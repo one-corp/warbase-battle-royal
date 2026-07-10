@@ -244,22 +244,25 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
     // --- WEAPON SOCKET ARCHITECTURE ---
     // We create a single socket attached to the hand bone. All weapons will be parented to this socket.
     // This allows us to perfectly position the grip once, and swapping weapons becomes trivial.
-    const weaponSocket = new TransformNode("WeaponSocket", scene);
+    const weaponSocketRoot = new TransformNode("WeaponSocketRoot", scene);
+    const weaponSocketOffset = new TransformNode("WeaponSocketOffset", scene);
+    weaponSocketOffset.parent = weaponSocketRoot;
+
     if (rightHandBone) {
-        weaponSocket.attachToBone(rightHandBone, viewmodelRoot);
+        weaponSocketRoot.attachToBone(rightHandBone, viewmodelRoot);
     } else {
-        weaponSocket.parent = swayRoot; // Fallback
+        weaponSocketRoot.parent = swayRoot; // Fallback
     }
     
     // Default socket offset (tweakable via Debug Keys)
     let socketPos = new Vector3(0, 0, 0);
     let socketRot = new Vector3(Math.PI / 2, 0, 0); // Mixamo hand bone usually points down Y axis
-    weaponSocket.position = socketPos;
-    weaponSocket.rotation = socketRot;
+    weaponSocketOffset.position = socketPos;
+    weaponSocketOffset.rotation = socketRot;
 
-    // Attach AK47 to the socket
+    // Attach AK47 to the socket offset
     akRoot.rotationQuaternion = null; 
-    akRoot.parent = weaponSocket;
+    akRoot.parent = weaponSocketOffset;
     akRoot.position = Vector3.Zero();
     akRoot.rotation = Vector3.Zero();
     akRoot.scaling = new Vector3(0.3, 0.3, 0.3); // Scale for original 67KB model
@@ -277,7 +280,7 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
     });
     
     pistolRoot.rotationQuaternion = null;
-    pistolRoot.parent = weaponSocket;
+    pistolRoot.parent = weaponSocketOffset;
     pistolRoot.position = Vector3.Zero();
     pistolRoot.rotation = Vector3.Zero();
     pistolRoot.scaling = new Vector3(0.3, 0.3, 0.3);
@@ -410,15 +413,21 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
 
             // Weapon Scale (uniform for current weapon)
             let activeRoot = activeConfig.id === 'ak47' ? akRoot : pistolRoot;
-            if (keys['5']) activeRoot.scaling.scaleInPlace(1.0 - 0.5 * dt);
-            if (keys['6']) activeRoot.scaling.scaleInPlace(1.0 + 0.5 * dt);
+            if (keys['5']) {
+                const s = activeRoot.scaling.x - 0.5 * dt;
+                activeRoot.scaling = new Vector3(s, s, s);
+            }
+            if (keys['6']) {
+                const s = activeRoot.scaling.x + 0.5 * dt;
+                activeRoot.scaling = new Vector3(s, s, s);
+            }
 
             // Sight Node Tweaks
             if (keys['7']) aimPoint.position.y -= 0.5 * dt;
             if (keys['8']) aimPoint.position.y += 0.5 * dt;
             
-            weaponSocket.position.copyFrom(socketPos);
-            weaponSocket.rotation.copyFrom(socketRot);
+            weaponSocketOffset.position.copyFrom(socketPos);
+            weaponSocketOffset.rotation.copyFrom(socketRot);
         }
         
         if (debugText) {
