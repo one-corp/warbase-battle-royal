@@ -241,7 +241,7 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
     akRoot.parent = swayRoot;
     akRoot.position = new Vector3(0.25, -0.25, 0.5);  // Right side, slightly below center, forward
     akRoot.rotation = new Vector3(0, Math.PI, 0);       // Point barrel forward (flip 180 on Y)
-    akRoot.scaling = new Vector3(0.012, 0.012, 0.012);  // Scale to fit FPS viewport
+    akRoot.scaling = new Vector3(1, 1, 1);  // Reset scale for the new model
 
     // Load Pistol
     const pistolContainer = await SceneLoader.LoadAssetContainerAsync("./models/", "pistol.glb", scene);
