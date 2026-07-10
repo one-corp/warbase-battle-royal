@@ -231,17 +231,38 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
     aimPoint.parent = akRoot;
     aimPoint.position = new Vector3(0, 0.15, 0.4); // On top of the barrel, near the iron sights
 
-    // --- WEAPON ATTACHMENT ---
-    // We parent the gun directly to swayRoot (camera-space), NOT to the character's hand bone.
-    // Why? Because:
-    //   1. attachToBone() applies the bone's world transform every frame, overriding our rotation fixes
-    //   2. The character skeleton is a cosmetic viewmodel — the gun must be stable in camera-space
-    //   3. This is how Krunker.io, Shell Shockers, and other web FPS games handle it
-    akRoot.rotationQuaternion = null; // GLB imports with quaternion; clear it so Euler rotation works
-    akRoot.parent = swayRoot;
-    akRoot.position = new Vector3(0.25, -0.25, 0.5);  // Right side, slightly below center, forward
-    akRoot.rotation = new Vector3(0, Math.PI, 0);       // Point barrel forward (flip 180 on Y)
-    akRoot.scaling = new Vector3(1, 1, 1);  // Reset scale for the new model
+    // Find the right hand bone to attach our socket
+    let rightHandBone: any = null;
+    if (entries.skeletons && entries.skeletons.length > 0) {
+        entries.skeletons[0].bones.forEach((bone: any) => {
+            if (bone.name.includes("RightHand")) {
+                rightHandBone = bone;
+            }
+        });
+    }
+
+    // --- WEAPON SOCKET ARCHITECTURE ---
+    // We create a single socket attached to the hand bone. All weapons will be parented to this socket.
+    // This allows us to perfectly position the grip once, and swapping weapons becomes trivial.
+    const weaponSocket = new TransformNode("WeaponSocket", scene);
+    if (rightHandBone) {
+        weaponSocket.attachToBone(rightHandBone, viewmodelRoot);
+    } else {
+        weaponSocket.parent = swayRoot; // Fallback
+    }
+    
+    // Default socket offset (tweakable via Debug Keys)
+    let socketPos = new Vector3(0, 0, 0);
+    let socketRot = new Vector3(Math.PI / 2, 0, 0); // Mixamo hand bone usually points down Y axis
+    weaponSocket.position = socketPos;
+    weaponSocket.rotation = socketRot;
+
+    // Attach AK47 to the socket
+    akRoot.rotationQuaternion = null; 
+    akRoot.parent = weaponSocket;
+    akRoot.position = Vector3.Zero();
+    akRoot.rotation = Vector3.Zero();
+    akRoot.scaling = new Vector3(0.3, 0.3, 0.3); // Scale for original 67KB model
 
     // Load Pistol
     const pistolContainer = await SceneLoader.LoadAssetContainerAsync("./models/", "pistol.glb", scene);
@@ -255,10 +276,11 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
         }
     });
     
-    pistolRoot.parent = swayRoot;
+    pistolRoot.rotationQuaternion = null;
+    pistolRoot.parent = weaponSocket;
+    pistolRoot.position = Vector3.Zero();
+    pistolRoot.rotation = Vector3.Zero();
     pistolRoot.scaling = new Vector3(0.3, 0.3, 0.3);
-    pistolRoot.position = new Vector3(0.15, -0.2, 0.4);
-    pistolRoot.rotation = new Vector3(Math.PI / 2, -Math.PI / 2, 0);
 
     pistolRoot.setEnabled(false); // Default to AK47
 
@@ -366,37 +388,42 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
         // Debug Keyboard controls for tuning ADS position perfectly
         if (input.weapon1) { } // Prevent TS warning
         
-        // Debug Keyboard controls for tuning weapon position in camera-space
+        // Debug Keyboard controls for tuning the Weapon Socket
         if ((window as any).debugKeys) {
             const keys = (window as any).debugKeys;
             
-            // Gun Pos (camera-space)
-            if (keys['u']) akRoot.position.x -= 0.5 * dt;
-            if (keys['i']) akRoot.position.x += 0.5 * dt;
-            if (keys['o']) akRoot.position.y -= 0.5 * dt;
-            if (keys['p']) akRoot.position.y += 0.5 * dt;
-            if (keys['k']) akRoot.position.z -= 0.5 * dt;
-            if (keys['l']) akRoot.position.z += 0.5 * dt;
+            // Socket Pos (relative to hand bone)
+            if (keys['u']) socketPos.x -= 0.01 * dt;
+            if (keys['i']) socketPos.x += 0.01 * dt;
+            if (keys['o']) socketPos.y -= 0.01 * dt;
+            if (keys['p']) socketPos.y += 0.01 * dt;
+            if (keys['k']) socketPos.z -= 0.01 * dt;
+            if (keys['l']) socketPos.z += 0.01 * dt;
             
-            // Gun Rot
-            if (keys['n']) akRoot.rotation.x -= 1.0 * dt;
-            if (keys['m']) akRoot.rotation.x += 1.0 * dt;
-            if (keys['1']) akRoot.rotation.y -= 1.0 * dt;
-            if (keys['2']) akRoot.rotation.y += 1.0 * dt;
-            if (keys['3']) akRoot.rotation.z -= 1.0 * dt;
-            if (keys['4']) akRoot.rotation.z += 1.0 * dt;
+            // Socket Rot
+            if (keys['n']) socketRot.x -= 1.0 * dt;
+            if (keys['m']) socketRot.x += 1.0 * dt;
+            if (keys['1']) socketRot.y -= 1.0 * dt;
+            if (keys['2']) socketRot.y += 1.0 * dt;
+            if (keys['3']) socketRot.z -= 1.0 * dt;
+            if (keys['4']) socketRot.z += 1.0 * dt;
 
-            // Gun Scale (uniform)
-            if (keys['5']) akRoot.scaling.scaleInPlace(1.0 - 0.5 * dt);
-            if (keys['6']) akRoot.scaling.scaleInPlace(1.0 + 0.5 * dt);
+            // Weapon Scale (uniform for current weapon)
+            let activeRoot = activeConfig.id === 'ak47' ? akRoot : pistolRoot;
+            if (keys['5']) activeRoot.scaling.scaleInPlace(1.0 - 0.5 * dt);
+            if (keys['6']) activeRoot.scaling.scaleInPlace(1.0 + 0.5 * dt);
 
             // Sight Node Tweaks
             if (keys['7']) aimPoint.position.y -= 0.5 * dt;
             if (keys['8']) aimPoint.position.y += 0.5 * dt;
+            
+            weaponSocket.position.copyFrom(socketPos);
+            weaponSocket.rotation.copyFrom(socketRot);
         }
         
         if (debugText) {
-            debugText.text = `GUN POS: ${akRoot.position.x.toFixed(3)}, ${akRoot.position.y.toFixed(3)}, ${akRoot.position.z.toFixed(3)}\nGUN ROT: ${akRoot.rotation.x.toFixed(2)}, ${akRoot.rotation.y.toFixed(2)}, ${akRoot.rotation.z.toFixed(2)}\nSCALE: ${akRoot.scaling.x.toFixed(4)}\nAIM Y: ${aimPoint.position.y.toFixed(3)}`;
+            let activeRoot = activeConfig.id === 'ak47' ? akRoot : pistolRoot;
+            debugText.text = `SOCKET POS: ${socketPos.x.toFixed(3)}, ${socketPos.y.toFixed(3)}, ${socketPos.z.toFixed(3)}\nSOCKET ROT: ${socketRot.x.toFixed(2)}, ${socketRot.y.toFixed(2)}, ${socketRot.z.toFixed(2)}\nSCALE: ${activeRoot.scaling.x.toFixed(4)}\nAIM Y: ${aimPoint.position.y.toFixed(3)}`;
         }
 
         
