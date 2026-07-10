@@ -530,8 +530,8 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
         // Viewmodel Animation Update
         if (!playerState.isGrounded) {
             playAnim("jump");
-        } else if (performance.now() - lastFireTime < 250) {
-            // Play firing animation for 250ms after each shot to make it visible
+        } else if ((input.fire && currentAmmo > 0 && !isReloading) || performance.now() - lastFireTime < 150) {
+            // Play firing animation as long as fire button is held, with a small 150ms buffer for single taps to finish
             playAnim("firing");
         } else if (input.forward || input.backward || input.left || input.right) {
             playAnim("run");
