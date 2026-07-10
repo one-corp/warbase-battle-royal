@@ -174,40 +174,32 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
 
     let currentAnim = "idle";
     const animGroups = entries.animationGroups;
-    let baseAnimGroups: any[] = [];
-    let firingAnimGroup: any = null;
-    let currentFiringWeight = 0;
     
-    // Separate Additive vs Base animations
+    
+    // Enable blending on all animations for smooth transitions.
+    // We do NOT use additive mode — it moves the torso/spine bones and clips the camera into the body.
+    // Instead, firing feedback is handled by procedural kickback on the gun mesh.
     animGroups.forEach((ag: any) => {
-        console.log("Loaded Animation:", ag.name); // Debug log
-        if (ag.name.toLowerCase().includes("firing")) {
-            ag.isAdditive = true;
-            firingAnimGroup = ag;
-            ag.start(true);
-            ag.setWeightForAllAnimatables(0);
-        } else {
-            baseAnimGroups.push(ag);
-            if (ag.targetedAnimations) {
-                ag.targetedAnimations.forEach((ta: any) => {
-                    ta.animation.enableBlending = true;
-                    ta.animation.blendingSpeed = 0.1; 
-                });
-            }
+        console.log("Loaded Animation:", ag.name);
+        if (ag.targetedAnimations) {
+            ag.targetedAnimations.forEach((ta: any) => {
+                ta.animation.enableBlending = true;
+                ta.animation.blendingSpeed = 0.1; 
+            });
         }
     });
 
     playAnim = (name: string) => {
         if (currentAnim === name) return;
-        const targetAnim = baseAnimGroups.find((ag: any) => ag.name.toLowerCase().includes(name));
+        const targetAnim = animGroups.find((ag: any) => ag.name.toLowerCase().includes(name));
         if (targetAnim) {
-            baseAnimGroups.forEach((ag: any) => ag.stop());
+            animGroups.forEach((ag: any) => ag.stop());
             targetAnim.start(true);
             currentAnim = name;
         } else if (name === "idle") {
-            const fallback = baseAnimGroups.find((ag: any) => ag.name.toLowerCase().includes("tpose"));
+            const fallback = animGroups.find((ag: any) => ag.name.toLowerCase().includes("tpose"));
             if (fallback) {
-                baseAnimGroups.forEach((ag: any) => ag.stop());
+                animGroups.forEach((ag: any) => ag.stop());
                 fallback.start(true);
                 currentAnim = "idle";
             }
@@ -235,42 +227,21 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
     });
 
     // Create the Industry Standard AimPoint (Sight Node)
-    // This is placed roughly where the iron sights of the AK47 are.
     const aimPoint = new TransformNode("AimPoint", scene);
     aimPoint.parent = akRoot;
-    // Tweak this vector to match the exact physical iron sight peak of your 3D model
-    aimPoint.position = new Vector3(0, 0.15, -0.1);
-    
-    
-    // Mixamo hand bones point down the Y-axis. The gun models usually point down Z-axis.
-    let baseGunRot = new Vector3(Math.PI / 2, 0, 0); 
-    let baseGunPos = new Vector3(0, 0, 0);
+    aimPoint.position = new Vector3(0, 0.15, 0.4); // On top of the barrel, near the iron sights
 
-    // Use Babylon's native attachToBone instead of setParent to fix weird Mixamo scaling/rotations
-    let rightHandBone: any = null;
-    if (entries.skeletons && entries.skeletons.length > 0) {
-        entries.skeletons[0].bones.forEach((bone: any) => {
-            if (bone.name.includes("RightHand")) {
-                rightHandBone = bone;
-            }
-        });
-    }
-
-    // Attach to hand if found, otherwise fallback to camera sway root
-    if (rightHandBone) {
-        akRoot.attachToBone(rightHandBone, viewmodelRoot);
-        akRoot.position = baseGunPos; 
-        akRoot.rotation = baseGunRot; 
-        // GLB models always import with rotationQuaternion. We must clear it to use standard rotation!
-        akRoot.rotationQuaternion = null;
-        // The user noted the gun is too large, let's scale it down by 50%
-        akRoot.scaling = new Vector3(0.5, 0.5, 0.5);
-    } else {
-        akRoot.parent = swayRoot;
-        akRoot.position = new Vector3(0.15, -0.2, 0.4);
-        akRoot.rotation = new Vector3(Math.PI / 2, -Math.PI / 2, 0);
-        akRoot.scaling = new Vector3(0.3, 0.3, 0.3);
-    }
+    // --- WEAPON ATTACHMENT ---
+    // We parent the gun directly to swayRoot (camera-space), NOT to the character's hand bone.
+    // Why? Because:
+    //   1. attachToBone() applies the bone's world transform every frame, overriding our rotation fixes
+    //   2. The character skeleton is a cosmetic viewmodel — the gun must be stable in camera-space
+    //   3. This is how Krunker.io, Shell Shockers, and other web FPS games handle it
+    akRoot.rotationQuaternion = null; // GLB imports with quaternion; clear it so Euler rotation works
+    akRoot.parent = swayRoot;
+    akRoot.position = new Vector3(0.25, -0.25, 0.5);  // Right side, slightly below center, forward
+    akRoot.rotation = new Vector3(0, Math.PI, 0);       // Point barrel forward (flip 180 on Y)
+    akRoot.scaling = new Vector3(0.012, 0.012, 0.012);  // Scale to fit FPS viewport
 
     // Load Pistol
     const pistolContainer = await SceneLoader.LoadAssetContainerAsync("./models/", "pistol.glb", scene);
@@ -395,40 +366,37 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
         // Debug Keyboard controls for tuning ADS position perfectly
         if (input.weapon1) { } // Prevent TS warning
         
-        // Debug Keyboard controls for tuning hand offsets and sight nodes perfectly
+        // Debug Keyboard controls for tuning weapon position in camera-space
         if ((window as any).debugKeys) {
             const keys = (window as any).debugKeys;
             
-            // Hand Pos
-            if (keys['u']) baseGunPos.x -= 0.01 * dt;
-            if (keys['i']) baseGunPos.x += 0.01 * dt;
-            if (keys['o']) baseGunPos.y -= 0.01 * dt;
-            if (keys['p']) baseGunPos.y += 0.01 * dt;
-            if (keys['k']) baseGunPos.z -= 0.01 * dt;
-            if (keys['l']) baseGunPos.z += 0.01 * dt;
+            // Gun Pos (camera-space)
+            if (keys['u']) akRoot.position.x -= 0.5 * dt;
+            if (keys['i']) akRoot.position.x += 0.5 * dt;
+            if (keys['o']) akRoot.position.y -= 0.5 * dt;
+            if (keys['p']) akRoot.position.y += 0.5 * dt;
+            if (keys['k']) akRoot.position.z -= 0.5 * dt;
+            if (keys['l']) akRoot.position.z += 0.5 * dt;
             
-            // Hand Rot
-            if (keys['n']) baseGunRot.x -= 1.0 * dt;
-            if (keys['m']) baseGunRot.x += 1.0 * dt;
-            if (keys['1']) baseGunRot.y -= 1.0 * dt;
-            if (keys['2']) baseGunRot.y += 1.0 * dt;
-            if (keys['3']) baseGunRot.z -= 1.0 * dt;
-            if (keys['4']) baseGunRot.z += 1.0 * dt;
+            // Gun Rot
+            if (keys['n']) akRoot.rotation.x -= 1.0 * dt;
+            if (keys['m']) akRoot.rotation.x += 1.0 * dt;
+            if (keys['1']) akRoot.rotation.y -= 1.0 * dt;
+            if (keys['2']) akRoot.rotation.y += 1.0 * dt;
+            if (keys['3']) akRoot.rotation.z -= 1.0 * dt;
+            if (keys['4']) akRoot.rotation.z += 1.0 * dt;
+
+            // Gun Scale (uniform)
+            if (keys['5']) akRoot.scaling.scaleInPlace(1.0 - 0.5 * dt);
+            if (keys['6']) akRoot.scaling.scaleInPlace(1.0 + 0.5 * dt);
 
             // Sight Node Tweaks
-            if (keys['5']) aimPoint.position.y -= 0.01 * dt;
-            if (keys['6']) aimPoint.position.y += 0.01 * dt;
-            if (keys['7']) aimPoint.position.z -= 0.01 * dt;
-            if (keys['8']) aimPoint.position.z += 0.01 * dt;
-
-            if (rightHandBone) {
-                akRoot.position.copyFrom(baseGunPos);
-                akRoot.rotation.copyFrom(baseGunRot);
-            }
+            if (keys['7']) aimPoint.position.y -= 0.5 * dt;
+            if (keys['8']) aimPoint.position.y += 0.5 * dt;
         }
         
         if (debugText) {
-            debugText.text = `HAND POS: \nX: ${baseGunPos.x.toFixed(3)}\nY: ${baseGunPos.y.toFixed(3)}\nZ: ${baseGunPos.z.toFixed(3)}\nHAND ROT: \nX: ${baseGunRot.x.toFixed(2)}\nY: ${baseGunRot.y.toFixed(2)}\nZ: ${baseGunRot.z.toFixed(2)}\nSIGHT NODE: \nY: ${aimPoint.position.y.toFixed(3)} Z: ${aimPoint.position.z.toFixed(3)}`;
+            debugText.text = `GUN POS: ${akRoot.position.x.toFixed(3)}, ${akRoot.position.y.toFixed(3)}, ${akRoot.position.z.toFixed(3)}\nGUN ROT: ${akRoot.rotation.x.toFixed(2)}, ${akRoot.rotation.y.toFixed(2)}, ${akRoot.rotation.z.toFixed(2)}\nSCALE: ${akRoot.scaling.x.toFixed(4)}\nAIM Y: ${aimPoint.position.y.toFixed(3)}`;
         }
 
         
@@ -623,19 +591,11 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
         
         kickbackZ = Scalar.Lerp(kickbackZ, 0, 15 * dt); // Spring back forward
 
-        // Firing Additive Weight Lerp
-        let targetFiringWeight = 0;
+        // Animation State Machine (unified — no additive layer)
+        // Priority: Firing > Jump > Run > Idle
         if ((input.fire && currentAmmo > 0 && !isReloading) || performance.now() - lastFireTime < 150) {
-            targetFiringWeight = 1.0;
-        }
-        
-        if (firingAnimGroup) {
-            currentFiringWeight = Scalar.Lerp(currentFiringWeight, targetFiringWeight, 15 * dt);
-            firingAnimGroup.setWeightForAllAnimatables(currentFiringWeight);
-        }
-
-        // Base Layer Animation Update
-        if (!playerState.isGrounded) {
+            playAnim("firing");
+        } else if (!playerState.isGrounded) {
             playAnim("jump");
         } else if (input.forward || input.backward || input.left || input.right) {
             playAnim("run");
