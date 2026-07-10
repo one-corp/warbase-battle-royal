@@ -194,12 +194,12 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
     playAnim = (name: string) => {
         if (currentAnim === name) return;
         const targetAnim = animGroups.find((ag: any) => ag.name.toLowerCase().includes(name));
-            if (targetAnim) {
-                animGroups.forEach((ag: any) => ag.stop());
-                targetAnim.start(true);
-                currentAnim = name;
-                console.log("Playing animation:", name);
-            } else if (name === "idle") {
+        if (targetAnim) {
+            animGroups.forEach((ag: any) => ag.stop());
+            targetAnim.start(true);
+            currentAnim = name;
+            console.log("Playing actual animation group:", targetAnim.name);
+        } else if (name === "idle") {
                 const fallback = animGroups.find((ag: any) => ag.name.toLowerCase().includes("tpose"));
                 if (fallback) {
                     animGroups.forEach((ag: any) => ag.stop());
@@ -314,6 +314,7 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
     let currentSpread = activeConfig.baseSpread;
     const recoil = new RecoilController();
     let adsProgress = 0;
+    let kickbackZ = 0; // Procedural weapon kickback
     
     // Inventory State
     let lastGrenadeTime = 0;
@@ -442,6 +443,9 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
             recoil.applyShot(activeConfig, isADS);
             currentSpread = Math.min(currentSpread + activeConfig.bloomPerShot, activeConfig.maxSpread);
             
+            // Procedural Kickback (more violent hipfire, tighter ADS)
+            kickbackZ = isADS ? -0.03 : -0.06;
+            
             flash.manualEmitCount = 5;
             flash.start();
             setTimeout(() => flash.stop(), 50);
@@ -546,9 +550,12 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
         // Apply Sway and Bob to swayRoot (add to base position)
         const adsSwayMult = 1.0 - (adsProgress * 0.8); 
         swayRoot.rotation.y = swayX * adsSwayMult;
-        swayRoot.rotation.x += swayY * adsSwayMult; // Add to reloadRotX
-        swayRoot.position.x += bobX * adsSwayMult; // Add to basePos
-        swayRoot.position.y += bobY * adsSwayMult;
+        swayRoot.rotation.x = reloadRotX + (swayY * adsSwayMult); 
+        swayRoot.position.x = basePos.x + reloadOffset.x + (bobX * adsSwayMult); 
+        swayRoot.position.y = basePos.y + reloadOffset.y + (bobY * adsSwayMult);
+        swayRoot.position.z = basePos.z + reloadOffset.z + kickbackZ; // Add kickback!
+        
+        kickbackZ = Scalar.Lerp(kickbackZ, 0, 15 * dt); // Spring back forward
 
         // Viewmodel Animation Update
         if (!playerState.isGrounded) {
