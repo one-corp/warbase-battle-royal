@@ -179,36 +179,44 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
 
     let currentAnim = "idle";
     const animGroups = entries.animationGroups;
+    let baseAnimGroups: any[] = [];
+    let firingAnimGroup: any = null;
+    let currentFiringWeight = 0;
     
-    // Enable buttery smooth blending between all animations
+    // Separate Additive vs Base animations
     animGroups.forEach((ag: any) => {
-        console.log("Loaded Animation:", ag.name); // Debug log to see exactly what is in the GLB
-        if (ag.targetedAnimations) {
-            ag.targetedAnimations.forEach((ta: any) => {
-                ta.animation.enableBlending = true;
-                ta.animation.blendingSpeed = 0.1; // Adjust this for faster/slower transitions
-            });
+        console.log("Loaded Animation:", ag.name); // Debug log
+        if (ag.name.toLowerCase().includes("firing")) {
+            ag.isAdditive = true;
+            firingAnimGroup = ag;
+            ag.start(true);
+            ag.setWeightForAllAnimatables(0);
+        } else {
+            baseAnimGroups.push(ag);
+            if (ag.targetedAnimations) {
+                ag.targetedAnimations.forEach((ta: any) => {
+                    ta.animation.enableBlending = true;
+                    ta.animation.blendingSpeed = 0.1; 
+                });
+            }
         }
     });
 
     playAnim = (name: string) => {
         if (currentAnim === name) return;
-        const targetAnim = animGroups.find((ag: any) => ag.name.toLowerCase().includes(name));
+        const targetAnim = baseAnimGroups.find((ag: any) => ag.name.toLowerCase().includes(name));
         if (targetAnim) {
-            animGroups.forEach((ag: any) => ag.stop());
+            baseAnimGroups.forEach((ag: any) => ag.stop());
             targetAnim.start(true);
             currentAnim = name;
-            console.log("Playing actual animation group:", targetAnim.name);
         } else if (name === "idle") {
-                const fallback = animGroups.find((ag: any) => ag.name.toLowerCase().includes("tpose"));
-                if (fallback) {
-                    animGroups.forEach((ag: any) => ag.stop());
-                    fallback.start(true);
-                    currentAnim = "idle";
-                }
-            } else {
-                console.warn("Could not find animation for:", name);
+            const fallback = baseAnimGroups.find((ag: any) => ag.name.toLowerCase().includes("tpose"));
+            if (fallback) {
+                baseAnimGroups.forEach((ag: any) => ag.stop());
+                fallback.start(true);
+                currentAnim = "idle";
             }
+        }
     };
 
     playAnim("idle");
@@ -557,12 +565,20 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
         
         kickbackZ = Scalar.Lerp(kickbackZ, 0, 15 * dt); // Spring back forward
 
-        // Viewmodel Animation Update
+        // Firing Additive Weight Lerp
+        let targetFiringWeight = 0;
+        if ((input.fire && currentAmmo > 0 && !isReloading) || performance.now() - lastFireTime < 150) {
+            targetFiringWeight = 1.0;
+        }
+        
+        if (firingAnimGroup) {
+            currentFiringWeight = Scalar.Lerp(currentFiringWeight, targetFiringWeight, 15 * dt);
+            firingAnimGroup.setWeightForAllAnimatables(currentFiringWeight);
+        }
+
+        // Base Layer Animation Update
         if (!playerState.isGrounded) {
             playAnim("jump");
-        } else if ((input.fire && currentAmmo > 0 && !isReloading) || performance.now() - lastFireTime < 150) {
-            // Play firing animation as long as fire button is held, with a small 150ms buffer for single taps to finish
-            playAnim("firing");
         } else if (input.forward || input.backward || input.left || input.right) {
             playAnim("run");
         } else {
