@@ -13,7 +13,7 @@ import {
     Scalar,
     SceneLoader
 } from "@babylonjs/core";
-import { AdvancedDynamicTexture, Rectangle, TextBlock } from "@babylonjs/gui";
+import { AdvancedDynamicTexture, Rectangle } from "@babylonjs/gui";
 import { input, playerState } from './PlayerController';
 import { throwGrenade } from './GrenadeSystem';
 
@@ -238,6 +238,13 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
             m.material.unlit = true;
         }
     });
+
+    // Create the Industry Standard AimPoint (Sight Node)
+    // This is placed roughly where the iron sights of the AK47 are.
+    const aimPoint = new TransformNode("AimPoint", scene);
+    aimPoint.parent = akRoot;
+    // Tweak this vector to match the exact physical iron sight peak of your 3D model
+    aimPoint.position = new Vector3(0, 0.15, -0.1);
     
     // Attach to hand if found, otherwise fallback to camera sway root
     if (rightHandTransform) {
@@ -297,22 +304,6 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
     crosshairV.color = "white";
     crosshairV.background = "white";
     advancedTexture.addControl(crosshairV);
-
-    const debugPanel = new Rectangle("debugPanel");
-    debugPanel.width = "300px";
-    debugPanel.height = "150px";
-    debugPanel.horizontalAlignment = 0; // Left
-    debugPanel.verticalAlignment = 1; // Bottom
-    debugPanel.background = "rgba(0,0,0,0.5)";
-    debugPanel.color = "white";
-    advancedTexture.addControl(debugPanel);
-
-    const debugText = new TextBlock("debugText");
-    debugText.text = "ADS Offset: O/P (X), K/L (Y), N/M (Z)\nCharacter Rotate: U/I (Yaw)\nUse this to align iron sights!";
-    debugText.textWrapping = true;
-    debugText.fontSize = 14;
-    debugPanel.addControl(debugText);
-
 
     // State
     let currentAmmo = activeConfig.magSize;
@@ -376,23 +367,12 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
         // Debug Keyboard controls for tuning ADS position perfectly
         if (input.weapon1) { } // Prevent TS warning
         
-        // We will just read from global window for debug to avoid altering InputState
+        // We no longer need Debug Keys! We use real math now.
         if ((window as any).debugKeys) {
             const keys = (window as any).debugKeys;
-            if (keys['o']) activeConfig.adsPosition.x -= 0.1 * dt;
-            if (keys['p']) activeConfig.adsPosition.x += 0.1 * dt;
-            if (keys['k']) activeConfig.adsPosition.y -= 0.1 * dt;
-            if (keys['l']) activeConfig.adsPosition.y += 0.1 * dt;
-            if (keys['n']) activeConfig.adsPosition.z -= 0.1 * dt;
-            if (keys['m']) activeConfig.adsPosition.z += 0.1 * dt;
-            
-            // Character rotation offset (in case Mixamo animation is skewed)
+            // Keep Character rotation offset (in case Mixamo animation is skewed)
             if (keys['u']) viewmodelRoot.rotation.y -= 1.0 * dt;
             if (keys['i']) viewmodelRoot.rotation.y += 1.0 * dt;
-        }
-        
-        if (debugText) {
-            debugText.text = `ADS Offset: \nX: ${activeConfig.adsPosition.x.toFixed(3)}\nY: ${activeConfig.adsPosition.y.toFixed(3)}\nZ: ${activeConfig.adsPosition.z.toFixed(3)}\nChar Yaw: ${viewmodelRoot.rotation.y.toFixed(2)}`;
         }
 
         
@@ -555,13 +535,35 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
             bobY = Math.sin(t * 1.5) * 0.003;
         }
 
-        // Apply Sway and Bob to swayRoot (add to base position)
+        // Calculate Mathematical ADS Offset to pin AimPoint to Camera Center
+        // 1. Where do we want the iron sights to be? (0.3 units in front of the camera lens)
+        const desiredWorldPos = camera.globalPosition.add(camera.getDirection(Vector3.Forward()).scale(0.3));
+        
+        // 2. Where are the iron sights right now?
+        const currentAimWorldPos = aimPoint.getAbsolutePosition();
+        
+        // 3. What is the world space delta required to bridge the gap?
+        const deltaWorldPos = desiredWorldPos.subtract(currentAimWorldPos);
+        
+        // 4. Convert that world delta into the Camera's local space (so we can move swayRoot)
+        const invertedCameraMatrix = camera.getWorldMatrix().clone().invert();
+        const localDelta = Vector3.TransformNormal(deltaWorldPos, invertedCameraMatrix);
+        
+        // 5. Calculate the final mathematically perfect ADS Position
+        const mathematicalADSPos = swayRoot.position.add(localDelta);
+
+        // Lerp SwayRoot position between Hipfire (basePos + reloadOffset) and Perfect ADS
+        const hipfirePos = basePos.add(reloadOffset);
+        const currentTargetPos = Vector3.Lerp(hipfirePos, mathematicalADSPos, adsProgress);
+        
+        // Apply Sway and Bob (diminished by ADS)
         const adsSwayMult = 1.0 - (adsProgress * 0.8); 
         swayRoot.rotation.y = swayX * adsSwayMult;
         swayRoot.rotation.x = reloadRotX + (swayY * adsSwayMult); 
-        swayRoot.position.x = basePos.x + reloadOffset.x + (bobX * adsSwayMult); 
-        swayRoot.position.y = basePos.y + reloadOffset.y + (bobY * adsSwayMult);
-        swayRoot.position.z = basePos.z + reloadOffset.z + kickbackZ; // Add kickback!
+        
+        swayRoot.position.x = currentTargetPos.x + (bobX * adsSwayMult); 
+        swayRoot.position.y = currentTargetPos.y + (bobY * adsSwayMult);
+        swayRoot.position.z = currentTargetPos.z + kickbackZ; // Add kickback!
         
         kickbackZ = Scalar.Lerp(kickbackZ, 0, 15 * dt); // Spring back forward
 
