@@ -13,7 +13,7 @@ import {
     Scalar,
     SceneLoader
 } from "@babylonjs/core";
-import { AdvancedDynamicTexture, Rectangle } from "@babylonjs/gui";
+import { AdvancedDynamicTexture, Rectangle, TextBlock } from "@babylonjs/gui";
 import { input, playerState } from './PlayerController';
 import { throwGrenade } from './GrenadeSystem';
 
@@ -165,12 +165,7 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
     viewmodelRoot.position = new Vector3(0, -1.6, -0.4); 
     viewmodelRoot.rotation = new Vector3(0, 0, 0); 
     
-    let rightHandTransform: TransformNode | undefined;
-    viewmodelRoot.getChildTransformNodes(false).forEach(node => {
-        if (node.name.includes("RightHand")) {
-            rightHandTransform = node;
-        }
-    });
+
     
     viewmodelRoot.getChildMeshes().forEach((m: any) => {
         m.alwaysSelectAsActiveMesh = true;
@@ -246,12 +241,26 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
     // Tweak this vector to match the exact physical iron sight peak of your 3D model
     aimPoint.position = new Vector3(0, 0.15, -0.1);
     
+    
+    // Mixamo hand bones point down the Y-axis. The gun models usually point down Z-axis.
+    let baseGunRot = new Vector3(Math.PI / 2, 0, 0); 
+    let baseGunPos = new Vector3(0, 0, 0);
+
+    // Use Babylon's native attachToBone instead of setParent to fix weird Mixamo scaling/rotations
+    let rightHandBone: any = null;
+    if (entries.skeletons && entries.skeletons.length > 0) {
+        entries.skeletons[0].bones.forEach((bone: any) => {
+            if (bone.name.includes("RightHand")) {
+                rightHandBone = bone;
+            }
+        });
+    }
+
     // Attach to hand if found, otherwise fallback to camera sway root
-    if (rightHandTransform) {
-        akRoot.setParent(rightHandTransform);
-        // Fine-tune these offsets based on how the Mixamo character holds it
-        akRoot.position = new Vector3(-0.1, 0.1, 0);
-        akRoot.rotation = new Vector3(Math.PI / 2, 0, 0);
+    if (rightHandBone) {
+        akRoot.attachToBone(rightHandBone, viewmodelRoot);
+        akRoot.position = baseGunPos; 
+        akRoot.rotation = baseGunRot; 
     } else {
         akRoot.parent = swayRoot;
         akRoot.position = new Vector3(0.15, -0.2, 0.4);
@@ -304,6 +313,21 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
     crosshairV.color = "white";
     crosshairV.background = "white";
     advancedTexture.addControl(crosshairV);
+
+    const debugPanel = new Rectangle("debugPanel");
+    debugPanel.width = "350px";
+    debugPanel.height = "250px";
+    debugPanel.horizontalAlignment = 0; // Left
+    debugPanel.verticalAlignment = 1; // Bottom
+    debugPanel.background = "rgba(0,0,0,0.5)";
+    debugPanel.color = "white";
+    advancedTexture.addControl(debugPanel);
+
+    const debugText = new TextBlock("debugText");
+    debugText.text = "HAND OFFSET DEBUG\nPos X/Y/Z: U/I, O/P, K/L\nRot X/Y/Z: N/M, 1/2, 3/4\nSight Node Y/Z: 5/6, 7/8";
+    debugText.textWrapping = true;
+    debugText.fontSize = 14;
+    debugPanel.addControl(debugText);
 
     // State
     let currentAmmo = activeConfig.magSize;
@@ -367,12 +391,40 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
         // Debug Keyboard controls for tuning ADS position perfectly
         if (input.weapon1) { } // Prevent TS warning
         
-        // We no longer need Debug Keys! We use real math now.
+        // Debug Keyboard controls for tuning hand offsets and sight nodes perfectly
         if ((window as any).debugKeys) {
             const keys = (window as any).debugKeys;
-            // Keep Character rotation offset (in case Mixamo animation is skewed)
-            if (keys['u']) viewmodelRoot.rotation.y -= 1.0 * dt;
-            if (keys['i']) viewmodelRoot.rotation.y += 1.0 * dt;
+            
+            // Hand Pos
+            if (keys['u']) baseGunPos.x -= 0.01 * dt;
+            if (keys['i']) baseGunPos.x += 0.01 * dt;
+            if (keys['o']) baseGunPos.y -= 0.01 * dt;
+            if (keys['p']) baseGunPos.y += 0.01 * dt;
+            if (keys['k']) baseGunPos.z -= 0.01 * dt;
+            if (keys['l']) baseGunPos.z += 0.01 * dt;
+            
+            // Hand Rot
+            if (keys['n']) baseGunRot.x -= 1.0 * dt;
+            if (keys['m']) baseGunRot.x += 1.0 * dt;
+            if (keys['1']) baseGunRot.y -= 1.0 * dt;
+            if (keys['2']) baseGunRot.y += 1.0 * dt;
+            if (keys['3']) baseGunRot.z -= 1.0 * dt;
+            if (keys['4']) baseGunRot.z += 1.0 * dt;
+
+            // Sight Node Tweaks
+            if (keys['5']) aimPoint.position.y -= 0.01 * dt;
+            if (keys['6']) aimPoint.position.y += 0.01 * dt;
+            if (keys['7']) aimPoint.position.z -= 0.01 * dt;
+            if (keys['8']) aimPoint.position.z += 0.01 * dt;
+
+            if (rightHandBone) {
+                akRoot.position.copyFrom(baseGunPos);
+                akRoot.rotation.copyFrom(baseGunRot);
+            }
+        }
+        
+        if (debugText) {
+            debugText.text = `HAND POS: \nX: ${baseGunPos.x.toFixed(3)}\nY: ${baseGunPos.y.toFixed(3)}\nZ: ${baseGunPos.z.toFixed(3)}\nHAND ROT: \nX: ${baseGunRot.x.toFixed(2)}\nY: ${baseGunRot.y.toFixed(2)}\nZ: ${baseGunRot.z.toFixed(2)}\nSIGHT NODE: \nY: ${aimPoint.position.y.toFixed(3)} Z: ${aimPoint.position.z.toFixed(3)}`;
         }
 
         
