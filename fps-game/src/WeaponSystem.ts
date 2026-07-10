@@ -11,6 +11,8 @@ import {
     AbstractMesh,
     Mesh,
     Scalar,
+    SceneLoader
+} from "@babylonjs/core";
 import { AdvancedDynamicTexture, Rectangle, TextBlock } from "@babylonjs/gui";
 import { input, playerState } from './PlayerController';
 import { throwGrenade } from './GrenadeSystem';
@@ -177,18 +179,21 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
     playAnim = (name: string) => {
         if (currentAnim === name) return;
         const targetAnim = animGroups.find((ag: any) => ag.name.toLowerCase().includes(name));
-        if (targetAnim) {
-            animGroups.forEach((ag: any) => ag.stop());
-            targetAnim.start(true);
-            currentAnim = name;
-        } else if (name === "idle") {
-            const fallback = animGroups.find((ag: any) => ag.name.toLowerCase().includes("tpose"));
-            if (fallback) {
+            if (targetAnim) {
                 animGroups.forEach((ag: any) => ag.stop());
-                fallback.start(true);
-                currentAnim = "idle";
+                targetAnim.start(true);
+                currentAnim = name;
+                console.log("Playing animation:", name);
+            } else if (name === "idle") {
+                const fallback = animGroups.find((ag: any) => ag.name.toLowerCase().includes("tpose"));
+                if (fallback) {
+                    animGroups.forEach((ag: any) => ag.stop());
+                    fallback.start(true);
+                    currentAnim = "idle";
+                }
+            } else {
+                console.warn("Could not find animation for:", name);
             }
-        }
     };
 
     playAnim("idle");
@@ -525,8 +530,8 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
         // Viewmodel Animation Update
         if (!playerState.isGrounded) {
             playAnim("jump");
-        } else if (performance.now() - lastFireTime < 100) {
-            // Play firing animation for 100ms after each shot
+        } else if (performance.now() - lastFireTime < 250) {
+            // Play firing animation for 250ms after each shot to make it visible
             playAnim("firing");
         } else if (input.forward || input.backward || input.left || input.right) {
             playAnim("run");
