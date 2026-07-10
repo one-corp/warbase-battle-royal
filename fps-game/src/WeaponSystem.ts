@@ -179,6 +179,18 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
 
     let currentAnim = "idle";
     const animGroups = entries.animationGroups;
+    
+    // Enable buttery smooth blending between all animations
+    animGroups.forEach((ag: any) => {
+        console.log("Loaded Animation:", ag.name); // Debug log to see exactly what is in the GLB
+        if (ag.targetedAnimations) {
+            ag.targetedAnimations.forEach((ta: any) => {
+                ta.animation.enableBlending = true;
+                ta.animation.blendingSpeed = 0.1; // Adjust this for faster/slower transitions
+            });
+        }
+    });
+
     playAnim = (name: string) => {
         if (currentAnim === name) return;
         const targetAnim = animGroups.find((ag: any) => ag.name.toLowerCase().includes(name));
