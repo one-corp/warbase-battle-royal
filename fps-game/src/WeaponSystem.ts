@@ -172,7 +172,10 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
         }
     });
     
-    viewmodelRoot.getChildMeshes().forEach((m: any) => m.alwaysSelectAsActiveMesh = true);
+    viewmodelRoot.getChildMeshes().forEach((m: any) => {
+        m.alwaysSelectAsActiveMesh = true;
+        m.isPickable = false;
+    });
 
     let currentAnim = "idle";
     const animGroups = entries.animationGroups;
@@ -210,6 +213,7 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
     // Convert PBR materials to Standard to guarantee lighting visibility, and force active
     akRoot.getChildMeshes().forEach((m: any) => {
         m.alwaysSelectAsActiveMesh = true;
+        m.isPickable = false;
         if (m.material && m.material.getClassName() === "PBRMaterial") {
             m.material.unlit = true;
         }
@@ -284,7 +288,7 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
     advancedTexture.addControl(debugPanel);
 
     const debugText = new TextBlock("debugText");
-    debugText.text = "ADS Offset (Press O/P to tweak X, K/L for Y, N/M for Z)\nUse this to align iron sights!";
+    debugText.text = "ADS Offset: O/P (X), K/L (Y), N/M (Z)\nCharacter Rotate: U/I (Yaw)\nUse this to align iron sights!";
     debugText.textWrapping = true;
     debugText.fontSize = 14;
     debugPanel.addControl(debugText);
@@ -360,10 +364,14 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
             if (keys['l']) activeConfig.adsPosition.y += 0.1 * dt;
             if (keys['n']) activeConfig.adsPosition.z -= 0.1 * dt;
             if (keys['m']) activeConfig.adsPosition.z += 0.1 * dt;
+            
+            // Character rotation offset (in case Mixamo animation is skewed)
+            if (keys['u']) viewmodelRoot.rotation.y -= 1.0 * dt;
+            if (keys['i']) viewmodelRoot.rotation.y += 1.0 * dt;
         }
         
         if (debugText) {
-            debugText.text = `ADS Offset: \nX: ${activeConfig.adsPosition.x.toFixed(3)}\nY: ${activeConfig.adsPosition.y.toFixed(3)}\nZ: ${activeConfig.adsPosition.z.toFixed(3)}`;
+            debugText.text = `ADS Offset: \nX: ${activeConfig.adsPosition.x.toFixed(3)}\nY: ${activeConfig.adsPosition.y.toFixed(3)}\nZ: ${activeConfig.adsPosition.z.toFixed(3)}\nChar Yaw: ${viewmodelRoot.rotation.y.toFixed(2)}`;
         }
 
         
@@ -438,10 +446,13 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
                 .add(up.scale(Math.sin(spreadAngle) * Math.sin(rot)))
                 .normalize();
 
-            const ray = new Ray(camera.position, spreadDir, 200);
-            const hit = scene.pickWithRay(ray, (m) => m.name.startsWith("crate") || m.name.startsWith("bot_capsule") || m.name.startsWith("player_"));
+            // BUGFIX: Use globalPosition so bullets shoot from the actual camera location, not the world origin!
+            const ray = new Ray(camera.globalPosition, spreadDir, 200);
             
-            let hitPoint = camera.position.add(spreadDir.scale(200));
+            // Hit everything EXCEPT the player capsule
+            const hit = scene.pickWithRay(ray, (m) => m.name !== "player" && m.isPickable);
+            
+            let hitPoint = camera.globalPosition.add(spreadDir.scale(200));
 
             if (hit?.hit && hit.pickedMesh) {
                 hitPoint = hit.pickedPoint!;
