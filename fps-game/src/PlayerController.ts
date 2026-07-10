@@ -166,17 +166,25 @@ export function setupPlayer(scene: Scene, canvas: HTMLCanvasElement, engine: Eng
         
         if (wasGrounded && !isGrounded) coyoteTimer = 0.1;
 
-        // Mouse Look
-        yaw += input.mouseDeltaX * BASE_SENSITIVITY;
-        pitch += input.mouseDeltaY * BASE_SENSITIVITY;
-        pitch = Math.max(-89 * DEG2RAD, Math.min(89 * DEG2RAD, pitch));
-        
-        playerMesh.rotationQuaternion = null;
-        camera.rotation.x = pitch;
-        camera.rotation.y = yaw;
+        // Rotation
+        const currentSens = input.ads ? BASE_SENSITIVITY * 0.5 : BASE_SENSITIVITY;
+        yaw += input.mouseDeltaX * currentSens;
+        pitch += input.mouseDeltaY * currentSens;
+        pitch = Math.max(-Math.PI / 2.1, Math.min(Math.PI / 2.1, pitch));
+        camera.rotation.set(pitch, yaw, 0);
         
         input.mouseDeltaX = 0;
         input.mouseDeltaY = 0;
+
+        // FOV / Zoom logic
+        let targetFOV = BASE_FOV;
+        const isMoving = (input.forward || input.backward || input.left || input.right);
+        if (input.ads) {
+            targetFOV = 50; // ADS Zoom
+        } else if (isSprinting && isGrounded && isMoving) {
+            targetFOV = BASE_FOV + SPRINT_FOV_BOOST;
+        }
+        camera.fov = Scalar.Lerp(camera.fov, targetFOV * DEG2RAD, FOV_LERP_SPEED * dt);
 
         // Crouch Toggle
         if (input.crouch) {

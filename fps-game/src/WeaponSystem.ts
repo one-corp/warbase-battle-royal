@@ -251,42 +251,39 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
     const flash = createMuzzleFlash(scene, muzzlePoint);
     const shellPoint = new Mesh("shellPoint", scene);
     shellPoint.parent = swayRoot;
-    const shellEjector = createShellEjector(scene, shellPoint);
-
-    // GUI: Scope UI
+    // Debug GUI for perfectly aligning the gun to the center of the screen
     const advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
-    const scopeOverlay = new Rectangle("scope");
-    scopeOverlay.width = 1;
-    scopeOverlay.height = 1;
-    scopeOverlay.color = "black";
-    scopeOverlay.thickness = 0;
-    scopeOverlay.background = "rgba(0,0,0,0.8)";
-    scopeOverlay.alpha = 0; // Hidden by default
     
-    const scopeLens = new Ellipse();
-    scopeLens.width = "400px";
-    scopeLens.height = "400px";
-    scopeLens.color = "black";
-    scopeLens.thickness = 4;
-    // Transparent center to see through
-    scopeLens.background = "transparent";
-    scopeOverlay.addControl(scopeLens);
-
+    // Hipfire Crosshair
     const crosshairH = new Rectangle();
-    crosshairH.width = "400px";
+    crosshairH.width = "10px";
     crosshairH.height = "2px";
-    crosshairH.color = "red";
-    crosshairH.background = "red";
-    scopeLens.addControl(crosshairH);
+    crosshairH.color = "white";
+    crosshairH.background = "white";
+    advancedTexture.addControl(crosshairH);
 
     const crosshairV = new Rectangle();
     crosshairV.width = "2px";
-    crosshairV.height = "400px";
-    crosshairV.color = "red";
-    crosshairV.background = "red";
-    scopeLens.addControl(crosshairV);
+    crosshairV.height = "10px";
+    crosshairV.color = "white";
+    crosshairV.background = "white";
+    advancedTexture.addControl(crosshairV);
 
-    advancedTexture.addControl(scopeOverlay);
+    const debugPanel = new Rectangle("debugPanel");
+    debugPanel.width = "300px";
+    debugPanel.height = "150px";
+    debugPanel.horizontalAlignment = 0; // Left
+    debugPanel.verticalAlignment = 1; // Bottom
+    debugPanel.background = "rgba(0,0,0,0.5)";
+    debugPanel.color = "white";
+    advancedTexture.addControl(debugPanel);
+
+    const debugText = new BABYLON.GUI.TextBlock("debugText");
+    debugText.text = "ADS Offset (Press O/P to tweak X, K/L for Y, N/M for Z)\nUse this to align iron sights!";
+    debugText.textWrapping = true;
+    debugText.fontSize = 14;
+    debugPanel.addControl(debugText);
+
 
     // State
     let currentAmmo = activeConfig.magSize;
@@ -346,15 +343,18 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
         const isADS = input.ads && !isReloading;
         adsProgress = Scalar.Lerp(adsProgress, isADS ? 1 : 0, (1 / activeConfig.adsTime) * dt);
         
-        // Only show scope UI if fully zoomed in and holding AK47 (sniper proxy)
-        if (activeConfig.id === 'ak47' && adsProgress > 0.8) {
-            scopeOverlay.alpha = Scalar.Lerp(scopeOverlay.alpha, 1.0, 10 * dt);
-            // Hide weapon mesh while in scope
-            akRoot.setEnabled(false);
-        } else {
-            scopeOverlay.alpha = 0;
-            if (activeConfig.id === 'ak47') akRoot.setEnabled(true);
+        // Debug Keyboard controls for tuning ADS position perfectly
+        if (input.keys && input.keys['o']) activeConfig.adsPosition.x -= 0.1 * dt;
+        if (input.keys && input.keys['p']) activeConfig.adsPosition.x += 0.1 * dt;
+        if (input.keys && input.keys['k']) activeConfig.adsPosition.y -= 0.1 * dt;
+        if (input.keys && input.keys['l']) activeConfig.adsPosition.y += 0.1 * dt;
+        if (input.keys && input.keys['n']) activeConfig.adsPosition.z -= 0.1 * dt;
+        if (input.keys && input.keys['m']) activeConfig.adsPosition.z += 0.1 * dt;
+        
+        if (debugText) {
+            debugText.text = `ADS Offset: \nX: ${activeConfig.adsPosition.x.toFixed(3)}\nY: ${activeConfig.adsPosition.y.toFixed(3)}\nZ: ${activeConfig.adsPosition.z.toFixed(3)}`;
         }
+
         
         // Reload Animation State Machine
         let reloadOffset = new Vector3(0, 0, 0);
@@ -519,6 +519,9 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
         // Viewmodel Animation Update
         if (!playerState.isGrounded) {
             playAnim("jump");
+        } else if (performance.now() - lastFireTime < 100) {
+            // Play firing animation for 100ms after each shot
+            playAnim("firing");
         } else if (input.forward || input.backward || input.left || input.right) {
             playAnim("run");
         } else {
