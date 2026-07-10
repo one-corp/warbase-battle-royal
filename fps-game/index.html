@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebGPU FPS</title>
+    <link rel="stylesheet" href="/src/style.css">
+  </head>
+  <body>
+    <!-- Multiplayer Login UI -->
+    <div id="loginUI" style="position: absolute; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; z-index: 10; background: rgba(0,0,0,0.8); font-family: sans-serif;">
+      <div style="background: white; padding: 30px; border-radius: 8px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <h2 style="margin-top: 0; color: #333;">Join FPS Match</h2>
+        <input type="text" id="usernameInput" placeholder="Enter Username" style="padding: 10px; font-size: 16px; width: 200px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 15px;" />
+        <br>
+        <button id="joinButton" style="padding: 10px 20px; font-size: 16px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; transition: background 0.2s;">Join Game</button>
+      </div>
+    </div>
+    
+    <canvas id="renderCanvas"></canvas>
+    
+    <!-- UI Overlay -->
+    <div id="uiLayer">
+      <div id="crosshair"></div>
+      
+      <div class="hud-bottom">
+        <div class="health-bar-container">
+            <div id="healthBar"></div>
+            <span id="healthText">100 HP</span>
+        </div>
+        <div class="ammo-container">
+            <span id="ammoText">30 / 120</span>
+        </div>
+      </div>
+
+      <!-- Pointer Lock Warning -->
+      <div id="pointerWarning" style="display: none; position: absolute; top: 15px; right: 15px; background: rgba(220, 53, 69, 0.9); color: white; padding: 12px 20px; border-radius: 6px; z-index: 100; font-family: sans-serif; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+        ⚠️ Game Paused - Click to Resume
+      </div>
+
+      <!-- Death Screen -->
+      <div id="deathScreen" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(150, 0, 0, 0.6); z-index: 1000; flex-direction: column; justify-content: center; align-items: center; color: white; font-family: sans-serif;">
+        <h1 style="font-size: 5rem; margin: 0; text-shadow: 2px 2px 5px black;">YOU DIED</h1>
+        <p style="font-size: 1.5rem; margin-top: 10px;">Respawning in <span id="respawnTimer">3</span>...</p>
+      </div>
+
+      <!-- Scoreboard Overlay -->
+      <div id="scoreboardUI" style="display: none; position: absolute; top: 10%; left: 20%; width: 60%; background: rgba(0,0,0,0.8); border: 2px solid #555; border-radius: 8px; color: white; font-family: monospace; padding: 20px;">
+        <h2 style="text-align: center; margin-top: 0;">SCOREBOARD</h2>
+        <table style="width: 100%; border-collapse: collapse; text-align: left;">
+          <thead>
+            <tr style="border-bottom: 2px solid #555;">
+              <th style="padding: 10px;">Player</th>
+              <th style="padding: 10px;">Kills</th>
+              <th style="padding: 10px;">Deaths</th>
+              <th style="padding: 10px;">Ping</th>
+            </tr>
+          </thead>
+          <tbody id="scoreboardBody">
+            <!-- Rows injected here -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
