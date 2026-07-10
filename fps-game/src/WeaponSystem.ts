@@ -11,9 +11,7 @@ import {
     AbstractMesh,
     Mesh,
     Scalar,
-    SceneLoader
-} from "@babylonjs/core";
-import { AdvancedDynamicTexture, Ellipse, Rectangle } from "@babylonjs/gui";
+import { AdvancedDynamicTexture, Rectangle, TextBlock } from "@babylonjs/gui";
 import { input, playerState } from './PlayerController';
 import { throwGrenade } from './GrenadeSystem';
 
@@ -251,6 +249,8 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
     const flash = createMuzzleFlash(scene, muzzlePoint);
     const shellPoint = new Mesh("shellPoint", scene);
     shellPoint.parent = swayRoot;
+    const shellEjector = createShellEjector(scene, shellPoint);
+
     // Debug GUI for perfectly aligning the gun to the center of the screen
     const advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
     
@@ -278,7 +278,7 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
     debugPanel.color = "white";
     advancedTexture.addControl(debugPanel);
 
-    const debugText = new BABYLON.GUI.TextBlock("debugText");
+    const debugText = new TextBlock("debugText");
     debugText.text = "ADS Offset (Press O/P to tweak X, K/L for Y, N/M for Z)\nUse this to align iron sights!";
     debugText.textWrapping = true;
     debugText.fontSize = 14;
@@ -344,12 +344,18 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
         adsProgress = Scalar.Lerp(adsProgress, isADS ? 1 : 0, (1 / activeConfig.adsTime) * dt);
         
         // Debug Keyboard controls for tuning ADS position perfectly
-        if (input.keys && input.keys['o']) activeConfig.adsPosition.x -= 0.1 * dt;
-        if (input.keys && input.keys['p']) activeConfig.adsPosition.x += 0.1 * dt;
-        if (input.keys && input.keys['k']) activeConfig.adsPosition.y -= 0.1 * dt;
-        if (input.keys && input.keys['l']) activeConfig.adsPosition.y += 0.1 * dt;
-        if (input.keys && input.keys['n']) activeConfig.adsPosition.z -= 0.1 * dt;
-        if (input.keys && input.keys['m']) activeConfig.adsPosition.z += 0.1 * dt;
+        if (input.weapon1) { } // Prevent TS warning
+        
+        // We will just read from global window for debug to avoid altering InputState
+        if ((window as any).debugKeys) {
+            const keys = (window as any).debugKeys;
+            if (keys['o']) activeConfig.adsPosition.x -= 0.1 * dt;
+            if (keys['p']) activeConfig.adsPosition.x += 0.1 * dt;
+            if (keys['k']) activeConfig.adsPosition.y -= 0.1 * dt;
+            if (keys['l']) activeConfig.adsPosition.y += 0.1 * dt;
+            if (keys['n']) activeConfig.adsPosition.z -= 0.1 * dt;
+            if (keys['m']) activeConfig.adsPosition.z += 0.1 * dt;
+        }
         
         if (debugText) {
             debugText.text = `ADS Offset: \nX: ${activeConfig.adsPosition.x.toFixed(3)}\nY: ${activeConfig.adsPosition.y.toFixed(3)}\nZ: ${activeConfig.adsPosition.z.toFixed(3)}`;

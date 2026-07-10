@@ -43,12 +43,16 @@ const KEY_MAP: Record<string, keyof InputState> = {
 };
 
 export function setupInputs(canvas: HTMLCanvasElement) {
+    (window as any).debugKeys = {};
+    
     window.addEventListener('keydown', (e) => {
+        (window as any).debugKeys[e.key.toLowerCase()] = true;
         const key = KEY_MAP[e.code];
         if (key) (input as any)[key] = true;
     });
 
     window.addEventListener('keyup', (e) => {
+        (window as any).debugKeys[e.key.toLowerCase()] = false;
         const key = KEY_MAP[e.code];
         if (key) (input as any)[key] = false;
     });
@@ -255,9 +259,6 @@ export function setupPlayer(scene: Scene, canvas: HTMLCanvasElement, engine: Eng
         // Camera Lerps
         const targetCamY = isCrouching ? CROUCH_CAM_Y : STAND_CAM_Y;
         camera.position.y = Scalar.Lerp(camera.position.y, targetCamY, CROUCH_LERP_SPEED * dt);
-
-        const targetFOV = isSprinting ? BASE_FOV + SPRINT_FOV_BOOST : BASE_FOV;
-        camera.fov = Scalar.Lerp(camera.fov, targetFOV * DEG2RAD, FOV_LERP_SPEED * dt);
         
         // Head Bob (simple)
         if (isGrounded && localDir.length() > 0) {
