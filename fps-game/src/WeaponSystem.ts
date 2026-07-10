@@ -261,12 +261,16 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
         akRoot.attachToBone(rightHandBone, viewmodelRoot);
         akRoot.position = baseGunPos; 
         akRoot.rotation = baseGunRot; 
+        // GLB models always import with rotationQuaternion. We must clear it to use standard rotation!
+        akRoot.rotationQuaternion = null;
+        // The user noted the gun is too large, let's scale it down by 50%
+        akRoot.scaling = new Vector3(0.5, 0.5, 0.5);
     } else {
         akRoot.parent = swayRoot;
         akRoot.position = new Vector3(0.15, -0.2, 0.4);
         akRoot.rotation = new Vector3(Math.PI / 2, -Math.PI / 2, 0);
+        akRoot.scaling = new Vector3(0.3, 0.3, 0.3);
     }
-    akRoot.scaling = new Vector3(0.3, 0.3, 0.3);
 
     // Load Pistol
     const pistolContainer = await SceneLoader.LoadAssetContainerAsync("./models/", "pistol.glb", scene);
