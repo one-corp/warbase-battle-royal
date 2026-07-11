@@ -192,30 +192,26 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
     const animGroups = entries.animationGroups;
     
     
-    // Enable blending on all animations for smooth transitions.
-    // We do NOT use additive mode — it moves the torso/spine bones and clips the camera into the body.
-    // Instead, firing feedback is handled by procedural kickback on the gun mesh.
     animGroups.forEach((ag: any) => {
         console.log("Loaded Animation:", ag.name);
-        if (ag.targetedAnimations) {
-            ag.targetedAnimations.forEach((ta: any) => {
-                ta.animation.enableBlending = true;
-                ta.animation.blendingSpeed = 0.1; 
-            });
-        }
     });
 
     playAnim = (name: string) => {
         if (currentAnim === name) return;
         const targetAnim = animGroups.find((ag: any) => ag.name.toLowerCase().includes(name));
+        
+        // Stop the current animation so Babylon can blend into the new one using the global AnimationPropertiesOverride
+        const currentAg = animGroups.find((ag: any) => ag.name.toLowerCase().includes(currentAnim));
+        if (currentAg) {
+            currentAg.stop();
+        }
+
         if (targetAnim) {
-            // Remove hard .stop() so Babylon crossfades automatically
             targetAnim.start(true, 1.0, targetAnim.from, targetAnim.to, false);
             currentAnim = name;
         } else if (name === "idle") {
             const fallback = animGroups.find((ag: any) => ag.name.toLowerCase().includes("tpose"));
             if (fallback) {
-                // Remove hard .stop()
                 fallback.start(true, 1.0, fallback.from, fallback.to, false);
                 currentAnim = "idle";
             }
@@ -570,13 +566,14 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
                     hit.pickedMesh.physicsBody.applyImpulse(spreadDir.scale(10), hitPoint);
                 } else if (!hit.pickedMesh.metadata?.playerId) {
                     // Spawn a Decal on static geometry (walls, ground)
-                    const decalSize = new Vector3(0.3, 0.3, 0.3);
-                    const decal = MeshBuilder.CreateDecal("bulletHole", hit.pickedMesh, {
-                        position: hitPoint,
-                        normal: hit.getNormal(true) || hit.pickedMesh.getFacetNormal(hit.faceId).normalize(),
-                        size: decalSize,
-                        angle: Math.random() * Math.PI * 2
-                    });
+                    const normal = hit.getNormal(true) || Vector3.Up();
+                    const decal = MeshBuilder.CreatePlane("bulletHole", { size: 0.3 }, scene);
+                    
+                    // Offset slightly to prevent Z-fighting
+                    decal.position = hitPoint.add(normal.scale(0.02)); 
+                    
+                    // Orient the plane so it faces outward from the surface
+                    decal.lookAt(decal.position.add(normal));
                     
                     decal.material = getBulletHoleMaterial(scene);
                     decal.isPickable = false; // Bullets shouldn't hit other bullet holes

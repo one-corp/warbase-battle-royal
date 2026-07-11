@@ -831,10 +831,6 @@ function updateMovement(dt: number) {
 
 ---
 
-> **NOTE — Current Code Gap:** The existing `PlayerController.ts` uses Babylon's legacy `UniversalCamera` collision system. This blueprint requires a full rewrite to use a **Havok physics capsule** with `setLinearVelocity()` for proper physics-based movement. The Havok plugin is already initialized in `main.ts` — we just need to wire the player to it.
-
----
-
 ## 17. Networked Animation Architecture (Multiplayer)
 
 A common question in FPS development is: *"If my viewmodel just floats in front of the camera and plays the Idle animation, how do other players see me running and walking?"*
@@ -924,3 +920,21 @@ if (player.currentState !== networkAnim) {
 ### 19.3 Camera Yaw vs Mesh Forward
 Standard 3D models (like the Mixamo `Soldier.glb`) typically default to facing the `-Z` axis (towards the camera). However, the Babylon.js `UniversalCamera` looks down the `+Z` axis.
 To ensure the remote player's model faces the correct direction they are looking, a `Math.PI` (180-degree) offset must be applied to the Yaw rotation before broadcasting it to the network server.
+
+### 19.4 Global Animation Blending (Smooth Transitions)
+When transitioning between animations (e.g., Idle -> Run), instantly playing the new animation can cause harsh snaps or jittering if the previous animation's weights aren't cleared properly.
+
+To achieve mathematically smooth crossfades between animations, Babylon.js requires two things:
+1. **Global Override**: A scene-wide `AnimationPropertiesOverride` to instruct the engine to blend all animations globally.
+```typescript
+const override = new AnimationPropertiesOverride();
+override.enableBlending = true;
+override.blendingSpeed = 0.05; // ~20 frames of smooth interpolation
+scene.animationPropertiesOverride = override;
+```
+2. **Proper `stop()` Calls**: When triggering a new animation state, the current animation MUST be explicitly stopped:
+```typescript
+currentAnimation.stop();
+newAnimation.start();
+```
+When `stop()` is called with global blending enabled, Babylon freezes the skeleton in its exact current frame/pose, and uses that pose as the starting point to smoothly lerp into the first frame of `newAnimation`. If you fail to call `stop()`, both animations will evaluate simultaneously and fight for bone control, breaking the blend.

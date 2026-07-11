@@ -10,7 +10,8 @@ import {
     CascadedShadowGenerator,
     DefaultRenderingPipeline,
     ImageProcessingConfiguration,
-    WebGPUEngine
+    WebGPUEngine,
+    AnimationPropertiesOverride
 } from '@babylonjs/core';
 import HavokPhysics from '@babylonjs/havok';
 import "@babylonjs/loaders/glTF"; // Ensure GLTF loader is available
@@ -48,6 +49,11 @@ async function createScene(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElem
     
     scene.collisionsEnabled = true;
     scene.gravity = new Vector3(0, -9.81, 0);
+
+    const override = new AnimationPropertiesOverride();
+    override.enableBlending = true;
+    override.blendingSpeed = 0.05; // Slower blending for smoother transitions
+    scene.animationPropertiesOverride = override;
 
     const havokInstance = await HavokPhysics();
     const hk = new HavokPlugin(true, havokInstance);
@@ -151,6 +157,9 @@ async function startGame(username: string) {
                             }
                         }, 1000);
                     }
+                } else if (!myState.isDead && isLocalDead) {
+                    // Server updated our state to alive, trigger respawn
+                    networkManager.onRespawn();
                 }
             }
 

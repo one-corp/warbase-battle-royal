@@ -152,7 +152,7 @@ export class MultiplayerEntities {
 
         // --- MUZZLE FLASH SYSTEM ---
         const flash = new ParticleSystem(`flash_${id}`, 50, this.scene);
-        flash.particleTexture = new Texture("https://raw.githubusercontent.com/BabylonJS/Babylon.js/master/packages/tools/Playground/public/textures/flare.png", this.scene);
+        flash.particleTexture = new Texture("https://playground.babylonjs.com/textures/flare.png", this.scene);
         flash.emitter = muzzlePoint;
         flash.minEmitBox = new Vector3(0, 0, 0);
         flash.maxEmitBox = new Vector3(0, 0, 0);
