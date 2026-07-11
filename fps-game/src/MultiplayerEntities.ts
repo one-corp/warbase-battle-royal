@@ -99,21 +99,26 @@ export class MultiplayerEntities {
         // --- WEAPON ATTACHMENT ---
         let muzzlePoint = new Mesh(`muzzle_${id}`, this.scene);
         
-        // Search for the RightHand linked transform node in the instantiated hierarchy
-        let rightHandTransform: TransformNode | undefined;
-        rootNode.getChildTransformNodes(false).forEach(node => {
-            if (node.name.includes("RightHand")) {
-                rightHandTransform = node;
-            }
-        });
+        // Find the right hand bone to attach our primitive weapon
+        let rightHandBone: any = null;
+        if (entries.skeletons && entries.skeletons.length > 0) {
+            entries.skeletons[0].bones.forEach((bone: any) => {
+                if (bone.name.includes("RightHand")) {
+                    rightHandBone = bone;
+                }
+            });
+        }
 
-        if (rightHandTransform) {
+        if (rightHandBone) {
+            const weaponSocket = new TransformNode("WeaponSocket", this.scene);
+            weaponSocket.attachToBone(rightHandBone, rootNode);
+
             // Build a procedural 3rd-person gun (simplified AK)
             const matteBlack = new StandardMaterial("matteBlack", this.scene);
             matteBlack.diffuseColor = new Color3(0.1, 0.1, 0.1);
 
             const gunRoot = new TransformNode("ak47_3p", this.scene);
-            gunRoot.setParent(rightHandTransform);
+            gunRoot.parent = weaponSocket;
             
             // Receiver
             const receiver = MeshBuilder.CreateBox("receiver", { width: 0.05, height: 0.08, depth: 0.3 }, this.scene);
@@ -129,8 +134,7 @@ export class MultiplayerEntities {
             barrel.parent = gunRoot;
 
             // Orient the gun to point forward from the hand
-            gunRoot.position = new Vector3(-0.1, 0.1, 0);
-            gunRoot.rotationQuaternion = Quaternion.FromEulerAngles(Math.PI / 2, 0, 0); 
+            gunRoot.rotation = new Vector3(Math.PI / 2, 0, 0); 
             gunRoot.scaling = new Vector3(0.5, 0.5, 0.5); // 3rd person scale
             
             // Turn off picking for the gun
