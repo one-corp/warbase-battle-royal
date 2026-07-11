@@ -99,7 +99,6 @@ export class MultiplayerEntities {
         // --- WEAPON ATTACHMENT ---
         let muzzlePoint = new Mesh(`muzzle_${id}`, this.scene);
         
-        // Find the right hand bone to attach our primitive weapon
         let rightHandBone: any = null;
         if (entries.skeletons && entries.skeletons.length > 0) {
             entries.skeletons[0].bones.forEach((bone: any) => {
@@ -137,8 +136,9 @@ export class MultiplayerEntities {
             gunRoot.rotation = new Vector3(Math.PI / 2, 0, 0); 
             gunRoot.scaling = new Vector3(0.5, 0.5, 0.5); // 3rd person scale
             
-            // Turn off picking for the gun
+            // Prevent frustum culling and picking
             gunRoot.getChildMeshes().forEach((m: any) => {
+                m.alwaysSelectAsActiveMesh = true;
                 m.isPickable = false;
             });
 
