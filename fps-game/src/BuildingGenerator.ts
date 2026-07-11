@@ -29,9 +29,9 @@ export function initBuildingTemplates(scene: Scene, shadowGenerator?: ShadowGene
     wallMat.metallic = 0.0;
     wallMat.roughness = 0.95;
     
-    // Add real brick texture to walls
-    const wallAlbedo = new Texture("https://playground.babylonjs.com/textures/brick.jpg", scene);
-    const wallBump = new Texture("https://playground.babylonjs.com/textures/brickn.jpg", scene);
+    // Add real concrete/rock texture to walls
+    const wallAlbedo = new Texture("https://playground.babylonjs.com/textures/rock.png", scene);
+    const wallBump = new Texture("https://playground.babylonjs.com/textures/rockn.png", scene);
     // Scale the texture so it tiles nicely across the 3x3 meter blocks
     wallAlbedo.uScale = 2;
     wallAlbedo.vScale = 2;

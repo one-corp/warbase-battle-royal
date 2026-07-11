@@ -193,14 +193,14 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
         if (currentAnim === name) return;
         const targetAnim = animGroups.find((ag: any) => ag.name.toLowerCase().includes(name));
         if (targetAnim) {
-            animGroups.forEach((ag: any) => ag.stop());
-            targetAnim.start(true);
+            // Remove hard .stop() so Babylon crossfades automatically
+            targetAnim.start(true, 1.0, targetAnim.from, targetAnim.to, false);
             currentAnim = name;
         } else if (name === "idle") {
             const fallback = animGroups.find((ag: any) => ag.name.toLowerCase().includes("tpose"));
             if (fallback) {
-                animGroups.forEach((ag: any) => ag.stop());
-                fallback.start(true);
+                // Remove hard .stop()
+                fallback.start(true, 1.0, fallback.from, fallback.to, false);
                 currentAnim = "idle";
             }
         }
