@@ -214,16 +214,18 @@ export function generateBuilding(
     
     // Position sign on the wall facing faceDirection
     const signY = Math.max(3, (heightTiles * TILE_SIZE) - 2); 
-    const offsetX = faceDirection.x * (width / 2 + 0.05);
-    const offsetZ = faceDirection.z * (depth / 2 + 0.05);
+    // 0.15 is half the wall thickness (0.3), 0.05 is the padding
+    const offsetX = faceDirection.x * (width / 2 + 0.15 + 0.05);
+    const offsetZ = faceDirection.z * (depth / 2 + 0.15 + 0.05);
     sign.position = new Vector3(positionX + offsetX, signY, positionZ + offsetZ);
     
     // Rotate sign to face the faceDirection
-    // A plane natively faces +Z (0, 0, 1)
-    if (faceDirection.x === 1) sign.rotation.y = Math.PI / 2;
-    else if (faceDirection.x === -1) sign.rotation.y = -Math.PI / 2;
-    else if (faceDirection.z === 1) sign.rotation.y = 0;
-    else if (faceDirection.z === -1) sign.rotation.y = Math.PI;
+    // A Babylon plane natively faces -Z (0, 0, -1)
+    if (faceDirection.x === 1) sign.rotation.y = -Math.PI / 2;
+    else if (faceDirection.x === -1) sign.rotation.y = Math.PI / 2;
+    else if (faceDirection.z === 1) sign.rotation.y = Math.PI;
+    else if (faceDirection.z === -1) sign.rotation.y = 0;
+
     
     // Create Emissive Dynamic Texture
     const dt = new DynamicTexture(`dt_${index}`, { width: 512, height: 512 }, scene, false);
@@ -238,6 +240,7 @@ export function generateBuilding(
     signMat.useAlphaFromDiffuseTexture = true; // Crucial for proper transparency over the wall!
     signMat.emissiveColor = new Color3(1.0, 0.2, 0.2); // Neon red
     signMat.disableLighting = true; // Make it purely glowing, ignoring shadows/lights
+    signMat.backFaceCulling = false; // Ensure it can be seen from both sides just in case
     
     sign.material = signMat;
 }
