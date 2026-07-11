@@ -38,14 +38,19 @@ export class NetworkManager {
 
         this.ws.onmessage = (event) => {
             try {
-                const data = JSON.parse(event.data);
-                
-                if (data.type === "respawn") {
-                    this.onRespawn();
-                } else if (data.type === "fire") {
-                    this.onFireReceived(data.payload.shooterId);
-                } else {
-                    this.onStateReceived(data);
+                // Split by newline in case the Go server batched multiple states/events
+                const lines = event.data.split("\n");
+                for (const line of lines) {
+                    if (!line.trim()) continue;
+                    const data = JSON.parse(line);
+                    
+                    if (data.type === "respawn") {
+                        this.onRespawn();
+                    } else if (data.type === "fire") {
+                        this.onFireReceived(data.payload.shooterId);
+                    } else {
+                        this.onStateReceived(data);
+                    }
                 }
             } catch (e) {
                 console.error("Error parsing game state:", e);
