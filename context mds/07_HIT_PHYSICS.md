@@ -29,14 +29,25 @@ const ray = new Ray(camera.position, spreadDir, activeConfig.range);
 const hit = scene.pickWithRay(ray);
 ```
 
-### 1.2 Environment Physics Interaction
-If the ray strikes an environmental mesh that has a physical Havok body (e.g., wooden crates), we apply an instant physical impulse to the hit point, causing crates to realistically flip or get knocked backward by gunfire.
+### 1.2 Environment Physics Interaction (Ammo Boxes / Crates)
+To make the world feel reactive to gunfire, we utilize Babylon's **Havok Physics Engine**. Small environmental props, like wooden crates or ammo boxes, are given physical weight and friction.
+
+For example, our ammo crates are instantiated with:
+```typescript
+new PhysicsAggregate(crate, PhysicsShapeType.BOX, { mass: 20, restitution: 0.1, friction: 0.8 }, scene);
+```
+- **Mass (20):** Heavy enough that players can't easily push them around just by walking into them.
+- **Restitution (0.1):** Very low bounciness so they act like heavy wooden/metal objects.
+
+When a Hitscan ray strikes an environmental mesh that has a physical body, we calculate an instant physical **Impulse** and apply it exactly at the hit coordinate (`hitPoint`). The force vector is simply the normalized direction of the bullet (`spreadDir`) scaled by a multiplier (e.g., `10`) to simulate kinetic impact.
 
 ```typescript
 if (hit.pickedMesh.physicsBody) {
-    hit.pickedMesh.physicsBody.applyImpulse(spreadDir.scale(10), hit.pickedPoint);
+    // scale(10) determines the kinetic impact force of the bullet
+    hit.pickedMesh.physicsBody.applyImpulse(spreadDir.scale(10), hitPoint);
 }
 ```
+This causes the crates to realistically flip, spin, or slide backward when shot, giving immense physical weight to the weapons.
 
 ---
 
