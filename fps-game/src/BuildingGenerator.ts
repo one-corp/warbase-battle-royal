@@ -12,8 +12,7 @@ import {
     ShadowGenerator,
     Texture,
     DynamicTexture,
-    StandardMaterial,
-    PointLight
+    StandardMaterial
 } from "@babylonjs/core";
 
 let wallTemplate: Mesh;
@@ -112,6 +111,7 @@ export function generateBuilding(
     heightTiles: number, 
     positionX: number, 
     positionZ: number, 
+    faceDirection: Vector3,
     scene: Scene,
     shadowGenerator?: ShadowGenerator
 ) {
@@ -212,30 +212,32 @@ export function generateBuilding(
     const signSize = 2.0;
     const sign = MeshBuilder.CreatePlane(`sign_${index}`, { width: signSize, height: signSize }, scene);
     
-    // Position sign on the front wall (facing -Z) near the top or middle
+    // Position sign on the wall facing faceDirection
     const signY = Math.max(3, (heightTiles * TILE_SIZE) - 2); 
-    sign.position = new Vector3(positionX, signY, positionZ - (depth / 2) - 0.05); // slightly out from the wall
-    sign.rotation.y = Math.PI; // Face outwards (-Z)
+    const offsetX = faceDirection.x * (width / 2 + 0.05);
+    const offsetZ = faceDirection.z * (depth / 2 + 0.05);
+    sign.position = new Vector3(positionX + offsetX, signY, positionZ + offsetZ);
+    
+    // Rotate sign to face the faceDirection
+    // A plane natively faces +Z (0, 0, 1)
+    if (faceDirection.x === 1) sign.rotation.y = Math.PI / 2;
+    else if (faceDirection.x === -1) sign.rotation.y = -Math.PI / 2;
+    else if (faceDirection.z === 1) sign.rotation.y = 0;
+    else if (faceDirection.z === -1) sign.rotation.y = Math.PI;
     
     // Create Emissive Dynamic Texture
     const dt = new DynamicTexture(`dt_${index}`, { width: 512, height: 512 }, scene, false);
     const font = "bold 250px Arial";
     // Draw text: text, x, y, font, text color, background color, invertY
+    // Use clearColor = "transparent" so the rest of the plane is invisible
     dt.drawText(index.toString().padStart(2, '0'), null, 350, font, "white", "transparent", true, true);
     
     const signMat = new StandardMaterial(`signMat_${index}`, scene);
     signMat.diffuseTexture = dt;
     signMat.diffuseTexture.hasAlpha = true;
+    signMat.useAlphaFromDiffuseTexture = true; // Crucial for proper transparency over the wall!
     signMat.emissiveColor = new Color3(1.0, 0.2, 0.2); // Neon red
     signMat.disableLighting = true; // Make it purely glowing, ignoring shadows/lights
     
     sign.material = signMat;
-    
-    // Add Artificial Lighting (PointLight)
-    // We add a light right where the sign is to cast its red glow onto the walls and ground!
-    const signLight = new PointLight(`signLight_${index}`, sign.position, scene);
-    signLight.diffuse = new Color3(1.0, 0.2, 0.2); // Match neon red
-    signLight.specular = new Color3(1.0, 0.2, 0.2);
-    signLight.intensity = 0.8;
-    signLight.range = 15;
 }

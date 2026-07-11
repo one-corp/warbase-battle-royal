@@ -1,5 +1,6 @@
 import {
     Scene,
+    Vector3,
     MeshBuilder,
     Color3,
     PhysicsAggregate,
@@ -59,23 +60,23 @@ export function setupEnvironment(scene: Scene, shadowGenerator?: ShadowGenerator
     let buildingIndex = 1;
 
     // Generate solid wall of buildings on all 4 sides
-    const spawnBuildingEdge = (x: number, z: number) => {
+    const spawnBuildingEdge = (x: number, z: number, faceDirection: Vector3) => {
         const heightTiles = 5 + Math.floor(Math.random() * 8); // 5 to 12 floors
         const widthTiles = 4; // Constant width so they snap perfectly
         const depthTiles = 4; 
-        generateBuilding(buildingIndex++, widthTiles, depthTiles, heightTiles, x, z, scene, shadowGenerator);
+        generateBuilding(buildingIndex++, widthTiles, depthTiles, heightTiles, x, z, faceDirection, scene, shadowGenerator);
     };
 
     // Top & Bottom Walls
     for (let x = -perimeterSize; x <= perimeterSize; x += buildingSpacing) {
-        spawnBuildingEdge(x, perimeterSize);
-        spawnBuildingEdge(x, -perimeterSize);
+        spawnBuildingEdge(x, perimeterSize, new Vector3(0, 0, -1)); // Top faces -Z
+        spawnBuildingEdge(x, -perimeterSize, new Vector3(0, 0, 1)); // Bottom faces +Z
     }
 
     // Left & Right Walls (Avoid corners)
     for (let z = -perimeterSize + buildingSpacing; z <= perimeterSize - buildingSpacing; z += buildingSpacing) {
-        spawnBuildingEdge(-perimeterSize, z);
-        spawnBuildingEdge(perimeterSize, z);
+        spawnBuildingEdge(-perimeterSize, z, new Vector3(1, 0, 0)); // Left faces +X
+        spawnBuildingEdge(perimeterSize, z, new Vector3(-1, 0, 0)); // Right faces -X
     }
 
     // 1.5 Park Cover / Obstacles (Showcasing Babylon Primitives)
