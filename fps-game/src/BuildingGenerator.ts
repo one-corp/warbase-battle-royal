@@ -12,7 +12,8 @@ import {
     ShadowGenerator,
     Texture,
     DynamicTexture,
-    StandardMaterial
+    StandardMaterial,
+    PointLight
 } from "@babylonjs/core";
 
 let wallTemplate: Mesh;
@@ -27,18 +28,18 @@ export function initBuildingTemplates(scene: Scene, shadowGenerator?: ShadowGene
 
     // 1. Materials
     const wallMat = new PBRMaterial("wallMat", scene);
-    wallMat.albedoColor = new Color3(0.8, 0.8, 0.8); // Base tint
+    wallMat.albedoColor = new Color3(1, 1, 1); // Reset to pure white for natural concrete color
     wallMat.metallic = 0.0;
     wallMat.roughness = 0.95;
     
     // Add real concrete/rock texture to walls
-    const wallAlbedo = new Texture("https://playground.babylonjs.com/textures/rock.png", scene);
-    const wallBump = new Texture("https://playground.babylonjs.com/textures/rockn.png", scene);
+    const wallAlbedo = new Texture("https://playground.babylonjs.com/textures/floor.png", scene);
+    const wallBump = new Texture("https://playground.babylonjs.com/textures/floor_bump.PNG", scene);
     // Scale the texture so it tiles nicely across the 3x3 meter blocks
     wallAlbedo.uScale = 2;
-    wallAlbedo.vScale = 2;
+    wallAlbedo.vScale = 4;
     wallBump.uScale = 2;
-    wallBump.vScale = 2;
+    wallBump.vScale = 4;
     
     wallMat.albedoTexture = wallAlbedo;
     wallMat.bumpTexture = wallBump;
@@ -229,4 +230,12 @@ export function generateBuilding(
     signMat.disableLighting = true; // Make it purely glowing, ignoring shadows/lights
     
     sign.material = signMat;
+    
+    // Add Artificial Lighting (PointLight)
+    // We add a light right where the sign is to cast its red glow onto the walls and ground!
+    const signLight = new PointLight(`signLight_${index}`, sign.position, scene);
+    signLight.diffuse = new Color3(1.0, 0.2, 0.2); // Match neon red
+    signLight.specular = new Color3(1.0, 0.2, 0.2);
+    signLight.intensity = 0.8;
+    signLight.range = 15;
 }

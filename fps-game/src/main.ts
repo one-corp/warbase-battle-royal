@@ -54,7 +54,7 @@ async function createScene(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElem
     scene.enablePhysics(new Vector3(0, -9.81, 0), hk);
 
     // 1. Image Based Lighting & Skybox
-    const envTexture = CubeTexture.CreateFromPrefilteredData("https://playground.babylonjs.com/textures/environment.env", scene);
+    const envTexture = CubeTexture.CreateFromPrefilteredData("https://playground.babylonjs.com/textures/Runyon_Canyon_A_2k_cube_specular.env", scene);
     scene.environmentTexture = envTexture;
     scene.createDefaultSkybox(envTexture, true, 1000, 0.3);
 
