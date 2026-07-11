@@ -51,21 +51,21 @@ This causes the crates to realistically flip, spin, or slide backward when shot,
 
 ---
 
-## 2. Remote Player Hit Detection
+## 2. Shooting Another Player (Step-by-Step)
 
-### 2.1 Mesh Metadata Tagging
-To identify *who* was shot, every sub-mesh of a remote player's 3D model (e.g., the `Soldier.glb`) is recursively tagged with their `playerId` during the spawning phase in `MultiplayerEntities`.
+### Step 1: Mesh Tagging (The Setup)
+To identify *who* was shot, every sub-mesh of a remote player's 3D model (e.g., the `Soldier.glb`'s head, torso, and limbs) is secretly tagged with their unique network `playerId` during the spawning phase.
 
 ```typescript
-// Inside spawnPlayer()
+// Inside spawnPlayer() in MultiplayerEntities
 rootNode.getChildMeshes().forEach(mesh => {
     // Crucial: Tagging mesh with network ID for hitscan resolution
     mesh.metadata = { playerId: id }; 
 });
 ```
 
-### 2.2 Resolving the Hit
-When the raycast strikes a mesh, we simply check the `metadata` property. If it contains a `playerId`, we have successfully hit an enemy.
+### Step 2: The Raycast (The Shot)
+When you click to shoot, the `WeaponSystem` fires an invisible laser line (a `Ray`) out of your camera. If that ray collides with a mesh, the game checks: *"Does this mesh have a `playerId` tag?"*
 
 ```typescript
 if (hit.pickedMesh.metadata && hit.pickedMesh.metadata.playerId) {
@@ -74,16 +74,16 @@ if (hit.pickedMesh.metadata && hit.pickedMesh.metadata.playerId) {
     // Transmit the damage event to the authoritative Go server
     networkManager.sendHit(targetId, activeConfig.damage);
     
-    // Trigger local UI feedback (Hitmarker)
+    // Trigger local UI feedback
     showHitmarker();
 }
 ```
 
 ---
 
-## 3. UI Feedback: Hitmarkers
+## 3. Visual Feedback (The Hitmarker)
 
-When a shot successfully strikes a remote player mesh, we provide instant visual feedback to the shooter. We achieve this by flashing the center UI crosshair bright **Red** for 100 milliseconds before returning it to White.
+Before the server even knows about the shot, your local client instantly gives you visual feedback. It flashes your UI crosshair bright **Red** for 100 milliseconds to confirm the impact. This instant client-side prediction makes the combat feel incredibly snappy.
 
 ```typescript
 crosshairH.color = "red";

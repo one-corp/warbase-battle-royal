@@ -23,14 +23,24 @@ Our game currently uses a **Client-Authoritative** hit detection model. This is 
 
 ---
 
-## 2. Server-Authoritative State (Health & Death)
+## 2. Server-Authoritative Validation (Anti-Cheat & Health)
 
 While the client decides *if* a hit lands, the **Go Server** is the absolute authority on Health, Kills, Deaths, and whether a player is alive or dead.
 
-### The Go Server Loop (`hub.go`):
-1. **Receiving Hits:** The server receives the `hit` payload. It looks up the target player in its internal memory map (`h.players`).
-2. **Validation:** The server checks `if !target.IsDead`. You cannot deal damage to a dead player.
-3. **Damage Calculation:** The server subtracts the damage from the target's Health. 
+### The Go Server Validation Loop (`hub.go`):
+When your client sends a lightweight `sendHit(targetId, damageAmount)` packet via WebSocket, the authoritative Go backend acts as the ultimate judge. 
+
+1. **Receiving Hits:** The server receives the `hit` payload. It looks up the target player and the shooter in its internal memory map (`h.players`).
+2. **Anti-Cheat Validation:** The server verifies:
+   - *Is the shooter actually alive?* (You can't deal damage if you just died).
+   - *Is the target actually alive?* (You can't deal damage to a dead player).
+   ```go
+   target, okTarget := h.players[hit.Target]
+   shooter, okShooter := h.players[message.SenderID]
+   
+   if okTarget && !target.IsDead { // Valid Hit!
+   ```
+3. **Damage Calculation:** If valid, the server subtracts the weapon's specific damage value from the target's HP. 
 4. **Death Trigger:** If Health drops to 0 or below, the server overrides the player's state:
    * Sets `Health = 0`
    * Sets `IsDead = true`
