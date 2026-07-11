@@ -9,7 +9,8 @@ import {
     PhysicsAggregate,
     PhysicsShapeType,
     CSG,
-    ShadowGenerator
+    ShadowGenerator,
+    Texture
 } from "@babylonjs/core";
 
 let wallTemplate: Mesh;
@@ -24,9 +25,21 @@ export function initBuildingTemplates(scene: Scene, shadowGenerator?: ShadowGene
 
     // 1. Materials
     const wallMat = new PBRMaterial("wallMat", scene);
-    wallMat.albedoColor = new Color3(0.55, 0.55, 0.55); // Concrete grey
+    wallMat.albedoColor = new Color3(0.8, 0.8, 0.8); // Base tint
     wallMat.metallic = 0.0;
     wallMat.roughness = 0.95;
+    
+    // Add real brick texture to walls
+    const wallAlbedo = new Texture("https://playground.babylonjs.com/textures/brick.jpg", scene);
+    const wallBump = new Texture("https://playground.babylonjs.com/textures/brickn.jpg", scene);
+    // Scale the texture so it tiles nicely across the 3x3 meter blocks
+    wallAlbedo.uScale = 2;
+    wallAlbedo.vScale = 2;
+    wallBump.uScale = 2;
+    wallBump.vScale = 2;
+    
+    wallMat.albedoTexture = wallAlbedo;
+    wallMat.bumpTexture = wallBump;
     
     // Glass Material
     const glassMat = new PBRMaterial("glassMat", scene);
