@@ -45,6 +45,7 @@ export function initBuildingTemplates(scene: Scene, shadowGenerator?: ShadowGene
     wallTemplate = MeshBuilder.CreateBox("wall_template", { width: TILE_SIZE, height: TILE_SIZE, depth: 0.3 }, scene);
     wallTemplate.material = wallMat;
     wallTemplate.alwaysSelectAsActiveMesh = true;
+    wallTemplate.receiveShadows = true;
 
     // 3. Window Wall Mesh (CSG Cutout)
     // Create the outer wall
@@ -60,6 +61,7 @@ export function initBuildingTemplates(scene: Scene, shadowGenerator?: ShadowGene
     
     windowTemplate = windowWallCSG.toMesh("window_template", wallMat, scene);
     windowTemplate.alwaysSelectAsActiveMesh = true;
+    windowTemplate.receiveShadows = true;
     
     // Cleanup temporary CSG meshes
     wallOuter.dispose();
@@ -77,6 +79,7 @@ export function initBuildingTemplates(scene: Scene, shadowGenerator?: ShadowGene
     roofTemplate = MeshBuilder.CreateBox("roof_template", { width: 1, height: 0.2, depth: 1 }, scene);
     roofTemplate.material = roofMat;
     roofTemplate.alwaysSelectAsActiveMesh = true;
+    roofTemplate.receiveShadows = true;
 
     if (shadowGenerator) {
         shadowGenerator.addShadowCaster(wallTemplate, true);

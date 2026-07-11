@@ -2,10 +2,14 @@ import './style.css';
 import {
     Scene,
     Vector3,
-    HemisphericLight,
+    DirectionalLight,
     Engine,
     HavokPlugin,
-    Quaternion
+    Quaternion,
+    CubeTexture,
+    CascadedShadowGenerator,
+    DefaultRenderingPipeline,
+    ImageProcessingConfiguration
 } from '@babylonjs/core';
 import HavokPhysics from '@babylonjs/havok';
 import "@babylonjs/loaders/glTF"; // Ensure GLTF loader is available
@@ -31,15 +35,43 @@ async function createScene(engine: Engine, canvas: HTMLCanvasElement) {
     const hk = new HavokPlugin(true, havokInstance);
     scene.enablePhysics(new Vector3(0, -9.81, 0), hk);
 
-    const light = new HemisphericLight("light", new Vector3(0, 1, 0), scene);
-    light.intensity = 1.0;
+    // 1. Image Based Lighting & Skybox
+    const envTexture = CubeTexture.CreateFromPrefilteredData("https://playground.babylonjs.com/textures/environment.env", scene);
+    scene.environmentTexture = envTexture;
+    scene.createDefaultSkybox(envTexture, true, 1000, 0.3);
 
-    initBuildingTemplates(scene);
-    setupEnvironment(scene);
+    // 2. Realistic Sun Lighting & Cascaded Shadows
+    const sun = new DirectionalLight("sun", new Vector3(-1, -2, -1), scene);
+    sun.position = new Vector3(20, 40, 20);
+    sun.intensity = 2.0;
+
+    const shadowGenerator = new CascadedShadowGenerator(2048, sun);
+    shadowGenerator.stabilizeCascades = true;
+    shadowGenerator.forceBackFacesOnly = true;
+    shadowGenerator.shadowMaxZ = 200;
+    shadowGenerator.usePercentageCloserFiltering = true;
+
+    initBuildingTemplates(scene, shadowGenerator);
+    setupEnvironment(scene, shadowGenerator);
 
     // await setupBots(scene, shadowGenerator); // Temporarily disable bots for multiplayer test
 
     const playerCamera = setupPlayer(scene, canvas, engine);
+
+    // 3. Cinematic Post-Processing
+    const pipeline = new DefaultRenderingPipeline("defaultPipeline", true, scene, [playerCamera]);
+    pipeline.samples = 4; // MSAA
+    pipeline.fxaaEnabled = true; // FXAA
+
+    // Tone Mapping (ACES for realistic brights/darks)
+    pipeline.imageProcessing.toneMappingEnabled = true;
+    pipeline.imageProcessing.toneMappingType = ImageProcessingConfiguration.TONEMAPPING_ACES;
+    pipeline.imageProcessing.exposure = 1.0;
+
+    // Bloom
+    pipeline.bloomEnabled = true;
+    pipeline.bloomThreshold = 0.8;
+    pipeline.bloomWeight = 0.3;
 
     return { scene, playerCamera, engine };
 }

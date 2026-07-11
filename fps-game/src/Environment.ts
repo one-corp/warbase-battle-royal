@@ -2,29 +2,16 @@ import {
     Scene,
     MeshBuilder,
     Color3,
-    Vector3,
     PhysicsAggregate,
     PhysicsShapeType,
-    DirectionalLight,
     ShadowGenerator,
     PBRMaterial,
-    Texture,
-    CubeTexture
+    Texture
 } from "@babylonjs/core";
 import { generateBuilding } from "./BuildingGenerator";
 
-export function setupEnvironment(scene: Scene): ShadowGenerator {
-    // 1. Environment Reflections (Required for PBR)
-    const envTexture = CubeTexture.CreateFromPrefilteredData("https://playground.babylonjs.com/textures/environment.dds", scene);
-    scene.environmentTexture = envTexture;
-    
-    scene.createDefaultEnvironment({
-        createSkybox: true,
-        skyboxSize: 1000,
-        skyboxColor: new Color3(0.5, 0.7, 1.0), // Blueish sky
-        createGround: false,
-        environmentTexture: envTexture
-    });
+export function setupEnvironment(scene: Scene, shadowGenerator?: ShadowGenerator) {
+    // The environment texture and skybox are now handled centrally in main.ts
 
     // 2. Create Ground (Asphalt/Roads)
     const ground = MeshBuilder.CreateGround("ground", { width: 100, height: 100 }, scene);
@@ -61,14 +48,7 @@ export function setupEnvironment(scene: Scene): ShadowGenerator {
     parkMat.albedoTexture = parkAlbedo;
     parkGround.material = parkMat;
 
-    // Sun & Shadows
-    const sun = new DirectionalLight("sun", new Vector3(-1, -2, -1), scene);
-    sun.position = new Vector3(20, 40, 20);
-    sun.intensity = 1.5;
-    
-    const shadowGenerator = new ShadowGenerator(2048, sun);
-    shadowGenerator.useBlurExponentialShadowMap = true;
-    shadowGenerator.blurKernel = 32;
+    // Shadows are handled centrally in main.ts using CascadedShadowGenerator
     ground.receiveShadows = true;
     parkGround.receiveShadows = true;
 
@@ -155,7 +135,9 @@ export function setupEnvironment(scene: Scene): ShadowGenerator {
         clone.position.y = template.name === "crate" ? 1 : (template.name === "block" || template.name === "barrel" ? 0.75 : 1.5);
         clone.rotation.y = Math.random() * Math.PI;
         
-        shadowGenerator.addShadowCaster(clone, true);
+        if (shadowGenerator) {
+            shadowGenerator.addShadowCaster(clone, true);
+        }
         clone.receiveShadows = true;
         
         // Add Physics Hitbox
@@ -182,11 +164,11 @@ export function setupEnvironment(scene: Scene): ShadowGenerator {
 
         crate.material = crateMat;
         crate.checkCollisions = true;
-        shadowGenerator.addShadowCaster(crate, true);
+        if (shadowGenerator) {
+            shadowGenerator.addShadowCaster(crate, true);
+        }
 
         // Dynamic physics for crates (wood is heavy and not bouncy)
         new PhysicsAggregate(crate, PhysicsShapeType.BOX, { mass: 20, restitution: 0.1, friction: 0.8 }, scene);
     }
-
-    return shadowGenerator;
 }
