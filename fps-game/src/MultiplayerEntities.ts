@@ -1,4 +1,4 @@
-import { Scene, AssetContainer, SceneLoader, Vector3, Quaternion, AnimationGroup, TransformNode, Mesh, ParticleSystem, Texture, Color4 } from "@babylonjs/core";
+import { Scene, AssetContainer, SceneLoader, Vector3, Quaternion, AnimationGroup, TransformNode, Mesh, ParticleSystem, Texture, Color4, StandardMaterial, Color3, MeshBuilder } from "@babylonjs/core";
 import type { PlayerState } from "./NetworkManager";
 
 const RENDER_DELAY = 100; // ms
@@ -14,7 +14,6 @@ interface RemotePlayer {
 export class MultiplayerEntities {
     private scene: Scene;
     private assetContainer: AssetContainer | null = null;
-    private weaponContainer: AssetContainer | null = null;
     private remotePlayers: Record<string, RemotePlayer> = {};
 
     constructor(scene: Scene) {
@@ -29,7 +28,6 @@ export class MultiplayerEntities {
 
     private async loadModel() {
         this.assetContainer = await SceneLoader.LoadAssetContainerAsync("./models/", `AnimatedSoldier.glb?v=${Date.now()}`, this.scene);
-        this.weaponContainer = await SceneLoader.LoadAssetContainerAsync("./models/", "ak47.glb", this.scene);
     }
 
     public updateNetworkState(globalState: Record<string, PlayerState>, localUsername: string) {
@@ -109,33 +107,39 @@ export class MultiplayerEntities {
             }
         });
 
-        if (this.weaponContainer && rightHandTransform) {
-            const weaponEntries = this.weaponContainer.instantiateModelsToScene(name => `weapon_${id}_${name}`, false);
-            const weaponRoot = weaponEntries.rootNodes[0] as TransformNode;
-            
-            // Set initial scale BEFORE parenting so setParent can preserve it properly
-            weaponRoot.scaling = new Vector3(0.3, 0.3, 0.3);
-            
-            // Use setParent to maintain absolute scale (prevents weapon from shrinking if bone is 0.01 scale)
-            weaponRoot.setParent(rightHandTransform);
+        if (rightHandTransform) {
+            // Build a procedural 3rd-person gun (simplified AK)
+            const matteBlack = new StandardMaterial("matteBlack", this.scene);
+            matteBlack.diffuseColor = new Color3(0.1, 0.1, 0.1);
 
-            // Tweak relative position/rotation so it sits in the hand for Mixamo rig
-            weaponRoot.position = new Vector3(-0.1, 0.1, 0); 
-            weaponRoot.rotationQuaternion = Quaternion.FromEulerAngles(Math.PI / 2, 0, 0);
-
-            muzzlePoint.parent = weaponRoot;
-            muzzlePoint.position = new Vector3(0, 0.1, 0.8);
-        } else if (this.weaponContainer) {
-            // Hard fallback: float weapon next to player if hand not found
-            const weaponEntries = this.weaponContainer.instantiateModelsToScene(name => `weapon_${id}_${name}`, false);
-            const weaponRoot = weaponEntries.rootNodes[0] as TransformNode;
+            const gunRoot = new TransformNode("ak47_3p", this.scene);
+            gunRoot.setParent(rightHandTransform);
             
-            weaponRoot.parent = rootNode;
-            weaponRoot.scaling = new Vector3(0.3, 0.3, 0.3);
-            weaponRoot.position = new Vector3(0.5, 1.2, 0.5); // Floating to the right
+            // Receiver
+            const receiver = MeshBuilder.CreateBox("receiver", { width: 0.05, height: 0.08, depth: 0.3 }, this.scene);
+            receiver.position = new Vector3(0, 0.04, 0.1);
+            receiver.material = matteBlack;
+            receiver.parent = gunRoot;
+            
+            // Barrel
+            const barrel = MeshBuilder.CreateCylinder("barrel", { diameter: 0.02, height: 0.4 }, this.scene);
+            barrel.rotation.x = Math.PI / 2;
+            barrel.position = new Vector3(0, 0.06, 0.45);
+            barrel.material = matteBlack;
+            barrel.parent = gunRoot;
 
-            muzzlePoint.parent = weaponRoot;
-            muzzlePoint.position = new Vector3(0, 0.1, 0.8);
+            // Orient the gun to point forward from the hand
+            gunRoot.position = new Vector3(-0.1, 0.1, 0);
+            gunRoot.rotationQuaternion = Quaternion.FromEulerAngles(Math.PI / 2, 0, 0); 
+            gunRoot.scaling = new Vector3(0.5, 0.5, 0.5); // 3rd person scale
+            
+            // Turn off picking for the gun
+            gunRoot.getChildMeshes().forEach((m: any) => {
+                m.isPickable = false;
+            });
+
+            muzzlePoint.parent = gunRoot;
+            muzzlePoint.position = new Vector3(0, 0.06, 0.65); // End of barrel
         } else {
             muzzlePoint.parent = rootNode;
             muzzlePoint.position = new Vector3(0, 1.2, 0.5);
