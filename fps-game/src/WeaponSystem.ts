@@ -228,24 +228,11 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
         // Unused block, can remain empty
     }
 
-    // Load AK47
-    const akContainer = await SceneLoader.LoadAssetContainerAsync("./models/", "ak47.glb", scene);
-    const akEntries = akContainer.instantiateModelsToScene();
-    const akRoot = akEntries.rootNodes[0] as TransformNode;
-    
-    // Convert PBR materials to Standard to guarantee lighting visibility, and force active
-    akRoot.getChildMeshes().forEach((m: any) => {
-        m.alwaysSelectAsActiveMesh = true;
-        m.isPickable = false;
-        if (m.material && m.material.getClassName() === "PBRMaterial") {
-            m.material.unlit = true;
-        }
-    });
-
-    // Create the Industry Standard AimPoint (Sight Node)
-    const aimPoint = new TransformNode("AimPoint", scene);
-    aimPoint.parent = akRoot;
-    aimPoint.position = new Vector3(0, 0.15, 0.4); // On top of the barrel, near the iron sights
+    // --- WEAPON SOCKET ARCHITECTURE ---
+    // We create a single socket attached to the hand bone. All weapons will be parented to this socket.
+    const weaponSocketRoot = new TransformNode("WeaponSocketRoot", scene);
+    const weaponSocketOffset = new TransformNode("WeaponSocketOffset", scene);
+    weaponSocketOffset.parent = weaponSocketRoot;
 
     // Find the right hand bone to attach our socket
     let rightHandBone: any = null;
@@ -257,51 +244,90 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
         });
     }
 
-    // --- WEAPON SOCKET ARCHITECTURE ---
-    // We create a single socket attached to the hand bone. All weapons will be parented to this socket.
-    // This allows us to perfectly position the grip once, and swapping weapons becomes trivial.
-    const weaponSocketRoot = new TransformNode("WeaponSocketRoot", scene);
-    const weaponSocketOffset = new TransformNode("WeaponSocketOffset", scene);
-    weaponSocketOffset.parent = weaponSocketRoot;
-
     if (rightHandBone) {
         weaponSocketRoot.attachToBone(rightHandBone, viewmodelRoot);
     } else {
         weaponSocketRoot.parent = swayRoot; // Fallback
     }
     
-    // Default socket offset (tweakable via Debug Keys)
+    // Default socket offset
     let socketPos = new Vector3(0, 0, 0);
     let socketRot = new Vector3(Math.PI / 2, 0, 0); // Mixamo hand bone usually points down Y axis
     weaponSocketOffset.position = socketPos;
     weaponSocketOffset.rotation = socketRot;
 
-    // Attach AK47 to the socket offset
-    akRoot.rotationQuaternion = null; 
-    akRoot.parent = weaponSocketOffset;
-    akRoot.position = Vector3.Zero();
-    akRoot.rotation = Vector3.Zero();
-    akRoot.scaling = new Vector3(0.3, 0.3, 0.3); // Scale for original 67KB model
-
-    // Load Pistol
-    const pistolContainer = await SceneLoader.LoadAssetContainerAsync("./models/", "pistol.glb", scene);
-    const pistolEntries = pistolContainer.instantiateModelsToScene();
-    const pistolRoot = pistolEntries.rootNodes[0] as TransformNode;
+    // --- NATIVE PROCEDURAL WEAPONS ---
+    const gunmetal = new StandardMaterial("gunmetal", scene);
+    gunmetal.diffuseColor = new Color3(0.2, 0.2, 0.2);
+    gunmetal.specularColor = new Color3(0.5, 0.5, 0.5);
     
+    const matteBlack = new StandardMaterial("matteBlack", scene);
+    matteBlack.diffuseColor = new Color3(0.05, 0.05, 0.05);
+
+    // 1. Build Native AK-47
+    const akRoot = new TransformNode("ak47", scene);
+    akRoot.parent = weaponSocketOffset;
+    
+    // The Grip is exactly at 0,0,0
+    const akGrip = MeshBuilder.CreateBox("akGrip", { width: 0.04, height: 0.12, depth: 0.06 }, scene);
+    akGrip.position = new Vector3(0, -0.06, 0);
+    akGrip.rotation.x = Math.PI / 8;
+    akGrip.material = matteBlack;
+    akGrip.parent = akRoot;
+    
+    const akReceiver = MeshBuilder.CreateBox("akReceiver", { width: 0.05, height: 0.08, depth: 0.3 }, scene);
+    akReceiver.position = new Vector3(0, 0.04, 0.1);
+    akReceiver.material = gunmetal;
+    akReceiver.parent = akRoot;
+    
+    const akBarrel = MeshBuilder.CreateCylinder("akBarrel", { diameter: 0.02, height: 0.4 }, scene);
+    akBarrel.rotation.x = Math.PI / 2;
+    akBarrel.position = new Vector3(0, 0.06, 0.45);
+    akBarrel.material = gunmetal;
+    akBarrel.parent = akRoot;
+
+    const akMag = MeshBuilder.CreateBox("akMag", { width: 0.04, height: 0.15, depth: 0.08 }, scene);
+    akMag.rotation.x = -Math.PI / 8;
+    akMag.position = new Vector3(0, -0.05, 0.2);
+    akMag.material = matteBlack;
+    akMag.parent = akRoot;
+
+    const akStock = MeshBuilder.CreateBox("akStock", { width: 0.04, height: 0.08, depth: 0.2 }, scene);
+    akStock.position = new Vector3(0, 0.02, -0.15);
+    akStock.material = gunmetal;
+    akStock.parent = akRoot;
+
+    akRoot.getChildMeshes().forEach((m: any) => {
+        m.alwaysSelectAsActiveMesh = true;
+        m.isPickable = false;
+    });
+
+    // 2. Build Native Pistol
+    const pistolRoot = new TransformNode("pistol", scene);
+    pistolRoot.parent = weaponSocketOffset;
+    
+    const pistolGrip = MeshBuilder.CreateBox("pistolGrip", { width: 0.03, height: 0.1, depth: 0.05 }, scene);
+    pistolGrip.position = new Vector3(0, -0.05, 0);
+    pistolGrip.rotation.x = Math.PI / 16;
+    pistolGrip.material = matteBlack;
+    pistolGrip.parent = pistolRoot;
+    
+    const pistolReceiver = MeshBuilder.CreateBox("pistolReceiver", { width: 0.04, height: 0.05, depth: 0.2 }, scene);
+    pistolReceiver.position = new Vector3(0, 0.025, 0.05);
+    pistolReceiver.material = gunmetal;
+    pistolReceiver.parent = pistolRoot;
+
     pistolRoot.getChildMeshes().forEach((m: any) => {
         m.alwaysSelectAsActiveMesh = true;
-        if (m.material && m.material.getClassName() === "PBRMaterial") {
-            m.material.unlit = true;
-        }
+        m.isPickable = false;
     });
-    
-    pistolRoot.rotationQuaternion = null;
-    pistolRoot.parent = weaponSocketOffset;
-    pistolRoot.position = Vector3.Zero();
-    pistolRoot.rotation = Vector3.Zero();
-    pistolRoot.scaling = new Vector3(0.3, 0.3, 0.3);
 
     pistolRoot.setEnabled(false); // Default to AK47
+
+    // Create the Industry Standard AimPoint (Sight Node)
+    const aimPoint = new TransformNode("AimPoint", scene);
+    aimPoint.parent = akRoot;
+    aimPoint.position = new Vector3(0, 0.08, 0.1); // On top of the receiver center
 
     // Muzzle Points (estimated relative to the weapon roots)
     const muzzlePoint = new Mesh("muzzle", scene);
@@ -379,7 +405,9 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
             currentAmmo = activeConfig.magSize;
             pistolRoot.setEnabled(false);
             akRoot.setEnabled(true);
-            updateUI();
+            pistolRoot.setEnabled(false);
+            aimPoint.parent = akRoot;
+            aimPoint.position = new Vector3(0, 0.08, 0.1);
             isReloading = false;
         }
         justPressed1 = input.weapon1;
