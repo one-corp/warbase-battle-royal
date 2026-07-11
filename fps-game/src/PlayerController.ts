@@ -98,7 +98,7 @@ export function setupPlayer(scene: Scene, canvas: HTMLCanvasElement, engine: Eng
 
     // Physics Constants
     const WALK_SPEED = 4.5;
-    const SPRINT_SPEED = 6.5;
+    const SPRINT_SPEED = 5.5; // Reduced from 6.5
     const CROUCH_SPEED = 2.0;
     
     const GROUND_ACCEL = 40;
@@ -106,7 +106,7 @@ export function setupPlayer(scene: Scene, canvas: HTMLCanvasElement, engine: Eng
     const AIR_ACCEL = 12;
     const AIR_DECEL = 5;
 
-    const JUMP_IMPULSE = 6.6;
+    const JUMP_IMPULSE = 5.5; // Reduced from 6.6
     const JUMP_COOLDOWN = 0.15;
 
     const BASE_FOV = 75;
