@@ -56,12 +56,14 @@ export function setupEnvironment(scene: Scene, shadowGenerator?: ShadowGenerator
     const perimeterSize = 41; // Road goes up to 35, buildings centered at 41
     const buildingSpacing = 12; // 4 tiles * 3m = 12m
 
+    let buildingIndex = 1;
+
     // Generate solid wall of buildings on all 4 sides
     const spawnBuildingEdge = (x: number, z: number) => {
         const heightTiles = 5 + Math.floor(Math.random() * 8); // 5 to 12 floors
         const widthTiles = 4; // Constant width so they snap perfectly
         const depthTiles = 4; 
-        generateBuilding(widthTiles, depthTiles, heightTiles, x, z, scene, shadowGenerator);
+        generateBuilding(buildingIndex++, widthTiles, depthTiles, heightTiles, x, z, scene, shadowGenerator);
     };
 
     // Top & Bottom Walls

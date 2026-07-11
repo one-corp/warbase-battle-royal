@@ -11,7 +11,9 @@ import {
     AbstractMesh,
     Mesh,
     Scalar,
-    SceneLoader
+    SceneLoader,
+    StandardMaterial,
+    Texture
 } from "@babylonjs/core";
 import { AdvancedDynamicTexture, Rectangle, TextBlock } from "@babylonjs/gui";
 import { input, playerState } from './PlayerController';
@@ -104,6 +106,20 @@ class RecoilController {
 }
 
 
+// --- Decal Management ---
+let bulletHoleMaterial: StandardMaterial | null = null;
+const decalQueue: Mesh[] = [];
+
+function getBulletHoleMaterial(scene: Scene): StandardMaterial {
+    if (!bulletHoleMaterial) {
+        bulletHoleMaterial = new StandardMaterial("bulletHoleMat", scene);
+        bulletHoleMaterial.diffuseTexture = new Texture("https://playground.babylonjs.com/textures/impact.png", scene);
+        bulletHoleMaterial.diffuseTexture.hasAlpha = true;
+        bulletHoleMaterial.zOffset = -1; // Prevent Z-fighting with the wall
+        bulletHoleMaterial.specularColor = new Color3(0, 0, 0); // Non-shiny
+    }
+    return bulletHoleMaterial;
+}
 
 function createMuzzleFlash(scene: Scene, parent: AbstractMesh): ParticleSystem {
     const ps = new ParticleSystem("muzzleFlash", 15, scene);
@@ -524,6 +540,24 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
                 // If we hit a physics object, push it
                 if (hit.pickedMesh.physicsBody) {
                     hit.pickedMesh.physicsBody.applyImpulse(spreadDir.scale(10), hitPoint);
+                } else if (!hit.pickedMesh.metadata?.playerId) {
+                    // Spawn a Decal on static geometry (walls, ground)
+                    const decalSize = new Vector3(0.3, 0.3, 0.3);
+                    const decal = MeshBuilder.CreateDecal("bulletHole", hit.pickedMesh, {
+                        position: hitPoint,
+                        normal: hit.getNormal(true) || hit.pickedMesh.getFacetNormal(hit.faceId).normalize(),
+                        size: decalSize,
+                        angle: Math.random() * Math.PI * 2
+                    });
+                    
+                    decal.material = getBulletHoleMaterial(scene);
+                    decal.isPickable = false; // Bullets shouldn't hit other bullet holes
+                    
+                    decalQueue.push(decal);
+                    if (decalQueue.length > 50) {
+                        const oldDecal = decalQueue.shift();
+                        if (oldDecal) oldDecal.dispose();
+                    }
                 }
 
                 // If we hit a remote player

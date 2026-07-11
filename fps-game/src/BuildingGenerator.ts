@@ -10,7 +10,9 @@ import {
     PhysicsShapeType,
     CSG,
     ShadowGenerator,
-    Texture
+    Texture,
+    DynamicTexture,
+    StandardMaterial
 } from "@babylonjs/core";
 
 let wallTemplate: Mesh;
@@ -103,6 +105,7 @@ export function initBuildingTemplates(scene: Scene, shadowGenerator?: ShadowGene
 }
 
 export function generateBuilding(
+    index: number,
     widthTiles: number, 
     depthTiles: number, 
     heightTiles: number, 
@@ -204,4 +207,26 @@ export function generateBuilding(
     physicsBox.position = new Vector3(positionX, roofY / 2, positionZ);
     physicsBox.isVisible = false; // Invisible physics barrier
     new PhysicsAggregate(physicsBox, PhysicsShapeType.BOX, { mass: 0, friction: 0.5, restitution: 0.0 }, scene);
+    // Generate a neon sign for the building number
+    const signSize = 2.0;
+    const sign = MeshBuilder.CreatePlane(`sign_${index}`, { width: signSize, height: signSize }, scene);
+    
+    // Position sign on the front wall (facing -Z) near the top or middle
+    const signY = Math.max(3, (heightTiles * TILE_SIZE) - 2); 
+    sign.position = new Vector3(positionX, signY, positionZ - (depth / 2) - 0.05); // slightly out from the wall
+    sign.rotation.y = Math.PI; // Face outwards (-Z)
+    
+    // Create Emissive Dynamic Texture
+    const dt = new DynamicTexture(`dt_${index}`, { width: 512, height: 512 }, scene, false);
+    const font = "bold 250px Arial";
+    // Draw text: text, x, y, font, text color, background color, invertY
+    dt.drawText(index.toString().padStart(2, '0'), null, 350, font, "white", "transparent", true, true);
+    
+    const signMat = new StandardMaterial(`signMat_${index}`, scene);
+    signMat.diffuseTexture = dt;
+    signMat.diffuseTexture.hasAlpha = true;
+    signMat.emissiveColor = new Color3(1.0, 0.2, 0.2); // Neon red
+    signMat.disableLighting = true; // Make it purely glowing, ignoring shadows/lights
+    
+    sign.material = signMat;
 }
