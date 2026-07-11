@@ -6,6 +6,7 @@ import {
     PhysicsShapeType,
     Ray,
     Engine,
+    WebGPUEngine,
     UniversalCamera,
     Scalar
 } from "@babylonjs/core";
@@ -92,7 +93,7 @@ export let playerState = {
     isSprinting: false
 };
 
-export function setupPlayer(scene: Scene, canvas: HTMLCanvasElement, engine: Engine): UniversalCamera {
+export function setupPlayer(scene: Scene, canvas: HTMLCanvasElement, engine: Engine | WebGPUEngine): UniversalCamera {
     setupInputs(canvas);
 
     // Physics Constants

@@ -9,7 +9,8 @@ import {
     CubeTexture,
     CascadedShadowGenerator,
     DefaultRenderingPipeline,
-    ImageProcessingConfiguration
+    ImageProcessingConfiguration,
+    WebGPUEngine
 } from '@babylonjs/core';
 import HavokPhysics from '@babylonjs/havok';
 import "@babylonjs/loaders/glTF"; // Ensure GLTF loader is available
@@ -20,12 +21,29 @@ import { NetworkManager } from "./NetworkManager";
 import { MultiplayerEntities } from "./MultiplayerEntities";
 import { initBuildingTemplates } from "./BuildingGenerator";
 
-async function initEngine(canvas: HTMLCanvasElement): Promise<Engine> {
-    const engine = new Engine(canvas, true);
-    return engine;
+export let currentEngineType = "WebGL 2.0";
+
+async function initEngine(canvas: HTMLCanvasElement): Promise<Engine | WebGPUEngine> {
+    const webgpuSupported = await WebGPUEngine.IsSupportedAsync;
+    if (webgpuSupported) {
+        try {
+            const engine = new WebGPUEngine(canvas);
+            await engine.initAsync();
+            currentEngineType = "WebGPU";
+            console.log("Successfully initialized WebGPU Engine");
+            return engine;
+        } catch (e) {
+            console.warn("WebGPU initialization failed, falling back to WebGL", e);
+        }
+    } else {
+        console.warn("WebGPU not supported by this browser, falling back to WebGL 2.0");
+    }
+    
+    currentEngineType = "WebGL 2.0";
+    return new Engine(canvas, true);
 }
 
-async function createScene(engine: Engine, canvas: HTMLCanvasElement) {
+async function createScene(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElement) {
     const scene = new Scene(engine);
     
     scene.collisionsEnabled = true;
@@ -229,12 +247,19 @@ async function startGame(username: string) {
         // Scoreboard (TAB)
         const scoreboard = document.getElementById("scoreboardUI");
         const scoreboardBody = document.getElementById("scoreboardBody");
+        const engineIndicator = document.getElementById("engineTypeIndicator");
         
         window.addEventListener("keydown", (e) => {
             if (e.code === "Tab") {
                 e.preventDefault();
                 if (scoreboard && scoreboardBody) {
                     scoreboard.style.display = "block";
+                    
+                    if (engineIndicator) {
+                        engineIndicator.innerText = currentEngineType;
+                        engineIndicator.style.color = currentEngineType === "WebGPU" ? "#00FF00" : "#FFA500";
+                    }
+
                     let html = "";
                     for (const id in globalStateRef) {
                         const p = globalStateRef[id];
