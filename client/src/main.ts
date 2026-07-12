@@ -151,7 +151,7 @@ async function startGame(username: string) {
                     }
                 } else if (!myState.isDead && isLocalDead) {
                     // Server updated our state to alive, trigger respawn
-                    networkManager.onRespawn();
+                    networkManager.onRespawn(myState.x, myState.y, myState.z);
                 }
             }
 
@@ -303,21 +303,25 @@ async function startGame(username: string) {
     }
 }
 
-// Wait for DOM to load, then setup login overlay
-document.addEventListener("DOMContentLoaded", () => {
-    const joinBtn = document.getElementById("joinButton");
-    const loginUI = document.getElementById("loginUI");
-    const usernameInput = document.getElementById("usernameInput") as HTMLInputElement;
+// Setup login overlay
+const joinBtn = document.getElementById("joinButton") as HTMLButtonElement;
+const loginUI = document.getElementById("loginUI");
+const usernameInput = document.getElementById("usernameInput") as HTMLInputElement;
 
-    if (joinBtn && loginUI && usernameInput) {
-        joinBtn.addEventListener("click", () => {
-            const username = usernameInput.value.trim();
-            if (username) {
-                loginUI.style.display = "none";
-                startGame(username);
-            }
-        });
-    } else {
-        startGame("Guest");
-    }
-});
+if (joinBtn && loginUI && usernameInput) {
+    joinBtn.disabled = false;
+    joinBtn.innerText = "Join Game";
+    joinBtn.style.background = "#28a745";
+    joinBtn.style.cursor = "pointer";
+
+    joinBtn.addEventListener("click", () => {
+        let username = usernameInput.value.trim();
+        if (!username) {
+            username = "Guest_" + Math.floor(Math.random() * 1000);
+        }
+        loginUI.style.display = "none";
+        startGame(username);
+    });
+} else {
+    startGame("Guest");
+}

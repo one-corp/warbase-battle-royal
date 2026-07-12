@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "postbuild": "node -e \"const fs = require('fs'); let c = fs.readFileSync('dist/index.html', 'utf8'); c = c.replace(/ crossorigin/g, ''); fs.writeFileSync('dist/index.html', c);\"",
     "preview": "vite preview"
   },
   "devDependencies": {

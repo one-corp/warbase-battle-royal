@@ -13,9 +13,18 @@
         <h2 style="margin-top: 0; color: #333;">Join FPS Match</h2>
         <input type="text" id="usernameInput" placeholder="Enter Username" style="padding: 10px; font-size: 16px; width: 200px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 15px;" />
         <br>
-        <button id="joinButton" style="padding: 10px 20px; font-size: 16px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; transition: background 0.2s;">Join Game</button>
+        <button id="joinButton" disabled style="padding: 10px 20px; font-size: 16px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: not-allowed; transition: background 0.2s;">Loading Engine...</button>
+        <div id="errorLog" style="color: red; margin-top: 15px; font-size: 12px; word-wrap: break-word;"></div>
       </div>
     </div>
+    
+    <script>
+      window.onerror = function(msg, url, lineNo, columnNo, error) {
+          const log = document.getElementById("errorLog");
+          if (log) log.innerHTML += msg + "<br/>";
+          return false;
+      };
+    </script>
     
     <canvas id="renderCanvas"></canvas>
     

@@ -10,5 +10,9 @@ func (app *application) routes() http.Handler {
 	mux.HandleFunc("/healthcheck", app.healthcheckHandler)
 	mux.HandleFunc("/ws", app.wsHandler)
 
+	// Serve the compiled Vite frontend from ../client/dist
+	fileServer := http.FileServer(http.Dir("../client/dist"))
+	mux.Handle("/", fileServer)
+
 	return mux
 }

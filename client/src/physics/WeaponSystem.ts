@@ -371,6 +371,25 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
     crosshairV.background = "white";
     advancedTexture.addControl(crosshairV);
 
+    if (networkManager) {
+        networkManager.onHitConfirmed = () => {
+            crosshairH.color = "rgba(255, 0, 0, 0.7)";
+            crosshairV.color = "rgba(255, 0, 0, 0.7)";
+            setTimeout(() => {
+                crosshairH.color = "white";
+                crosshairV.color = "white";
+            }, 100);
+        };
+        networkManager.onKillConfirmed = () => {
+            crosshairH.color = "red";
+            crosshairV.color = "red";
+            setTimeout(() => {
+                crosshairH.color = "white";
+                crosshairV.color = "white";
+            }, 250); // Longer flash for kill
+        };
+    }
+
     const debugPanel = new Rectangle("debugPanel");
     debugPanel.width = "350px";
     debugPanel.height = "250px";
@@ -425,6 +444,7 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
             aimPoint.parent = akRoot;
             aimPoint.position = new Vector3(0, 0.08, 0.1);
             isReloading = false;
+            if (networkManager) networkManager.sendSwitchWeapon('ak47');
         }
         justPressed1 = input.weapon1;
 
@@ -435,6 +455,7 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
             pistolRoot.setEnabled(true);
             updateUI();
             isReloading = false;
+            if (networkManager) networkManager.sendSwitchWeapon('pistol');
         }
         justPressed2 = input.weapon2;
 
@@ -606,20 +627,12 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
                     // If multiplayer, send hit event with specific limb damage multiplier
                     if (networkManager) {
                         const targetId = hitMesh.metadata.playerId;
-                        const zone = hitMesh.metadata.zone || "body";
                         const mult = hitMesh.metadata.multiplier || 1.0;
                         
                         const finalDamage = Math.round(activeConfig.damage * mult);
                         
                         networkManager.sendHit(targetId, finalDamage);
-                        
-                        // Show hitmarker: flash crosshair red for headshot, semi-red for body
-                        crosshairH.color = zone === "head" ? "red" : "rgba(255, 0, 0, 0.7)";
-                        crosshairV.color = zone === "head" ? "red" : "rgba(255, 0, 0, 0.7)";
-                        setTimeout(() => {
-                            crosshairH.color = "white";
-                            crosshairV.color = "white";
-                        }, 100);
+                        // Hitmarker is now handled authoritatively by networkManager.onHitConfirmed
                     }
                 } else if (!hitMesh.metadata?.playerId) {
                     // We hit a static environment object, spawn decal
@@ -658,6 +671,7 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
         if ((input.reload || (wantsToFire && currentAmmo === 0)) && !isReloading && currentAmmo < activeConfig.magSize) {
             isReloading = true;
             reloadTimer = 0;
+            if (networkManager) networkManager.sendReload();
         }
 
         // Spread & Recoil Recovery
