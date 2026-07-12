@@ -1,4 +1,4 @@
-import './style.css';
+import './ui/style.css';
 import {
     Scene,
     Vector3,
@@ -14,12 +14,12 @@ import {
 } from '@babylonjs/core';
 import HavokPhysics from '@babylonjs/havok';
 import "@babylonjs/loaders/glTF"; // Ensure GLTF loader is available
-import { setupEnvironment } from './Environment';
-import { setupPlayer, input, playerState } from './PlayerController';
-import { setupWeaponSystem } from './WeaponSystem';
-import { NetworkManager } from "./NetworkManager";
-import { MultiplayerEntities } from "./MultiplayerEntities";
-import { initBuildingTemplates } from "./BuildingGenerator";
+import { setupEnvironment } from './engine/Environment';
+import { setupPlayer, input, playerState } from './physics/PlayerController';
+import { setupWeaponSystem } from './physics/WeaponSystem';
+import { NetworkManager } from "./network/NetworkManager";
+import { MultiplayerEntities } from "./network/MultiplayerEntities";
+import { initBuildingTemplates } from "./engine/BuildingGenerator";
 
 export let currentEngineType = "WebGL 2.0";
 

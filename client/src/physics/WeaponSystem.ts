@@ -155,8 +155,7 @@ function createShellEjector(scene: Scene, parent: AbstractMesh): ParticleSystem 
     return ps;
 }
 
-import type { NetworkManager } from "./NetworkManager";
-
+import type { NetworkManager } from "../network/NetworkManager";
 let playAnim: (name: string, forceRestart?: boolean) => void = () => {};
 
 export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, networkManager?: NetworkManager) {
