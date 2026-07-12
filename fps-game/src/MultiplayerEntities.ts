@@ -9,6 +9,7 @@ interface RemotePlayer {
     currentState: string;
     stateBuffer: { time: number, position: Vector3, rotation: Quaternion }[];
     flashSystem: ParticleSystem;
+    fireAnimTimer: number;
 }
 
 export class MultiplayerEntities {
@@ -90,6 +91,16 @@ export class MultiplayerEntities {
         const anims: Record<string, AnimationGroup> = {};
         entries.animationGroups.forEach(ag => {
             anims[ag.name] = ag;
+            
+            // Setup per-animation blending
+            if (ag.targetedAnimations) {
+                const isFiring = ag.name.toLowerCase().includes("fire") || ag.name.toLowerCase().includes("firing");
+                ag.targetedAnimations.forEach((ta: any) => {
+                    ta.animation.enableBlending = !isFiring;
+                    ta.animation.blendingSpeed = 0.05;
+                });
+            }
+            
             ag.stop();
         });
 
@@ -179,7 +190,8 @@ export class MultiplayerEntities {
             anims: anims,
             currentState: "idle",
             stateBuffer: [],
-            flashSystem: flash
+            flashSystem: flash,
+            fireAnimTimer: 0
         };
     }
 
@@ -191,6 +203,13 @@ export class MultiplayerEntities {
             setTimeout(() => {
                 player.flashSystem.stop();
             }, 50);
+            
+            player.fireAnimTimer = performance.now();
+            if (player.currentState === "run" || player.currentState === "firing walk") {
+                this.syncAnimation(player, "firing walk", false, true);
+            } else {
+                this.syncAnimation(player, "firing", false, true);
+            }
         }
     }
 
@@ -202,7 +221,7 @@ export class MultiplayerEntities {
         }
     }
 
-    private syncAnimation(player: RemotePlayer, networkAnim: string, isDead: boolean) {
+    private syncAnimation(player: RemotePlayer, networkAnim: string, isDead: boolean, forceRestart: boolean = false) {
         if (isDead) {
             player.mesh.getChildMeshes().forEach(m => m.isPickable = false);
             if (player.currentState !== "death") {
@@ -227,9 +246,18 @@ export class MultiplayerEntities {
         player.mesh.getChildMeshes().forEach(m => m.isPickable = true);
 
         networkAnim = networkAnim || "idle";
+        
+        if (networkAnim !== "firing" && networkAnim !== "firing walk" && player.fireAnimTimer && performance.now() - player.fireAnimTimer < 250) {
+            // If they were doing a firing animation, keep doing it instead of dropping to idle/run
+            if (player.currentState === "firing" || player.currentState === "firing walk") {
+                networkAnim = player.currentState;
+            } else {
+                networkAnim = "firing";
+            }
+        }
 
-        // Only switch animations if the requested animation changed
-        if (player.currentState !== networkAnim) {
+        // Only switch animations if the requested animation changed (or if forced)
+        if (player.currentState !== networkAnim || forceRestart) {
             // Stop current animations
             for (const name in player.anims) {
                 player.anims[name].stop();
@@ -238,7 +266,15 @@ export class MultiplayerEntities {
             let animFound = false;
             // Try exact match, or fallback to includes
             for (const name in player.anims) {
-                if (name.toLowerCase().includes(networkAnim.toLowerCase())) {
+                const lowerName = name.toLowerCase();
+                const lowerNet = networkAnim.toLowerCase();
+                
+                // If asking for "firing", don't accidentally get "firing walk"
+                if (lowerNet === "firing" && lowerName.includes("firing") && !lowerName.includes("walk")) {
+                    player.anims[name].start(true, 1.0, player.anims[name].from, player.anims[name].to, false); 
+                    animFound = true;
+                    break;
+                } else if (lowerNet !== "firing" && lowerName.includes(lowerNet)) {
                     player.anims[name].start(true, 1.0, player.anims[name].from, player.anims[name].to, false); 
                     animFound = true;
                     break;

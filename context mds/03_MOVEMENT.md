@@ -62,12 +62,13 @@ The equipped weapon modifies base walk speed:
 | Idle → Walk | Any WASD input | Instant (with acceleration) |
 | Walk → Sprint | Hold Shift + W (forward only) | 0.1s |
 | Sprint → Walk | Release Shift OR release W | 0.15s decel |
+| Sprint → Fire | Press Fire (cancels sprint) | Instant transition to Walk Speed + Firing Walk anim |
 | Walk → Crouch Walk | Press C | 0.2s (camera lerp) |
 | Crouch → Stand | Press C | 0.2s (with ceiling check) |
 | Any → Airborne | Space (or fall off edge) | Instant |
 | Airborne → Idle/Walk | Contact ground | Instant (with landing) |
-| Sprint → Fire | Left click | Auto-cancels sprint first |
-| Sprint → ADS | Right click | Auto-cancels sprint first |
+| Moving → Firing Walk | Press Fire while moving | Plays 'firing walk' animation |
+| Standing → Firing | Press Fire while standing | Plays 'firing' animation |
 
 ---
 

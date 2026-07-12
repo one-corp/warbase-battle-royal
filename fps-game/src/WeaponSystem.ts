@@ -157,7 +157,7 @@ function createShellEjector(scene: Scene, parent: AbstractMesh): ParticleSystem 
 
 import type { NetworkManager } from "./NetworkManager";
 
-let playAnim: (name: string) => void = () => {};
+let playAnim: (name: string, forceRestart?: boolean) => void = () => {};
 
 export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, networkManager?: NetworkManager) {
     let activeConfig = AK47;
@@ -194,19 +194,35 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
     
     animGroups.forEach((ag: any) => {
         console.log("Loaded Animation:", ag.name);
+        if (ag.targetedAnimations) {
+            const isFiring = ag.name.toLowerCase().includes("fire") || ag.name.toLowerCase().includes("firing");
+            ag.targetedAnimations.forEach((ta: any) => {
+                ta.animation.enableBlending = !isFiring;
+                ta.animation.blendingSpeed = 0.05; 
+            });
+        }
     });
 
-    playAnim = (name: string) => {
-        if (currentAnim === name) return;
-        const targetAnim = animGroups.find((ag: any) => ag.name.toLowerCase().includes(name));
+    playAnim = (name: string, forceRestart: boolean = false) => {
+        if (currentAnim === name && !forceRestart) return;
         
-        // Stop the current animation so Babylon can blend into the new one using the global AnimationPropertiesOverride
+        const targetAnim = animGroups.find((ag: any) => {
+            const agName = ag.name.toLowerCase();
+            if (name === "firing") {
+                return agName.includes("firing") && !agName.includes("walk");
+            }
+            return agName.includes(name);
+        });
+        
+        // Stop the current animation so Babylon can blend into the new one (or restart it)
         const currentAg = animGroups.find((ag: any) => ag.name.toLowerCase().includes(currentAnim));
         if (currentAg) {
             currentAg.stop();
         }
 
         if (targetAnim) {
+            // Mixamo firing animations should loop so they don't freeze on the last frame if held, 
+            // but we force restart them on every shot.
             targetAnim.start(true, 1.0, targetAnim.from, targetAnim.to, false);
             currentAnim = name;
         } else if (name === "idle") {
@@ -217,6 +233,11 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
             }
         }
     };
+
+    // Expose for Puppeteer testing
+    (window as any).debugAnimGroups = animGroups;
+    (window as any).debugGetCurrentAnim = () => currentAnim;
+    (window as any).debugPlayAnim = playAnim;
 
     playAnim("idle");
 
@@ -376,6 +397,7 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
     const recoil = new RecoilController();
     let adsProgress = 0;
     let kickbackZ = 0; // Procedural weapon kickback
+    let kickbackRotX = 0; // Procedural weapon rotational kick
     
     // Inventory State
     let lastGrenadeTime = 0;
@@ -532,7 +554,8 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
             currentSpread = Math.min(currentSpread + activeConfig.bloomPerShot, activeConfig.maxSpread);
             
             // Procedural Kickback (more violent hipfire, tighter ADS)
-            kickbackZ = isADS ? -0.03 : -0.06;
+            kickbackZ = isADS ? -0.02 : -0.05;
+            kickbackRotX = isADS ? -0.02 : -0.08; // Pitch weapon up
             
             flash.manualEmitCount = 5;
             flash.start();
@@ -544,6 +567,14 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
             const forward = camera.getDirection(Vector3.Forward());
             const right = camera.getDirection(Vector3.Right());
             const up = camera.getDirection(Vector3.Up());
+            
+            // Explicitly force restart the firing animation on click
+            const isMoving = input.forward || input.backward || input.left || input.right;
+            if (isMoving && playerState.isGrounded) {
+                playAnim("firing walk", true);
+            } else {
+                playAnim("firing", true);
+            }
             
             const spreadDir = forward
                 .add(right.scale(Math.sin(spreadAngle) * Math.cos(rot)))
@@ -678,21 +709,26 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
         // Apply Sway and Bob (diminished by ADS)
         const adsSwayMult = 1.0 - (adsProgress * 0.8); 
         swayRoot.rotation.y = swayX * adsSwayMult;
-        swayRoot.rotation.x = reloadRotX + (swayY * adsSwayMult); 
+        swayRoot.rotation.x = reloadRotX + (swayY * adsSwayMult) + kickbackRotX; 
         
         swayRoot.position.x = currentTargetPos.x + (bobX * adsSwayMult); 
         swayRoot.position.y = currentTargetPos.y + (bobY * adsSwayMult);
         swayRoot.position.z = currentTargetPos.z + kickbackZ; // Add kickback!
         
         kickbackZ = Scalar.Lerp(kickbackZ, 0, 15 * dt); // Spring back forward
+        kickbackRotX = Scalar.Lerp(kickbackRotX, 0, 15 * dt); // Spring back down
 
         // Animation State Machine (unified — no additive layer)
         // Priority: Firing > Jump > Run > Idle
-        if ((input.fire && currentAmmo > 0 && !isReloading) || performance.now() - lastFireTime < 150) {
-            playAnim("firing");
+        
+        // We give the firing animation at least 250ms to play out before the state machine overrides it
+        const isRecentFire = performance.now() - lastFireTime < 250;
+
+        if (isRecentFire) {
+            // Let the firing animation (which was forced restarted on click) continue playing
         } else if (!playerState.isGrounded) {
             playAnim("jump");
-        } else if (input.forward || input.backward || input.left || input.right) {
+        } else if (isMoving) {
             playAnim("run");
         } else {
             playAnim("idle");

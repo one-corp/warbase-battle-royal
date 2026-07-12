@@ -47,7 +47,7 @@ export class NetworkManager {
                     if (data.type === "respawn") {
                         this.onRespawn();
                     } else if (data.type === "fire") {
-                        this.onFireReceived(data.payload.shooterId);
+                        this.onFireReceived(data.payload.shooter);
                     } else {
                         this.onStateReceived(data);
                     }

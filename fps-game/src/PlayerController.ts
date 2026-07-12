@@ -207,6 +207,11 @@ export function setupPlayer(scene: Scene, canvas: HTMLCanvasElement, engine: Eng
         let targetSpeed = WALK_SPEED;
         if (isSprinting) targetSpeed = SPRINT_SPEED;
         if (isCrouching) targetSpeed = CROUCH_SPEED;
+        
+        // Firing penalty (slower tactical movement)
+        if (input.fire && isGrounded && !isCrouching) {
+            targetSpeed *= 0.6; // e.g., 4.5 becomes 2.7
+        }
 
         // Input Direction in World Space
         let dirX = 0, dirZ = 0;
@@ -264,7 +269,7 @@ export function setupPlayer(scene: Scene, canvas: HTMLCanvasElement, engine: Eng
         // Head Bob (simple)
         if (isGrounded && localDir.length() > 0) {
             const freq = isSprinting ? 3.0 : 2.5;
-            const amp = isSprinting ? 0.03 : 0.02;
+            const amp = isSprinting ? 0.015 : 0.01; // Reduced shake
             const time = performance.now() * 0.001;
             camera.position.y += Math.sin(time * Math.PI * 2 * freq) * amp;
         }
