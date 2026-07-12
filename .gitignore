@@ -9,3 +9,4 @@ build/
 *.dylib
 *.test
 *.out
+mixamo/
