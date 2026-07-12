@@ -411,3 +411,24 @@ A single `Hub` struct works for one match, but real games need hundreds of match
 
 ### F. Clock Synchronization (NTP)
 For accurate lag compensation and packet timestamping, the server and client need a synchronized clock, often implemented via a custom RTT (Round Trip Time) ping-pong mechanism during the initial WebSocket handshake.
+
+---
+
+## 9. Required Reading for Game Server Engineering
+
+To master the concepts above, there are three "holy grail" resources that form the foundation of modern game networking. Reading these will provide the equivalent of a Master's degree in Game Server Networking:
+
+### A. Valve's Source Multiplayer Networking
+This is the single most important document for an FPS developer. Valve (creators of Counter-Strike and Half-Life) published exactly how their engine handles networking, lag compensation, hit detection, and entity interpolation. It's the industry standard that almost every modern shooter copies.
+*   **Link:** [Source Multiplayer Networking (Valve Developer Community)](https://developer.valvesoftware.com/wiki/Source_Multiplayer_Networking)
+*   **Why read it:** It perfectly explains the concepts of "Tickrate", "Interpolation Delay", and why the server always needs to be authoritative.
+
+### B. Gaffer on Games: Networked Physics Series
+Glenn Fiedler is an absolute legend in game network programming. His website is basically a textbook for building multiplayer engines.
+*   **Link:** [Gaffer on Games: Networked Physics](https://gafferongames.com/post/networked_physics_2004/) (and his broader Game Networking Series)
+*   **Why read it:** It breaks down the math behind client-side prediction, how to sync physics over a network, and the tradeoffs between sending inputs vs. sending snapshot states. His article "Fix Your Timestep" is required reading for writing any game loop.
+
+### C. Gorilla WebSocket Chat Example (Go-Specific)
+Since this backend is built in Go, the `gorilla/websocket` library is the gold standard. The official chat example provided in their repository is the exact Hub-and-Spoke concurrency pattern outlined in our blueprint.
+*   **Link:** [Gorilla WebSocket Chat Example](https://github.com/gorilla/websocket/tree/master/examples/chat)
+*   **Why read it:** It shows the mathematically perfect, lock-free way to build a Go server with a `Hub` struct, `Client` structs, and channels for `readPumps` and `writePumps`. Using this architecture as the base for the game server will allow it to comfortably handle thousands of concurrent players without deadlocking or crashing.
