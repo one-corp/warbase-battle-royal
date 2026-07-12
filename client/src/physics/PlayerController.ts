@@ -48,8 +48,13 @@ export function setupInputs(canvas: HTMLCanvasElement) {
     
     window.addEventListener('keydown', (e) => {
         (window as any).debugKeys[e.key.toLowerCase()] = true;
-        const key = KEY_MAP[e.code];
-        if (key) (input as any)[key] = true;
+        if (!KEY_MAP[e.code]) return;
+        
+        if (e.code === 'Space') {
+            if (!e.repeat) input.jump = true;
+        } else {
+            (input as any)[KEY_MAP[e.code]] = true;
+        }
     });
 
     window.addEventListener('keyup', (e) => {
@@ -106,7 +111,7 @@ export function setupPlayer(scene: Scene, canvas: HTMLCanvasElement, engine: Eng
     const AIR_ACCEL = 12;
     const AIR_DECEL = 5;
 
-    const JUMP_IMPULSE = 5.5; // Reduced from 6.6
+    const JUMP_IMPULSE = 3.0; // Reduced to make jump shorter
     const JUMP_COOLDOWN = 0.15;
 
     const BASE_FOV = 75;
@@ -131,7 +136,7 @@ export function setupPlayer(scene: Scene, canvas: HTMLCanvasElement, engine: Eng
         scene
     );
     playerAggregate.body.setMassProperties({ inertia: Vector3.ZeroReadOnly }); // Prevent tipping
-    playerAggregate.body.setGravityFactor(1.5); // Increase gravity fall speed for snappiness
+    // Removed gravityFactor to allow for a smoother, more realistic fall transition
 
     // Create Camera
     const camera = new UniversalCamera("playerCamera", new Vector3(0, STAND_CAM_Y, 0), scene);
@@ -162,9 +167,10 @@ export function setupPlayer(scene: Scene, canvas: HTMLCanvasElement, engine: Eng
 
         const rayStart = playerMesh.position.clone();
         const rayDir = new Vector3(0, -1, 0);
-        const ray = new Ray(rayStart, rayDir, 1.0);
+        // Slightly shorter ray (0.95) to prevent jumping when barely off the ground
+        const ray = new Ray(rayStart, rayDir, 0.95); 
         
-        const rayResult = scene.pickWithRay(ray, (mesh) => mesh !== playerMesh);
+        const rayResult = scene.pickWithRay(ray, (mesh) => mesh !== playerMesh && !mesh.isDescendantOf(playerMesh));
         
         const wasGrounded = isGrounded;
         isGrounded = rayResult?.hit ?? false;
@@ -238,7 +244,8 @@ export function setupPlayer(scene: Scene, canvas: HTMLCanvasElement, engine: Eng
             right.normalize();
         }
 
-        const targetVel = forward.scale(localDir.z).add(right.scale(localDir.x)).scale(targetSpeed);
+        const STRAFE_MULTIPLIER = 0.5; // Strafe slower than moving forward
+        const targetVel = forward.scale(localDir.z).add(right.scale(localDir.x * STRAFE_MULTIPLIER)).scale(targetSpeed);
 
         // Acceleration
         const accel = isGrounded 
@@ -256,6 +263,7 @@ export function setupPlayer(scene: Scene, canvas: HTMLCanvasElement, engine: Eng
             isGrounded = false;
             coyoteTimer = 0;
             jumpCooldownTimer = JUMP_COOLDOWN;
+            input.jump = false; // Consume the jump so holding space doesn't auto-bhop
         }
 
         // Apply Velocity
@@ -265,13 +273,22 @@ export function setupPlayer(scene: Scene, canvas: HTMLCanvasElement, engine: Eng
         // Camera Lerps
         const targetCamY = isCrouching ? CROUCH_CAM_Y : STAND_CAM_Y;
         camera.position.y = Scalar.Lerp(camera.position.y, targetCamY, CROUCH_LERP_SPEED * dt);
-        
-        // Head Bob (simple)
+
+        // Cinematic Head Bob (Battlefield style weight shifting)
         if (isGrounded && localDir.length() > 0) {
-            const freq = isSprinting ? 3.0 : 2.5;
-            const amp = isSprinting ? 0.015 : 0.01; // Reduced shake
+            const freq = isSprinting ? 2.8 : 2.0;
+            const ampY = isSprinting ? 0.012 : 0.006;
+            const ampX = isSprinting ? 0.010 : 0.005;
             const time = performance.now() * 0.001;
-            camera.position.y += Math.sin(time * Math.PI * 2 * freq) * amp;
+            
+            // Vertical bob (sine wave)
+            camera.position.y += Math.sin(time * Math.PI * 2 * freq) * ampY;
+            
+            // Horizontal weight shift (side-to-side step)
+            camera.position.x = Math.cos(time * Math.PI * freq) * ampX;
+        } else {
+            // Return to center smoothly when stopping
+            camera.position.x = Scalar.Lerp(camera.position.x, 0, 10 * dt);
         }
     });
 

@@ -14,7 +14,6 @@ import {
 
 const GRENADE_RADIUS = 0.1;
 const GRENADE_FUSE = 3000; // ms
-const GRENADE_DAMAGE = 150;
 const EXPLOSION_RADIUS = 8;
 const EXPLOSION_FORCE = 30;
 
@@ -72,7 +71,6 @@ function detonateGrenade(grenade: Mesh, scene: Scene) {
         mesh.physicsBody!.applyImpulse(impulse, mesh.getAbsolutePosition());
         
         if (mesh.metadata?.isEnemy) {
-            console.log("Grenade Hit Enemy! Damage:", GRENADE_DAMAGE * forceMult);
         }
     }
 

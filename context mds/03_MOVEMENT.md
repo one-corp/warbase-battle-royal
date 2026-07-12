@@ -200,14 +200,14 @@ Small bar above health, only visible when stamina < 100%.
 | Parameter | Value | Notes |
 |-----------|-------|-------|
 | **Gravity** | -18 m/s² | Snappier than real (9.81). Tuned for game feel |
-| **Jump Impulse** | 6.6 m/s upward | Gives ~1.2m jump height |
-| **Jump Height** | ~1.2m | Enough to jump on crates/low walls |
+| **Jump Impulse** | 4.0 m/s upward | Reduced for a shorter, tighter jump profile |
+| **Jump Height** | ~0.45m | Enough to hurdle small obstacles, prevents floating |
 | **Air Control** | 30% of ground accel | Slight trajectory adjustment |
 | **Jump Cooldown** | 150ms after landing | Prevents bunny hopping |
 
 ### 5.2 Jump Height Formula
 
-$$v_0 = \sqrt{2 \cdot |g| \cdot h} = \sqrt{2 \times 18 \times 1.2} \approx 6.6 \text{ m/s}$$
+$$v_0 = \sqrt{2 \cdot |g| \cdot h} = \sqrt{2 \times 18 \times 0.45} \approx 4.0 \text{ m/s}$$
 
 ### 5.3 Implementation
 
@@ -373,48 +373,49 @@ function applyCameraRotation(dt: number) {
 
 ---
 
-## 9. Head Bobbing
+## 9. Cinematic Head Bobbing (Battlefield 6 Style)
 
-### 9.1 Values
+### 9.1 The Problem with Standard Bobbing
 
-| State | Vertical Amplitude | Horizontal Amplitude | Frequency (Hz) |
-|-------|-------------------|---------------------|-----------------|
-| Walk | 0.04m | 0.02m | 2.5 |
-| Sprint | 0.07m | 0.04m | 4.0 |
-| Crouch Walk | 0.02m | 0.01m | 2.0 |
-| Idle | 0.005m | 0.003m | 0.8 (breathing) |
+Traditional FPS head bobbing bounces the camera rapidly up and down like a pogo stick. This causes motion sickness and feels disconnected from human locomotion.
 
-### 9.2 Implementation
+### 9.2 Battlefield 6 Cinematic Weight Shift
+
+Instead of just vertical bouncing, we simulate the complex transfer of human weight from foot to foot:
+1. **Vertical Bob (Sine Wave):** Slight dip when stepping.
+2. **Horizontal Weight Shift (Cosine Wave):** The body sways left and right as weight transfers to each leg.
+3. **Camera Roll (Head Tilt):** A tiny fraction of Z-axis rotation to mimic neck tilt during heavy steps.
+
+### 9.3 Implementation
 
 ```typescript
-let bobTimer = 0;
-
-function updateHeadBob(dt: number, speed: number) {
-    if (speed < 0.1) {
-        // Idle breathing
-        bobTimer += dt * 0.8;
-        camera.position.y += Math.sin(bobTimer * Math.PI * 2) * 0.005;
-        return;
-    }
-
-    const config = isSprinting ? sprintBob : (isCrouching ? crouchBob : walkBob);
-    bobTimer += dt * config.frequency;
-
-    const vertBob = Math.sin(bobTimer * Math.PI * 2) * config.vertAmplitude;
-    const horizBob = Math.cos(bobTimer * Math.PI) * config.horizAmplitude;
-
-    // Apply as offset (don't replace camera.position, add to it)
-    camera.position.y += vertBob;
-    camera.position.x += horizBob;
+// Cinematic Head Bob (Battlefield style weight shifting)
+if (isGrounded && localDir.length() > 0) {
+    const freq = isSprinting ? 2.8 : 2.0;
+    const ampY = isSprinting ? 0.012 : 0.006;
+    const ampX = isSprinting ? 0.010 : 0.005;
+    const ampRoll = isSprinting ? 0.005 : 0.002;
+    const time = performance.now() * 0.001;
+    
+    // Vertical bob (sine wave)
+    camera.position.y += Math.sin(time * Math.PI * 2 * freq) * ampY;
+    
+    // Horizontal weight shift (side-to-side step)
+    camera.position.x = Math.cos(time * Math.PI * freq) * ampX;
+    
+    // Slight camera roll (head tilt)
+    camera.rotation.z = Math.cos(time * Math.PI * freq) * ampRoll;
+} else {
+    // Return to center smoothly when stopping
+    camera.position.x = Scalar.Lerp(camera.position.x, 0, 10 * dt);
+    camera.rotation.z = Scalar.Lerp(camera.rotation.z, 0, 10 * dt);
 }
 ```
 
-### 9.3 Best Practices
+### 9.4 Best Practices
 
 - **Subtlety is critical** — if the player consciously notices the bob, it's too much
 - Scale amplitude by actual velocity (zero bob when stopped)
-- Sync bob frequency with footstep sounds
-- Provide a setting to reduce or disable (accessibility)
 - Apply to **weapon viewmodel** as well (slightly offset timing for depth)
 
 ---

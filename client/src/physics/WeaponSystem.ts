@@ -4,7 +4,6 @@ import {
     MeshBuilder,
     Color3,
     Vector3,
-    Ray,
     TransformNode,
     ParticleSystem,
     Color4,
@@ -13,7 +12,8 @@ import {
     Scalar,
     SceneLoader,
     StandardMaterial,
-    Texture
+    Texture,
+    PhysicsMotionType
 } from "@babylonjs/core";
 import { AdvancedDynamicTexture, Rectangle, TextBlock } from "@babylonjs/gui";
 import { input, playerState } from './PlayerController';
@@ -192,7 +192,6 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
     
     
     animGroups.forEach((ag: any) => {
-        console.log("Loaded Animation:", ag.name);
         if (ag.targetedAnimations) {
             const isFiring = ag.name.toLowerCase().includes("fire") || ag.name.toLowerCase().includes("firing");
             ag.targetedAnimations.forEach((ta: any) => {
@@ -580,23 +579,51 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
                 .add(up.scale(Math.sin(spreadAngle) * Math.sin(rot)))
                 .normalize();
 
-            // BUGFIX: Use globalPosition so bullets shoot from the actual camera location, not the world origin!
-            const ray = new Ray(camera.globalPosition, spreadDir, 200);
+            // 4. Unified Havok Raycast for Hitscan & Decals
+            const endPoint = camera.globalPosition.add(spreadDir.scale(300)); // 300 meters range
+            let hitPoint = endPoint;
             
-            // Hit everything EXCEPT the player capsule
-            const hit = scene.pickWithRay(ray, (m) => m.name !== "player" && m.isPickable);
-            
-            let hitPoint = camera.globalPosition.add(spreadDir.scale(200));
+            // Ignore the local player's body so we don't shoot ourselves from the inside
+            const playerMesh = camera.parent as AbstractMesh;
+            const query: any = { shouldHitTriggers: true };
+            if (playerMesh && playerMesh.physicsBody) {
+                query.ignoreBody = playerMesh.physicsBody;
+            }
 
-            if (hit?.hit && hit.pickedMesh) {
-                hitPoint = hit.pickedPoint!;
+            const physResult = scene.getPhysicsEngine()?.raycast(camera.globalPosition, endPoint, query);
+
+            if (physResult && physResult.hasHit && physResult.body && physResult.body.transformNode) {
+                hitPoint = physResult.hitPointWorld;
+                const hitMesh = physResult.body.transformNode;
+
+            // Push dynamic physics objects
+                if (hitMesh.physicsBody && hitMesh.physicsBody.getMotionType() === PhysicsMotionType.DYNAMIC) {
+                    hitMesh.physicsBody.applyImpulse(spreadDir.scale(10), hitPoint);
+                }
                 
-                // If we hit a physics object, push it
-                if (hit.pickedMesh.physicsBody) {
-                    hit.pickedMesh.physicsBody.applyImpulse(spreadDir.scale(10), hitPoint);
-                } else if (!hit.pickedMesh.metadata?.playerId) {
-                    // Spawn a Decal on static geometry (walls, ground)
-                    const normal = hit.getNormal(true) || Vector3.Up();
+                // Verify if we hit a remote player hitbox
+                if (hitMesh.metadata && hitMesh.metadata.isHitbox && hitMesh.metadata.playerId && hitMesh.metadata.playerId !== networkManager?.username) {
+                    // If multiplayer, send hit event with specific limb damage multiplier
+                    if (networkManager) {
+                        const targetId = hitMesh.metadata.playerId;
+                        const zone = hitMesh.metadata.zone || "body";
+                        const mult = hitMesh.metadata.multiplier || 1.0;
+                        
+                        const finalDamage = Math.round(activeConfig.damage * mult);
+                        
+                        networkManager.sendHit(targetId, finalDamage);
+                        
+                        // Show hitmarker: flash crosshair red for headshot, semi-red for body
+                        crosshairH.color = zone === "head" ? "red" : "rgba(255, 0, 0, 0.7)";
+                        crosshairV.color = zone === "head" ? "red" : "rgba(255, 0, 0, 0.7)";
+                        setTimeout(() => {
+                            crosshairH.color = "white";
+                            crosshairV.color = "white";
+                        }, 100);
+                    }
+                } else if (!hitMesh.metadata?.playerId) {
+                    // We hit a static environment object, spawn decal
+                    const normal = physResult.hitNormalWorld;
                     const decal = MeshBuilder.CreatePlane("bulletHole", { size: 0.3 }, scene);
                     
                     // Offset slightly to prevent Z-fighting
@@ -613,25 +640,6 @@ export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, n
                         const oldDecal = decalQueue.shift();
                         if (oldDecal) oldDecal.dispose();
                     }
-                }
-
-                // If we hit a remote player
-                if (hit.pickedMesh.metadata && hit.pickedMesh.metadata.playerId) {
-                    const targetId = hit.pickedMesh.metadata.playerId;
-                    if (networkManager) {
-                        networkManager.sendHit(targetId, activeConfig.damage);
-                    }
-                    
-                    // Show hitmarker: flash crosshair red
-                    crosshairH.color = "red";
-                    crosshairV.color = "red";
-                    setTimeout(() => {
-                        crosshairH.color = "white";
-                        crosshairV.color = "white";
-                    }, 100);
-                } else if (hit.pickedMesh.metadata?.isEnemy) {
-                    // If it's a bot, show hit in console
-                    console.log("Hit enemy bot! Damage dealt: ", activeConfig.damage);
                 }
             }
 

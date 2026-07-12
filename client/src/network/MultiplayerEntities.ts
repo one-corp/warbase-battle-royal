@@ -1,4 +1,4 @@
-import { Scene, AssetContainer, SceneLoader, Vector3, Quaternion, AnimationGroup, TransformNode, Mesh, ParticleSystem, Texture, Color4, StandardMaterial, Color3, MeshBuilder } from "@babylonjs/core";
+import { Scene, AssetContainer, SceneLoader, Vector3, Quaternion, AnimationGroup, TransformNode, Mesh, ParticleSystem, Texture, Color4, StandardMaterial, Color3, MeshBuilder, PhysicsAggregate, PhysicsShapeType, PhysicsMotionType } from "@babylonjs/core";
 import type { PlayerState } from "./NetworkManager";
 
 const RENDER_DELAY = 100; // ms
@@ -83,10 +83,17 @@ export class MultiplayerEntities {
             rootNode.rotationQuaternion = Quaternion.Identity();
         }
 
-        // Tag all meshes with playerId so hitscan raycasts know who was hit
+        // Tag all meshes with playerId but DISABLE picking on them!
+        // This is critical to avoid CPU skinning performance traps.
         rootNode.getChildMeshes().forEach(mesh => {
             mesh.metadata = { playerId: id };
+            mesh.isPickable = false;
+            mesh.doNotSyncBoundingInfo = true;
+            mesh.alwaysSelectAsActiveMesh = true; // Fix disappearing body bug!
         });
+
+        // Create the invisible bone colliders
+        this.createHitboxes(rootNode, id);
 
         const anims: Record<string, AnimationGroup> = {};
         entries.animationGroups.forEach(ag => {
@@ -233,7 +240,7 @@ export class MultiplayerEntities {
                 
                 // Find death anim
                 for (const name in player.anims) {
-                    if (name.toLowerCase().includes("death")) {
+                    if (name.toLowerCase().includes("death") || name.toLowerCase().includes("dying")) {
                         // Play once, don't loop
                         player.anims[name].start(false, 1.0, player.anims[name].from, player.anims[name].to, false);
                         break;
@@ -319,5 +326,89 @@ export class MultiplayerEntities {
                 }
             }
         }
+    }
+
+    private createHitboxes(rootNode: TransformNode, id: string) {
+        const nodes = rootNode.getChildTransformNodes(false);
+        const findNode = (name: string) => nodes.find(n => n.name.toLowerCase().includes(name.toLowerCase()));
+
+        const headNode = findNode("Head");
+        const spineNode = findNode("Spine2") || findNode("Spine");
+        const leftArmNode = findNode("LeftArm");
+        const rightArmNode = findNode("RightArm");
+        const leftForeArmNode = findNode("LeftForeArm");
+        const rightForeArmNode = findNode("RightForeArm");
+        const leftLegNode = findNode("LeftUpLeg");
+        const rightLegNode = findNode("RightUpLeg");
+        const leftCalfNode = findNode("LeftLeg"); // mixamo usually calls calf "LeftLeg"
+        const rightCalfNode = findNode("RightLeg");
+
+        // We make them slightly visible for debugging purposes (alpha 0.0), 
+        // normally we would set isVisible = false
+        const hitboxMat = new StandardMaterial("hitboxMat", this.scene);
+        hitboxMat.alpha = 0.4; // Make hitboxes visible to debug hit registration!
+        hitboxMat.diffuseColor = new Color3(1, 0, 0);
+
+        const makeHitbox = (zone: string, type: "sphere"|"box"|"cylinder", size: any, mult: number, parentNode: TransformNode | undefined, offset: Vector3, rotation?: Vector3) => {
+            if (!parentNode) return;
+            let mesh: Mesh;
+            let shapeType: PhysicsShapeType;
+            if (type === "sphere") {
+                mesh = MeshBuilder.CreateSphere(`hitbox_${id}_${zone}`, size, this.scene);
+                shapeType = PhysicsShapeType.SPHERE;
+            } else if (type === "box") {
+                mesh = MeshBuilder.CreateBox(`hitbox_${id}_${zone}`, size, this.scene);
+                shapeType = PhysicsShapeType.BOX;
+            } else {
+                mesh = MeshBuilder.CreateCylinder(`hitbox_${id}_${zone}`, size, this.scene);
+                shapeType = PhysicsShapeType.CAPSULE;
+            }
+            
+            mesh.setParent(parentNode);
+            mesh.position = offset;
+            if (rotation) mesh.rotation = rotation;
+            
+            mesh.material = hitboxMat;
+            mesh.isPickable = false; // We use Havok raycast now, no need for Babylon picking
+            mesh.alwaysSelectAsActiveMesh = true; // prevent frustum culling issues when parent is out of view
+            
+            // Critical metadata for WeaponSystem raycast
+            mesh.metadata = { isHitbox: true, playerId: id, zone: zone, multiplier: mult };
+
+            // Attach Havok Physics Aggregate
+            const aggregate = new PhysicsAggregate(mesh, shapeType, { mass: 0 }, this.scene);
+            
+            // Fix 1: Make it follow the animation perfectly instead of being stuck at spawn
+            aggregate.body.setMotionType(PhysicsMotionType.ANIMATED);
+            aggregate.body.disablePreStep = false;
+
+            // Fix 2: Set as trigger so players don't walk into an invisible wall
+            // Triggers don't physically bump into anything, but they CAN be raycasted!
+            aggregate.shape.isTrigger = true; 
+        };
+
+        // Note: The character was exported from Blender in meters. 
+        // We must define these in meters (e.g. 0.2 instead of 20).
+        // Head
+        makeHitbox("head", "sphere", { diameter: 0.2 }, 2.5, headNode, new Vector3(0, 0.1, 0));
+        
+        // Torso
+        makeHitbox("torso", "box", { width: 0.35, height: 0.45, depth: 0.25 }, 1.0, spineNode, new Vector3(0, 0.1, 0));
+        
+        // Upper Arms
+        makeHitbox("arm", "cylinder", { diameter: 0.12, height: 0.25 }, 0.8, leftArmNode, new Vector3(0, 0.12, 0), new Vector3(0, 0, Math.PI/2));
+        makeHitbox("arm", "cylinder", { diameter: 0.12, height: 0.25 }, 0.8, rightArmNode, new Vector3(0, 0.12, 0), new Vector3(0, 0, -Math.PI/2));
+        
+        // Lower Arms
+        makeHitbox("arm", "cylinder", { diameter: 0.10, height: 0.25 }, 0.8, leftForeArmNode, new Vector3(0, 0.12, 0), new Vector3(0, 0, Math.PI/2));
+        makeHitbox("arm", "cylinder", { diameter: 0.10, height: 0.25 }, 0.8, rightForeArmNode, new Vector3(0, 0.12, 0), new Vector3(0, 0, -Math.PI/2));
+        
+        // Upper Legs
+        makeHitbox("leg", "cylinder", { diameter: 0.16, height: 0.45 }, 0.6, leftLegNode, new Vector3(0, 0.22, 0));
+        makeHitbox("leg", "cylinder", { diameter: 0.16, height: 0.45 }, 0.6, rightLegNode, new Vector3(0, 0.22, 0));
+        
+        // Lower Legs (Calves)
+        makeHitbox("leg", "cylinder", { diameter: 0.14, height: 0.45 }, 0.6, leftCalfNode, new Vector3(0, 0.22, 0));
+        makeHitbox("leg", "cylinder", { diameter: 0.14, height: 0.45 }, 0.6, rightCalfNode, new Vector3(0, 0.22, 0));
     }
 }

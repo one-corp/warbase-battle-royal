@@ -30,7 +30,6 @@ async function initEngine(canvas: HTMLCanvasElement): Promise<Engine | WebGPUEng
             const engine = new WebGPUEngine(canvas);
             await engine.initAsync();
             currentEngineType = "WebGPU";
-            console.log("Successfully initialized WebGPU Engine");
             return engine;
         } catch (e) {
             console.warn("WebGPU initialization failed, falling back to WebGL", e);
@@ -107,7 +106,6 @@ async function startGame(username: string) {
         // Network Setup
         const multiplayerEntities = new MultiplayerEntities(scene);
         const networkManager = new NetworkManager(username, () => {
-            console.log("Connected to Go Server!");
         });
 
         await setupWeaponSystem(scene, playerCamera, networkManager);
@@ -215,8 +213,12 @@ async function startGame(username: string) {
                 let anim = "idle";
                 if (!playerState.isGrounded) {
                     anim = "jump";
-                } else if (input.forward || input.backward || input.left || input.right) {
+                } else if (input.forward || input.backward) {
                     anim = "run";
+                } else if (input.left) {
+                    anim = "right";
+                } else if (input.right) {
+                    anim = "left";
                 }
 
                 networkManager.sendState(playerMesh.position, rot, anim);
@@ -237,11 +239,9 @@ async function startGame(username: string) {
 
         document.addEventListener("pointerlockchange", () => {
             if (document.pointerLockElement === canvas) {
-                console.log("Pointer locked");
                 isLocked = true;
                 if (pointerWarning) pointerWarning.style.display = "none";
             } else {
-                console.log("Pointer unlocked");
                 isLocked = false;
                 if (pointerWarning) pointerWarning.style.display = "block";
             }

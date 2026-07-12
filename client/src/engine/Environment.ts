@@ -131,7 +131,7 @@ export function setupEnvironment(scene: Scene, shadowGenerator?: ShadowGenerator
         
         // Pick random template
         const template = templates[Math.floor(Math.random() * templates.length)];
-        const clone = template.clone("obstacle_" + i);
+        const clone = template.createInstance("obstacle_" + i);
         
         clone.position.x = x;
         clone.position.z = z;
@@ -151,21 +151,23 @@ export function setupEnvironment(scene: Scene, shadowGenerator?: ShadowGenerator
         new PhysicsAggregate(clone, shape, { mass: 0 }, scene);
     }
 
-    // 3. Dynamic Targets (Crates to shoot)
     const crateMat = new PBRMaterial("crateMat", scene);
     crateMat.albedoColor = new Color3(0.8, 0.4, 0.1);
     crateMat.roughness = 0.9;
     crateMat.metallic = 0.0;
     crateMat.albedoTexture = new Texture("https://playground.babylonjs.com/textures/wood.jpg", scene);
 
+    const dynamicCrateTemplate = MeshBuilder.CreateBox("dynamic_crate_template", { size: 2 }, scene);
+    dynamicCrateTemplate.material = crateMat;
+    dynamicCrateTemplate.position.y = -100; // hide it
+
     for (let i = 0; i < 20; i++) {
-        const crate = MeshBuilder.CreateBox(`crate_${i}`, { size: 2 }, scene);
+        const crate = dynamicCrateTemplate.createInstance(`crate_${i}`);
         
         crate.position.x = (Math.random() - 0.5) * 40;
         crate.position.z = (Math.random() - 0.5) * 40;
         crate.position.y = 10 + Math.random() * 10; // Drop from sky
 
-        crate.material = crateMat;
         crate.checkCollisions = true;
         if (shadowGenerator) {
             shadowGenerator.addShadowCaster(crate, true);
