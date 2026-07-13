@@ -1,13 +1,9 @@
-.PHONY: dev client server
+.PHONY: build run
 
-dev:
-	@echo "Starting Development Environment..."
-	@make -j2 client server
+build:
+	@echo "Building Frontend Client..."
+	@cd client && npm run build
 
-client:
-	@echo "Starting Client..."
-	@cd client && npm run dev
-
-server:
-	@echo "Starting Server..."
+run: build
+	@echo "Starting Unified Game Server (Port 8080)..."
 	@cd server && go run ./cmd/game/

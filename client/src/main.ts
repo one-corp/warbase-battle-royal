@@ -13,10 +13,10 @@ import {
     WebGPUEngine
 } from '@babylonjs/core';
 import HavokPhysics from '@babylonjs/havok';
-import "@babylonjs/loaders/glTF"; // Ensure GLTF loader is available
-import { setupEnvironment } from './engine/Environment';
-import { setupPlayer, input, playerState } from './physics/PlayerController';
-import { setupWeaponSystem } from './physics/WeaponSystem';
+import "@babylonjs/loaders/glTF"; 
+import { EnvironmentManager } from './engine/Environment';
+import { PlayerController } from './physics/PlayerController';
+import { WeaponSystem } from './physics/WeaponSystem';
 import { NetworkManager } from "./network/NetworkManager";
 import { MultiplayerEntities } from "./network/MultiplayerEntities";
 import { initBuildingTemplates } from "./engine/BuildingGenerator";
@@ -69,14 +69,12 @@ async function createScene(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElem
     shadowGenerator.usePercentageCloserFiltering = true;
 
     initBuildingTemplates(scene, shadowGenerator);
-    setupEnvironment(scene, shadowGenerator);
-
-    // await setupBots(scene, shadowGenerator); // Temporarily disable bots for multiplayer test
-
-    const playerCamera = setupPlayer(scene, canvas, engine);
+    
+    new EnvironmentManager(scene, shadowGenerator);
+    const playerController = new PlayerController(scene, canvas, engine);
 
     // 3. Cinematic Post-Processing
-    const pipeline = new DefaultRenderingPipeline("defaultPipeline", true, scene, [playerCamera]);
+    const pipeline = new DefaultRenderingPipeline("defaultPipeline", true, scene, [playerController.camera]);
     pipeline.samples = 4; // MSAA
     pipeline.fxaaEnabled = true; // FXAA
 
@@ -90,7 +88,7 @@ async function createScene(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElem
     pipeline.bloomThreshold = 0.8;
     pipeline.bloomWeight = 0.3;
 
-    return { scene, playerCamera, engine };
+    return { scene, playerController, engine };
 }
 
 let globalStateRef: Record<string, any> = {};
@@ -101,14 +99,15 @@ async function startGame(username: string) {
 
     try {
         const engine = await initEngine(canvas);
-        const { scene, playerCamera } = await createScene(engine, canvas);
+        const { scene, playerController } = await createScene(engine, canvas);
 
         // Network Setup
         const multiplayerEntities = new MultiplayerEntities(scene);
         const networkManager = new NetworkManager(username, () => {
         });
 
-        await setupWeaponSystem(scene, playerCamera, networkManager);
+        const weaponSystem = new WeaponSystem(scene, playerController, networkManager);
+        await weaponSystem.init();
 
         let isLocalDead = false;
         let respawnTimerActive = false;
@@ -183,15 +182,11 @@ async function startGame(username: string) {
             if (timerSpan) timerSpan.innerText = "3";
 
             // Teleport back to spawn
-            if (playerCamera && playerCamera.parent) {
-                const mesh = playerCamera.parent as any;
-                if (mesh.physicsBody) {
-                    // Random spawn position near center
-                    const rx = (Math.random() - 0.5) * 20;
-                    const rz = (Math.random() - 0.5) * 20;
-                    mesh.position.set(rx, 5, rz);
-                    mesh.physicsBody.setLinearVelocity(Vector3.Zero());
-                }
+            if (playerController.mesh && playerController.aggregate.body) {
+                const rx = (Math.random() - 0.5) * 20;
+                const rz = (Math.random() - 0.5) * 20;
+                playerController.mesh.position.set(rx, 5, rz);
+                playerController.aggregate.body.setLinearVelocity(Vector3.Zero());
             }
         };
 
@@ -199,39 +194,43 @@ async function startGame(username: string) {
             multiplayerEntities.triggerFire(shooterId);
         };
 
-        // Network Tick Loop (30Hz)
-        setInterval(() => {
+        // Network Tick Loop (60Hz for smoother interpolation)
+        let networkTickTimer = 0;
+        scene.onBeforeRenderObservable.add(() => {
             if (isLocalDead) return;
-
-            if (playerCamera && playerCamera.parent) {
-                const playerMesh = playerCamera.parent as any;
-                // Derive rotation from yaw in player controller
-                const yaw = playerCamera.rotation.y;
-                const rot = Quaternion.RotationYawPitchRoll(yaw, 0, 0);
+            
+            networkTickTimer += engine.getDeltaTime();
+            if (networkTickTimer >= 1000 / 60) {
+                networkTickTimer = 0;
                 
-                // Determine animation state based on input and playerState
-                let anim = "idle";
-                if (!playerState.isGrounded) {
-                    anim = "jump";
-                } else if (input.forward || input.backward) {
-                    anim = "run";
-                } else if (input.left) {
-                    anim = "right";
-                } else if (input.right) {
-                    anim = "left";
-                }
+                if (playerController.mesh) {
+                    const yaw = playerController.camera.rotation.y;
+                    const rot = Quaternion.RotationYawPitchRoll(yaw, 0, 0);
+                    
+                    const input = playerController.input;
+                    const state = playerController.state;
+                    
+                    let anim = "idle";
+                    if (!state.isGrounded) {
+                        anim = "jump";
+                    } else if (input.forward || input.backward) {
+                        anim = "run";
+                    } else if (input.left) {
+                        anim = "right";
+                    } else if (input.right) {
+                        anim = "left";
+                    }
 
-                networkManager.sendState(playerMesh.position, rot, anim);
+                    networkManager.sendState(playerController.mesh.position, rot, anim);
+                }
             }
-        }, 1000 / 30);
+        });
 
         // UI and Pointer Lock
         let isLocked = false;
         const pointerWarning = document.getElementById("pointerWarning");
         
-        document.addEventListener("click", (e) => {
-            const target = e.target as HTMLElement;
-            if (target.id === "joinButton" || target.id === "usernameInput") return;
+        canvas.addEventListener("click", () => {
             if (!isLocked && !isLocalDead) {
                 engine.enterPointerlock();
             }
@@ -303,7 +302,6 @@ async function startGame(username: string) {
     }
 }
 
-// Setup login overlay
 const joinBtn = document.getElementById("joinButton") as HTMLButtonElement;
 const loginUI = document.getElementById("loginUI");
 const usernameInput = document.getElementById("usernameInput") as HTMLInputElement;

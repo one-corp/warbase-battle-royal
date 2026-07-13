@@ -1,6 +1,5 @@
 import {
     Scene,
-    UniversalCamera,
     MeshBuilder,
     Color3,
     Vector3,
@@ -16,31 +15,28 @@ import {
     PhysicsMotionType
 } from "@babylonjs/core";
 import { AdvancedDynamicTexture, Rectangle, TextBlock } from "@babylonjs/gui";
-import { input, playerState } from './PlayerController';
 import { throwGrenade } from './GrenadeSystem';
+import type { PlayerController } from './PlayerController';
+import type { NetworkManager } from "../network/NetworkManager";
 
 interface WeaponConfig {
     id: string;
     damage: number;
     headshotMultiplier: number;
-    fireRate: number;          // RPM
+    fireRate: number;
     magSize: number;
-    reloadTime: number;        // seconds
-    
-    baseSpread: number;        // degrees
-    bloomPerShot: number;      
-    maxSpread: number;         
-    bloomRecovery: number;     // degrees/second
-    
-    recoilVertical: number;    
-    recoilHorizontal: number;  
-    recoilRecovery: number;    
-    
-    adsFOV: number;            
-    adsTime: number;           
-    adsSpreadMult: number;     
-    adsRecoilMult: number;     
-    
+    reloadTime: number;
+    baseSpread: number;
+    bloomPerShot: number;
+    maxSpread: number;
+    bloomRecovery: number;
+    recoilVertical: number;
+    recoilHorizontal: number;
+    recoilRecovery: number;
+    adsFOV: number;
+    adsTime: number;
+    adsSpreadMult: number;
+    adsRecoilMult: number;
     hipPosition: Vector3;
     adsPosition: Vector3;
 }
@@ -70,8 +66,8 @@ const AK47: WeaponConfig = {
 const PISTOL: WeaponConfig = {
     id: 'pistol',
     damage: 25,
-    headshotMultiplier: 3.0, // High reward for headshots
-    fireRate: 400, // Semi-auto usually, but capped RPM
+    headshotMultiplier: 3.0,
+    fireRate: 400,
     magSize: 12,
     reloadTime: 1.5,
     baseSpread: 1.0,
@@ -82,7 +78,7 @@ const PISTOL: WeaponConfig = {
     recoilHorizontal: 0.01,
     recoilRecovery: 10.0,
     adsFOV: 65,
-    adsTime: 0.12, // Faster ADS
+    adsTime: 0.12,
     adsSpreadMult: 0.2,
     adsRecoilMult: 0.5,
     hipPosition: new Vector3(0.2, -0.2, 0.5),
@@ -95,7 +91,7 @@ class RecoilController {
     
     applyShot(config: WeaponConfig, isADS: boolean) {
         const mult = isADS ? config.adsRecoilMult : 1.0;
-        this.offsetY -= config.recoilVertical * mult; // negative pitches camera UP
+        this.offsetY -= config.recoilVertical * mult;
         this.offsetX += (Math.random() - 0.5) * 2 * config.recoilHorizontal * mult;
     }
     
@@ -105,654 +101,553 @@ class RecoilController {
     }
 }
 
+export class WeaponSystem {
+    private activeConfig: WeaponConfig = AK47;
+    private currentAmmo = this.activeConfig.magSize;
+    private lastFireTime = 0;
+    private isReloading = false;
+    private reloadTimer = 0;
+    private currentSpread = this.activeConfig.baseSpread;
+    private recoil = new RecoilController();
+    private adsProgress = 0;
+    private kickbackZ = 0;
+    private kickbackRotX = 0;
+    private lastGrenadeTime = 0;
+    private justPressed1 = false;
+    private justPressed2 = false;
+    private swayX = 0;
+    private swayY = 0;
+    private walkBobTimer = 0;
 
-// --- Decal Management ---
-let bulletHoleMaterial: StandardMaterial | null = null;
-const decalQueue: Mesh[] = [];
+    private bulletHoleMaterial: StandardMaterial | null = null;
+    private decalQueue: Mesh[] = [];
+    private currentAnim = "idle";
+    private playAnim: (name: string, forceRestart?: boolean) => void = () => {};
 
-function getBulletHoleMaterial(scene: Scene): StandardMaterial {
-    if (!bulletHoleMaterial) {
-        bulletHoleMaterial = new StandardMaterial("bulletHoleMat", scene);
-        bulletHoleMaterial.diffuseTexture = new Texture("https://playground.babylonjs.com/textures/impact.png", scene);
-        bulletHoleMaterial.diffuseTexture.hasAlpha = true;
-        bulletHoleMaterial.zOffset = -1; // Prevent Z-fighting with the wall
-        bulletHoleMaterial.specularColor = new Color3(0, 0, 0); // Non-shiny
+    private scene: Scene;
+    private player: PlayerController;
+    private networkManager?: NetworkManager;
+
+    constructor(
+        scene: Scene, 
+        player: PlayerController, 
+        networkManager?: NetworkManager
+    ) {
+        this.scene = scene;
+        this.player = player;
+        this.networkManager = networkManager;
     }
-    return bulletHoleMaterial;
-}
 
-function createMuzzleFlash(scene: Scene, parent: AbstractMesh): ParticleSystem {
-    const ps = new ParticleSystem("muzzleFlash", 15, scene);
-    ps.particleTexture = null as any; 
-    ps.emitter = parent;
-    ps.emitRate = 0;
-    ps.minLifeTime = 0.03;
-    ps.maxLifeTime = 0.08;
-    ps.minSize = 0.05;
-    ps.maxSize = 0.15;
-    ps.blendMode = ParticleSystem.BLENDMODE_ADD;
-    ps.color1 = new Color4(1.0, 0.8, 0.3, 1.0);
-    ps.colorDead = new Color4(1.0, 0.2, 0.0, 0.0);
-    return ps;
-}
+    public async init() {
+        const camera = this.player.camera;
+        
+        const oldRoot = this.scene.getNodeByName("swayRoot");
+        if (oldRoot) oldRoot.dispose();
+        
+        const swayRoot = new TransformNode("swayRoot", this.scene);
+        swayRoot.parent = camera;
 
-function createShellEjector(scene: Scene, parent: AbstractMesh): ParticleSystem {
-    const ps = new ParticleSystem("shells", 10, scene);
-    ps.particleTexture = null as any; 
-    ps.emitter = parent;
-    ps.emitRate = 0;
-    ps.minLifeTime = 1.0;
-    ps.maxLifeTime = 1.5;
-    ps.minSize = 0.03;
-    ps.maxSize = 0.04;
-    ps.color1 = new Color4(0.8, 0.7, 0.2, 1.0); // Brass
-    ps.color2 = new Color4(0.7, 0.6, 0.1, 1.0);
-    ps.colorDead = new Color4(0.5, 0.4, 0.1, 0.0);
-    
-    ps.direction1 = new Vector3(1, 1, 0);
-    ps.direction2 = new Vector3(2, 2, 0.5);
-    ps.gravity = new Vector3(0, -9.81, 0);
-    return ps;
-}
+        const container = await SceneLoader.LoadAssetContainerAsync("./models/", `AnimatedSoldier.glb?v=${Date.now()}`, this.scene);
+        const entries = container.instantiateModelsToScene();
+        const viewmodelRoot = entries.rootNodes[0] as TransformNode;
+        viewmodelRoot.parent = swayRoot;
+        viewmodelRoot.position = new Vector3(0, -1.6, -0.4); 
+        viewmodelRoot.rotation = new Vector3(0, 0, 0); 
+        
+        viewmodelRoot.getChildMeshes().forEach((m: any) => {
+            m.alwaysSelectAsActiveMesh = true;
+            m.isPickable = false;
+        });
 
-import type { NetworkManager } from "../network/NetworkManager";
-let playAnim: (name: string, forceRestart?: boolean) => void = () => {};
+        const animGroups = entries.animationGroups;
+        animGroups.forEach((ag: any) => {
+            if (ag.targetedAnimations) {
+                const isFiring = ag.name.toLowerCase().includes("fire") || ag.name.toLowerCase().includes("firing");
+                ag.targetedAnimations.forEach((ta: any) => {
+                    ta.animation.enableBlending = !isFiring;
+                    ta.animation.blendingSpeed = 0.05; 
+                });
+            }
+        });
 
-export async function setupWeaponSystem(scene: Scene, camera: UniversalCamera, networkManager?: NetworkManager) {
-    let activeConfig = AK47;
-    // Clean up old weapons for HMR
-    const oldRoot = scene.getNodeByName("swayRoot");
-    if (oldRoot) {
-        oldRoot.dispose();
-    }
-    
-    // Create a sway root to apply sway/bob independent of recoil
-    const swayRoot = new TransformNode("swayRoot", scene);
-    swayRoot.parent = camera;
+        this.playAnim = (name: string, forceRestart: boolean = false) => {
+            if (this.currentAnim === name && !forceRestart) return;
+            
+            const targetAnim = animGroups.find((ag: any) => {
+                const agName = ag.name.toLowerCase();
+                if (name === "firing") return agName.includes("firing") && !agName.includes("walk");
+                return agName.includes(name);
+            });
+            
+            const currentAg = animGroups.find((ag: any) => ag.name.toLowerCase().includes(this.currentAnim));
+            if (currentAg) currentAg.stop();
 
-    // Load Soldier model for viewmodel
-    const container = await SceneLoader.LoadAssetContainerAsync("./models/", `AnimatedSoldier.glb?v=${Date.now()}`, scene);
-    const entries = container.instantiateModelsToScene();
-    const viewmodelRoot = entries.rootNodes[0] as TransformNode;
-    viewmodelRoot.parent = swayRoot;
-    
-    // Position body so camera is in front of the face, and face forward
-    viewmodelRoot.position = new Vector3(0, -1.6, -0.4); 
-    viewmodelRoot.rotation = new Vector3(0, 0, 0); 
-    
+            if (targetAnim) {
+                targetAnim.start(true, 1.0, targetAnim.from, targetAnim.to, false);
+                this.currentAnim = name;
+            } else if (name === "idle") {
+                const fallback = animGroups.find((ag: any) => ag.name.toLowerCase().includes("tpose"));
+                if (fallback) {
+                    fallback.start(true, 1.0, fallback.from, fallback.to, false);
+                    this.currentAnim = "idle";
+                }
+            }
+        };
 
-    
-    viewmodelRoot.getChildMeshes().forEach((m: any) => {
-        m.alwaysSelectAsActiveMesh = true;
-        m.isPickable = false;
-    });
+        this.playAnim("idle");
 
-    let currentAnim = "idle";
-    const animGroups = entries.animationGroups;
-    
-    
-    animGroups.forEach((ag: any) => {
-        if (ag.targetedAnimations) {
-            const isFiring = ag.name.toLowerCase().includes("fire") || ag.name.toLowerCase().includes("firing");
-            ag.targetedAnimations.forEach((ta: any) => {
-                ta.animation.enableBlending = !isFiring;
-                ta.animation.blendingSpeed = 0.05; 
+        const weaponSocketRoot = new TransformNode("WeaponSocketRoot", this.scene);
+        const weaponSocketOffset = new TransformNode("WeaponSocketOffset", this.scene);
+        weaponSocketOffset.parent = weaponSocketRoot;
+
+        let rightHandBone: any = null;
+        if (entries.skeletons && entries.skeletons.length > 0) {
+            entries.skeletons[0].bones.forEach((bone: any) => {
+                if (bone.name.includes("RightHand")) rightHandBone = bone;
             });
         }
-    });
 
-    playAnim = (name: string, forceRestart: boolean = false) => {
-        if (currentAnim === name && !forceRestart) return;
+        if (rightHandBone) {
+            weaponSocketRoot.attachToBone(rightHandBone, viewmodelRoot);
+        } else {
+            weaponSocketRoot.parent = swayRoot;
+        }
         
-        const targetAnim = animGroups.find((ag: any) => {
-            const agName = ag.name.toLowerCase();
-            if (name === "firing") {
-                return agName.includes("firing") && !agName.includes("walk");
-            }
-            return agName.includes(name);
+        let socketPos = new Vector3(0, 0, 0);
+        let socketRot = new Vector3(Math.PI / 2, 0, 0); 
+        weaponSocketOffset.position = socketPos;
+        weaponSocketOffset.rotation = socketRot;
+
+        const gunmetal = new StandardMaterial("gunmetal", this.scene);
+        gunmetal.diffuseColor = new Color3(0.2, 0.2, 0.2);
+        gunmetal.specularColor = new Color3(0.5, 0.5, 0.5);
+        
+        const matteBlack = new StandardMaterial("matteBlack", this.scene);
+        matteBlack.diffuseColor = new Color3(0.05, 0.05, 0.05);
+
+        const akRoot = new TransformNode("ak47", this.scene);
+        akRoot.parent = weaponSocketOffset;
+        
+        const akGrip = MeshBuilder.CreateBox("akGrip", { width: 0.04, height: 0.12, depth: 0.06 }, this.scene);
+        akGrip.position = new Vector3(0, -0.06, 0);
+        akGrip.rotation.x = Math.PI / 8;
+        akGrip.material = matteBlack;
+        akGrip.parent = akRoot;
+        
+        const akReceiver = MeshBuilder.CreateBox("akReceiver", { width: 0.05, height: 0.08, depth: 0.3 }, this.scene);
+        akReceiver.position = new Vector3(0, 0.04, 0.1);
+        akReceiver.material = gunmetal;
+        akReceiver.parent = akRoot;
+        
+        const akBarrel = MeshBuilder.CreateCylinder("akBarrel", { diameter: 0.02, height: 0.4 }, this.scene);
+        akBarrel.rotation.x = Math.PI / 2;
+        akBarrel.position = new Vector3(0, 0.06, 0.45);
+        akBarrel.material = gunmetal;
+        akBarrel.parent = akRoot;
+
+        const akMag = MeshBuilder.CreateBox("akMag", { width: 0.04, height: 0.15, depth: 0.08 }, this.scene);
+        akMag.rotation.x = -Math.PI / 8;
+        akMag.position = new Vector3(0, -0.05, 0.2);
+        akMag.material = matteBlack;
+        akMag.parent = akRoot;
+
+        const akStock = MeshBuilder.CreateBox("akStock", { width: 0.04, height: 0.08, depth: 0.2 }, this.scene);
+        akStock.position = new Vector3(0, 0.02, -0.15);
+        akStock.material = gunmetal;
+        akStock.parent = akRoot;
+
+        akRoot.getChildMeshes().forEach((m: any) => {
+            m.alwaysSelectAsActiveMesh = true;
+            m.isPickable = false;
         });
+
+        const pistolRoot = new TransformNode("pistol", this.scene);
+        pistolRoot.parent = weaponSocketOffset;
         
-        // Stop the current animation so Babylon can blend into the new one (or restart it)
-        const currentAg = animGroups.find((ag: any) => ag.name.toLowerCase().includes(currentAnim));
-        if (currentAg) {
-            currentAg.stop();
-        }
+        const pistolGrip = MeshBuilder.CreateBox("pistolGrip", { width: 0.03, height: 0.1, depth: 0.05 }, this.scene);
+        pistolGrip.position = new Vector3(0, -0.05, 0);
+        pistolGrip.rotation.x = Math.PI / 16;
+        pistolGrip.material = matteBlack;
+        pistolGrip.parent = pistolRoot;
+        
+        const pistolReceiver = MeshBuilder.CreateBox("pistolReceiver", { width: 0.04, height: 0.05, depth: 0.2 }, this.scene);
+        pistolReceiver.position = new Vector3(0, 0.025, 0.05);
+        pistolReceiver.material = gunmetal;
+        pistolReceiver.parent = pistolRoot;
 
-        if (targetAnim) {
-            // Mixamo firing animations should loop so they don't freeze on the last frame if held, 
-            // but we force restart them on every shot.
-            targetAnim.start(true, 1.0, targetAnim.from, targetAnim.to, false);
-            currentAnim = name;
-        } else if (name === "idle") {
-            const fallback = animGroups.find((ag: any) => ag.name.toLowerCase().includes("tpose"));
-            if (fallback) {
-                fallback.start(true, 1.0, fallback.from, fallback.to, false);
-                currentAnim = "idle";
-            }
-        }
-    };
-
-    // Expose for Puppeteer testing
-    (window as any).debugAnimGroups = animGroups;
-    (window as any).debugGetCurrentAnim = () => currentAnim;
-    (window as any).debugPlayAnim = playAnim;
-
-    playAnim("idle");
-
-    if (entries.skeletons && entries.skeletons.length > 0) {
-        // Unused block, can remain empty
-    }
-
-    // --- WEAPON SOCKET ARCHITECTURE ---
-    // We create a single socket attached to the hand bone. All weapons will be parented to this socket.
-    const weaponSocketRoot = new TransformNode("WeaponSocketRoot", scene);
-    const weaponSocketOffset = new TransformNode("WeaponSocketOffset", scene);
-    weaponSocketOffset.parent = weaponSocketRoot;
-
-    // Find the right hand bone to attach our socket
-    let rightHandBone: any = null;
-    if (entries.skeletons && entries.skeletons.length > 0) {
-        entries.skeletons[0].bones.forEach((bone: any) => {
-            if (bone.name.includes("RightHand")) {
-                rightHandBone = bone;
-            }
+        pistolRoot.getChildMeshes().forEach((m: any) => {
+            m.alwaysSelectAsActiveMesh = true;
+            m.isPickable = false;
         });
-    }
 
-    if (rightHandBone) {
-        weaponSocketRoot.attachToBone(rightHandBone, viewmodelRoot);
-    } else {
-        weaponSocketRoot.parent = swayRoot; // Fallback
-    }
-    
-    // Default socket offset
-    let socketPos = new Vector3(0, 0, 0);
-    let socketRot = new Vector3(Math.PI / 2, 0, 0); // Mixamo hand bone usually points down Y axis
-    weaponSocketOffset.position = socketPos;
-    weaponSocketOffset.rotation = socketRot;
+        pistolRoot.setEnabled(false); 
 
-    // --- NATIVE PROCEDURAL WEAPONS ---
-    const gunmetal = new StandardMaterial("gunmetal", scene);
-    gunmetal.diffuseColor = new Color3(0.2, 0.2, 0.2);
-    gunmetal.specularColor = new Color3(0.5, 0.5, 0.5);
-    
-    const matteBlack = new StandardMaterial("matteBlack", scene);
-    matteBlack.diffuseColor = new Color3(0.05, 0.05, 0.05);
+        const aimPoint = new TransformNode("AimPoint", this.scene);
+        aimPoint.parent = akRoot;
+        aimPoint.position = new Vector3(0, 0.08, 0.1); 
 
-    // 1. Build Native AK-47
-    const akRoot = new TransformNode("ak47", scene);
-    akRoot.parent = weaponSocketOffset;
-    
-    // The Grip is exactly at 0,0,0
-    const akGrip = MeshBuilder.CreateBox("akGrip", { width: 0.04, height: 0.12, depth: 0.06 }, scene);
-    akGrip.position = new Vector3(0, -0.06, 0);
-    akGrip.rotation.x = Math.PI / 8;
-    akGrip.material = matteBlack;
-    akGrip.parent = akRoot;
-    
-    const akReceiver = MeshBuilder.CreateBox("akReceiver", { width: 0.05, height: 0.08, depth: 0.3 }, scene);
-    akReceiver.position = new Vector3(0, 0.04, 0.1);
-    akReceiver.material = gunmetal;
-    akReceiver.parent = akRoot;
-    
-    const akBarrel = MeshBuilder.CreateCylinder("akBarrel", { diameter: 0.02, height: 0.4 }, scene);
-    akBarrel.rotation.x = Math.PI / 2;
-    akBarrel.position = new Vector3(0, 0.06, 0.45);
-    akBarrel.material = gunmetal;
-    akBarrel.parent = akRoot;
+        const muzzlePoint = new Mesh("muzzle", this.scene);
+        muzzlePoint.parent = swayRoot;
 
-    const akMag = MeshBuilder.CreateBox("akMag", { width: 0.04, height: 0.15, depth: 0.08 }, scene);
-    akMag.rotation.x = -Math.PI / 8;
-    akMag.position = new Vector3(0, -0.05, 0.2);
-    akMag.material = matteBlack;
-    akMag.parent = akRoot;
+        const flash = this.createMuzzleFlash(muzzlePoint);
+        const shellPoint = new Mesh("shellPoint", this.scene);
+        shellPoint.parent = swayRoot;
+        const shellEjector = this.createShellEjector(shellPoint);
 
-    const akStock = MeshBuilder.CreateBox("akStock", { width: 0.04, height: 0.08, depth: 0.2 }, scene);
-    akStock.position = new Vector3(0, 0.02, -0.15);
-    akStock.material = gunmetal;
-    akStock.parent = akRoot;
-
-    akRoot.getChildMeshes().forEach((m: any) => {
-        m.alwaysSelectAsActiveMesh = true;
-        m.isPickable = false;
-    });
-
-    // 2. Build Native Pistol
-    const pistolRoot = new TransformNode("pistol", scene);
-    pistolRoot.parent = weaponSocketOffset;
-    
-    const pistolGrip = MeshBuilder.CreateBox("pistolGrip", { width: 0.03, height: 0.1, depth: 0.05 }, scene);
-    pistolGrip.position = new Vector3(0, -0.05, 0);
-    pistolGrip.rotation.x = Math.PI / 16;
-    pistolGrip.material = matteBlack;
-    pistolGrip.parent = pistolRoot;
-    
-    const pistolReceiver = MeshBuilder.CreateBox("pistolReceiver", { width: 0.04, height: 0.05, depth: 0.2 }, scene);
-    pistolReceiver.position = new Vector3(0, 0.025, 0.05);
-    pistolReceiver.material = gunmetal;
-    pistolReceiver.parent = pistolRoot;
-
-    pistolRoot.getChildMeshes().forEach((m: any) => {
-        m.alwaysSelectAsActiveMesh = true;
-        m.isPickable = false;
-    });
-
-    pistolRoot.setEnabled(false); // Default to AK47
-
-    // Create the Industry Standard AimPoint (Sight Node)
-    const aimPoint = new TransformNode("AimPoint", scene);
-    aimPoint.parent = akRoot;
-    aimPoint.position = new Vector3(0, 0.08, 0.1); // On top of the receiver center
-
-    // Muzzle Points (estimated relative to the weapon roots)
-    const muzzlePoint = new Mesh("muzzle", scene);
-    muzzlePoint.parent = swayRoot; // We'll just cast from center of screen for simplicity to avoid bone transform complexity
-
-    const flash = createMuzzleFlash(scene, muzzlePoint);
-    const shellPoint = new Mesh("shellPoint", scene);
-    shellPoint.parent = swayRoot;
-    const shellEjector = createShellEjector(scene, shellPoint);
-
-    // Debug GUI for perfectly aligning the gun to the center of the screen
-    const advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
-    
-    // Hipfire Crosshair
-    const crosshairH = new Rectangle();
-    crosshairH.width = "10px";
-    crosshairH.height = "2px";
-    crosshairH.color = "white";
-    crosshairH.background = "white";
-    advancedTexture.addControl(crosshairH);
-
-    const crosshairV = new Rectangle();
-    crosshairV.width = "2px";
-    crosshairV.height = "10px";
-    crosshairV.color = "white";
-    crosshairV.background = "white";
-    advancedTexture.addControl(crosshairV);
-
-    if (networkManager) {
-        networkManager.onHitConfirmed = () => {
-            crosshairH.color = "rgba(255, 0, 0, 0.7)";
-            crosshairV.color = "rgba(255, 0, 0, 0.7)";
-            setTimeout(() => {
-                crosshairH.color = "white";
-                crosshairV.color = "white";
-            }, 100);
-        };
-        networkManager.onKillConfirmed = () => {
-            crosshairH.color = "red";
-            crosshairV.color = "red";
-            setTimeout(() => {
-                crosshairH.color = "white";
-                crosshairV.color = "white";
-            }, 250); // Longer flash for kill
-        };
-    }
-
-    const debugPanel = new Rectangle("debugPanel");
-    debugPanel.width = "350px";
-    debugPanel.height = "250px";
-    debugPanel.horizontalAlignment = 0; // Left
-    debugPanel.verticalAlignment = 1; // Bottom
-    debugPanel.background = "rgba(0,0,0,0.5)";
-    debugPanel.color = "white";
-    advancedTexture.addControl(debugPanel);
-
-    const debugText = new TextBlock("debugText");
-    debugText.text = "HAND OFFSET DEBUG\nPos X/Y/Z: U/I, O/P, K/L\nRot X/Y/Z: N/M, 1/2, 3/4\nSight Node Y/Z: 5/6, 7/8";
-    debugText.textWrapping = true;
-    debugText.fontSize = 14;
-    debugPanel.addControl(debugText);
-
-    // State
-    let currentAmmo = activeConfig.magSize;
-    let lastFireTime = 0;
-    let isReloading = false;
-    let reloadTimer = 0;
-    let currentSpread = activeConfig.baseSpread;
-    const recoil = new RecoilController();
-    let adsProgress = 0;
-    let kickbackZ = 0; // Procedural weapon kickback
-    let kickbackRotX = 0; // Procedural weapon rotational kick
-    
-    // Inventory State
-    let lastGrenadeTime = 0;
-    let justPressed1 = false;
-    let justPressed2 = false;
-
-    let swayX = 0;
-    let swayY = 0;
-    let walkBobTimer = 0;
-
-    const ammoText = document.getElementById("ammoText");
-    const updateUI = () => { if (ammoText) ammoText.innerText = `${activeConfig.id.toUpperCase()}: ${currentAmmo} / --`; };
-    updateUI();
-
-    const DEG2RAD = Math.PI / 180;
-
-    scene.onBeforeRenderObservable.add(() => {
-        const dt = scene.getEngine().getDeltaTime() / 1000;
+        const advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
         
-        // Weapon Switching
-        if (input.weapon1 && !justPressed1 && activeConfig.id !== 'ak47') {
-            activeConfig = AK47;
-            currentAmmo = activeConfig.magSize;
-            pistolRoot.setEnabled(false);
-            akRoot.setEnabled(true);
-            pistolRoot.setEnabled(false);
-            aimPoint.parent = akRoot;
-            aimPoint.position = new Vector3(0, 0.08, 0.1);
-            isReloading = false;
-            if (networkManager) networkManager.sendSwitchWeapon('ak47');
+        const crosshairH = new Rectangle();
+        crosshairH.width = "10px";
+        crosshairH.height = "2px";
+        crosshairH.color = "white";
+        crosshairH.background = "white";
+        advancedTexture.addControl(crosshairH);
+
+        const crosshairV = new Rectangle();
+        crosshairV.width = "2px";
+        crosshairV.height = "10px";
+        crosshairV.color = "white";
+        crosshairV.background = "white";
+        advancedTexture.addControl(crosshairV);
+
+        if (this.networkManager) {
+            this.networkManager.onHitConfirmed = () => {
+                crosshairH.color = "rgba(255, 0, 0, 0.7)";
+                crosshairV.color = "rgba(255, 0, 0, 0.7)";
+                setTimeout(() => { crosshairH.color = "white"; crosshairV.color = "white"; }, 100);
+            };
+            this.networkManager.onKillConfirmed = () => {
+                crosshairH.color = "red";
+                crosshairV.color = "red";
+                setTimeout(() => { crosshairH.color = "white"; crosshairV.color = "white"; }, 250); 
+            };
         }
-        justPressed1 = input.weapon1;
 
-        if (input.weapon2 && !justPressed2 && activeConfig.id !== 'pistol') {
-            activeConfig = PISTOL;
-            currentAmmo = activeConfig.magSize;
-            akRoot.setEnabled(false);
-            pistolRoot.setEnabled(true);
-            updateUI();
-            isReloading = false;
-            if (networkManager) networkManager.sendSwitchWeapon('pistol');
-        }
-        justPressed2 = input.weapon2;
+        const debugPanel = new Rectangle("debugPanel");
+        debugPanel.width = "350px";
+        debugPanel.height = "250px";
+        debugPanel.horizontalAlignment = 0;
+        debugPanel.verticalAlignment = 1;
+        debugPanel.background = "rgba(0,0,0,0.5)";
+        debugPanel.color = "white";
+        advancedTexture.addControl(debugPanel);
 
-        // Grenade Throwing
-        if (input.grenade && performance.now() - lastGrenadeTime > 2000) {
-            lastGrenadeTime = performance.now();
-            throwGrenade(scene, camera);
-        }
-        
-        // ADS Logic & Scope UI
-        const isADS = input.ads && !isReloading;
-        adsProgress = Scalar.Lerp(adsProgress, isADS ? 1 : 0, (1 / activeConfig.adsTime) * dt);
-        
-        // Debug Keyboard controls for tuning ADS position perfectly
-        if (input.weapon1) { } // Prevent TS warning
-        
-        // Debug Keyboard controls for tuning the Weapon Socket
-        if ((window as any).debugKeys) {
-            const keys = (window as any).debugKeys;
+        const debugText = new TextBlock("debugText");
+        debugText.text = "HAND OFFSET DEBUG\nPos X/Y/Z: U/I, O/P, K/L\nRot X/Y/Z: N/M, 1/2, 3/4\nSight Node Y/Z: 5/6, 7/8";
+        debugText.textWrapping = true;
+        debugText.fontSize = 14;
+        debugPanel.addControl(debugText);
+
+        const ammoText = document.getElementById("ammoText");
+        const updateUI = () => { if (ammoText) ammoText.innerText = `${this.activeConfig.id.toUpperCase()}: ${this.currentAmmo} / --`; };
+        updateUI();
+
+        const DEG2RAD = Math.PI / 180;
+
+        this.scene.onBeforeRenderObservable.add(() => {
+            const dt = this.scene.getEngine().getDeltaTime() / 1000;
+            const input = this.player.input;
+            const playerState = this.player.state;
             
-            // Socket Pos (relative to hand bone)
-            if (keys['u']) socketPos.x -= 0.01 * dt;
-            if (keys['i']) socketPos.x += 0.01 * dt;
-            if (keys['o']) socketPos.y -= 0.01 * dt;
-            if (keys['p']) socketPos.y += 0.01 * dt;
-            if (keys['k']) socketPos.z -= 0.01 * dt;
-            if (keys['l']) socketPos.z += 0.01 * dt;
-            
-            // Socket Rot
-            if (keys['n']) socketRot.x -= 1.0 * dt;
-            if (keys['m']) socketRot.x += 1.0 * dt;
-            if (keys['1']) socketRot.y -= 1.0 * dt;
-            if (keys['2']) socketRot.y += 1.0 * dt;
-            if (keys['3']) socketRot.z -= 1.0 * dt;
-            if (keys['4']) socketRot.z += 1.0 * dt;
-
-            // Weapon Scale (uniform for current weapon)
-            let activeRoot = activeConfig.id === 'ak47' ? akRoot : pistolRoot;
-            if (keys['5']) {
-                const s = activeRoot.scaling.x - 0.5 * dt;
-                activeRoot.scaling = new Vector3(s, s, s);
+            if (input.weapon1 && !this.justPressed1 && this.activeConfig.id !== 'ak47') {
+                this.activeConfig = AK47;
+                this.currentAmmo = this.activeConfig.magSize;
+                pistolRoot.setEnabled(false);
+                akRoot.setEnabled(true);
+                aimPoint.parent = akRoot;
+                aimPoint.position = new Vector3(0, 0.08, 0.1);
+                this.isReloading = false;
+                if (this.networkManager) this.networkManager.sendSwitchWeapon('ak47');
             }
-            if (keys['6']) {
-                const s = activeRoot.scaling.x + 0.5 * dt;
-                activeRoot.scaling = new Vector3(s, s, s);
-            }
+            this.justPressed1 = input.weapon1;
 
-            // Sight Node Tweaks
-            if (keys['7']) aimPoint.position.y -= 0.5 * dt;
-            if (keys['8']) aimPoint.position.y += 0.5 * dt;
-            
-            weaponSocketOffset.position.copyFrom(socketPos);
-            weaponSocketOffset.rotation.copyFrom(socketRot);
-        }
-        
-        if (debugText) {
-            let activeRoot = activeConfig.id === 'ak47' ? akRoot : pistolRoot;
-            debugText.text = `SOCKET POS: ${socketPos.x.toFixed(3)}, ${socketPos.y.toFixed(3)}, ${socketPos.z.toFixed(3)}\nSOCKET ROT: ${socketRot.x.toFixed(2)}, ${socketRot.y.toFixed(2)}, ${socketRot.z.toFixed(2)}\nSCALE: ${activeRoot.scaling.x.toFixed(4)}\nAIM Y: ${aimPoint.position.y.toFixed(3)}`;
-        }
-
-        
-        // Reload Animation State Machine
-        let reloadOffset = new Vector3(0, 0, 0);
-        let reloadRotX = 0;
-
-        if (isReloading) {
-            reloadTimer += dt;
-            const progress = reloadTimer / activeConfig.reloadTime;
-            
-            // Procedural Reload Animation
-            if (progress < 0.2) {
-                // Lower weapon
-                const t = progress / 0.2;
-                reloadOffset.y = Scalar.Lerp(0, -0.4, t);
-                reloadRotX = Scalar.Lerp(0, Math.PI / 4, t);
-            } else if (progress < 0.8) {
-                // Hold lowered
-                reloadOffset.y = -0.4;
-                reloadRotX = Math.PI / 4;
-            } else {
-                // Raise weapon
-                const t = (progress - 0.8) / 0.2;
-                reloadOffset.y = Scalar.Lerp(-0.4, 0, t);
-                reloadRotX = Scalar.Lerp(Math.PI / 4, 0, t);
-            }
-
-            if (progress >= 1.0) {
-                currentAmmo = activeConfig.magSize;
-                isReloading = false;
+            if (input.weapon2 && !this.justPressed2 && this.activeConfig.id !== 'pistol') {
+                this.activeConfig = PISTOL;
+                this.currentAmmo = this.activeConfig.magSize;
+                akRoot.setEnabled(false);
+                pistolRoot.setEnabled(true);
                 updateUI();
+                this.isReloading = false;
+                if (this.networkManager) this.networkManager.sendSwitchWeapon('pistol');
             }
-        }
+            this.justPressed2 = input.weapon2;
 
-        // Apply Position (Hip vs ADS + Reload Offset)
-        const basePos = Vector3.Lerp(Vector3.Zero(), activeConfig.adsPosition, adsProgress);
-        swayRoot.position = basePos.add(reloadOffset);
-        swayRoot.rotation.x = reloadRotX;
-
-        // Firing Logic
-        const canFire = currentAmmo > 0 && !isReloading;
-        const wantsToFire = input.fire;
-        
-        const fireInterval = 60000 / activeConfig.fireRate;
-
-        if (wantsToFire && canFire && performance.now() - lastFireTime >= fireInterval) {
-            lastFireTime = performance.now();
-            currentAmmo--;
-            updateUI();
-            
-            if (networkManager) {
-                networkManager.sendFire();
-            }
-
-            recoil.applyShot(activeConfig, isADS);
-            currentSpread = Math.min(currentSpread + activeConfig.bloomPerShot, activeConfig.maxSpread);
-            
-            // Procedural Kickback (more violent hipfire, tighter ADS)
-            kickbackZ = isADS ? -0.02 : -0.05;
-            kickbackRotX = isADS ? -0.02 : -0.08; // Pitch weapon up
-            
-            flash.manualEmitCount = 5;
-            flash.start();
-            setTimeout(() => flash.stop(), 50);
-
-            // Raycast Hitscan
-            const spreadAngle = currentSpread * DEG2RAD * (isADS ? activeConfig.adsSpreadMult : 1.0);
-            const rot = Math.random() * Math.PI * 2;
-            const forward = camera.getDirection(Vector3.Forward());
-            const right = camera.getDirection(Vector3.Right());
-            const up = camera.getDirection(Vector3.Up());
-            
-            // Explicitly force restart the firing animation on click
-            const isMoving = input.forward || input.backward || input.left || input.right;
-            if (isMoving && playerState.isGrounded) {
-                playAnim("firing walk", true);
-            } else {
-                playAnim("firing", true);
+            if (input.grenade && performance.now() - this.lastGrenadeTime > 2000) {
+                this.lastGrenadeTime = performance.now();
+                throwGrenade(this.scene, camera);
             }
             
-            const spreadDir = forward
-                .add(right.scale(Math.sin(spreadAngle) * Math.cos(rot)))
-                .add(up.scale(Math.sin(spreadAngle) * Math.sin(rot)))
-                .normalize();
-
-            // 4. Unified Havok Raycast for Hitscan & Decals
-            const endPoint = camera.globalPosition.add(spreadDir.scale(300)); // 300 meters range
-            let hitPoint = endPoint;
+            const isADS = input.ads && !this.isReloading;
+            this.adsProgress = Scalar.Lerp(this.adsProgress, isADS ? 1 : 0, (1 / this.activeConfig.adsTime) * dt);
             
-            // Ignore the local player's body so we don't shoot ourselves from the inside
-            const playerMesh = camera.parent as AbstractMesh;
-            const query: any = { shouldHitTriggers: true };
-            if (playerMesh && playerMesh.physicsBody) {
-                query.ignoreBody = playerMesh.physicsBody;
+            if ((window as any).debugKeys) {
+                const keys = (window as any).debugKeys;
+                if (keys['u']) socketPos.x -= 0.01 * dt;
+                if (keys['i']) socketPos.x += 0.01 * dt;
+                if (keys['o']) socketPos.y -= 0.01 * dt;
+                if (keys['p']) socketPos.y += 0.01 * dt;
+                if (keys['k']) socketPos.z -= 0.01 * dt;
+                if (keys['l']) socketPos.z += 0.01 * dt;
+                
+                if (keys['n']) socketRot.x -= 1.0 * dt;
+                if (keys['m']) socketRot.x += 1.0 * dt;
+                if (keys['1']) socketRot.y -= 1.0 * dt;
+                if (keys['2']) socketRot.y += 1.0 * dt;
+                if (keys['3']) socketRot.z -= 1.0 * dt;
+                if (keys['4']) socketRot.z += 1.0 * dt;
+
+                let activeRoot = this.activeConfig.id === 'ak47' ? akRoot : pistolRoot;
+                if (keys['5']) {
+                    const s = activeRoot.scaling.x - 0.5 * dt;
+                    activeRoot.scaling = new Vector3(s, s, s);
+                }
+                if (keys['6']) {
+                    const s = activeRoot.scaling.x + 0.5 * dt;
+                    activeRoot.scaling = new Vector3(s, s, s);
+                }
+
+                if (keys['7']) aimPoint.position.y -= 0.5 * dt;
+                if (keys['8']) aimPoint.position.y += 0.5 * dt;
+                
+                weaponSocketOffset.position.copyFrom(socketPos);
+                weaponSocketOffset.rotation.copyFrom(socketRot);
+            }
+            
+            if (debugText) {
+                let activeRoot = this.activeConfig.id === 'ak47' ? akRoot : pistolRoot;
+                debugText.text = `SOCKET POS: ${socketPos.x.toFixed(3)}, ${socketPos.y.toFixed(3)}, ${socketPos.z.toFixed(3)}\nSOCKET ROT: ${socketRot.x.toFixed(2)}, ${socketRot.y.toFixed(2)}, ${socketRot.z.toFixed(2)}\nSCALE: ${activeRoot.scaling.x.toFixed(4)}\nAIM Y: ${aimPoint.position.y.toFixed(3)}`;
             }
 
-            const physResult = scene.getPhysicsEngine()?.raycast(camera.globalPosition, endPoint, query);
+            let reloadOffset = new Vector3(0, 0, 0);
+            let reloadRotX = 0;
 
-            if (physResult && physResult.hasHit && physResult.body && physResult.body.transformNode) {
-                hitPoint = physResult.hitPointWorld;
-                const hitMesh = physResult.body.transformNode;
+            if (this.isReloading) {
+                this.reloadTimer += dt;
+                const progress = this.reloadTimer / this.activeConfig.reloadTime;
+                
+                if (progress < 0.2) {
+                    const t = progress / 0.2;
+                    reloadOffset.y = Scalar.Lerp(0, -0.4, t);
+                    reloadRotX = Scalar.Lerp(0, Math.PI / 4, t);
+                } else if (progress < 0.8) {
+                    reloadOffset.y = -0.4;
+                    reloadRotX = Math.PI / 4;
+                } else {
+                    const t = (progress - 0.8) / 0.2;
+                    reloadOffset.y = Scalar.Lerp(-0.4, 0, t);
+                    reloadRotX = Scalar.Lerp(Math.PI / 4, 0, t);
+                }
 
-            // Push dynamic physics objects
-                if (hitMesh.physicsBody && hitMesh.physicsBody.getMotionType() === PhysicsMotionType.DYNAMIC) {
-                    hitMesh.physicsBody.applyImpulse(spreadDir.scale(10), hitPoint);
+                if (progress >= 1.0) {
+                    this.currentAmmo = this.activeConfig.magSize;
+                    this.isReloading = false;
+                    updateUI();
+                }
+            }
+
+            const basePos = Vector3.Lerp(Vector3.Zero(), this.activeConfig.adsPosition, this.adsProgress);
+            swayRoot.position = basePos.add(reloadOffset);
+            swayRoot.rotation.x = reloadRotX;
+
+            const canFire = this.currentAmmo > 0 && !this.isReloading;
+            const wantsToFire = input.fire;
+            const fireInterval = 60000 / this.activeConfig.fireRate;
+
+            if (wantsToFire && canFire && performance.now() - this.lastFireTime >= fireInterval) {
+                this.lastFireTime = performance.now();
+                this.currentAmmo--;
+                updateUI();
+                
+                if (this.networkManager) this.networkManager.sendFire();
+
+                this.recoil.applyShot(this.activeConfig, isADS);
+                this.currentSpread = Math.min(this.currentSpread + this.activeConfig.bloomPerShot, this.activeConfig.maxSpread);
+                
+                this.kickbackZ = isADS ? -0.02 : -0.05;
+                this.kickbackRotX = isADS ? -0.02 : -0.08; 
+                
+                flash.manualEmitCount = 5;
+                flash.start();
+                setTimeout(() => flash.stop(), 50);
+
+                const spreadAngle = this.currentSpread * DEG2RAD * (isADS ? this.activeConfig.adsSpreadMult : 1.0);
+                const rot = Math.random() * Math.PI * 2;
+                const forward = camera.getDirection(Vector3.Forward());
+                const right = camera.getDirection(Vector3.Right());
+                const up = camera.getDirection(Vector3.Up());
+                
+                const isMoving = input.forward || input.backward || input.left || input.right;
+                if (isMoving && playerState.isGrounded) {
+                    this.playAnim("firing walk", true);
+                } else {
+                    this.playAnim("firing", true);
                 }
                 
-                // Verify if we hit a remote player hitbox
-                if (hitMesh.metadata && hitMesh.metadata.isHitbox && hitMesh.metadata.playerId && hitMesh.metadata.playerId !== networkManager?.username) {
-                    // If multiplayer, send hit event with specific limb damage multiplier
-                    if (networkManager) {
-                        const targetId = hitMesh.metadata.playerId;
-                        const mult = hitMesh.metadata.multiplier || 1.0;
-                        
-                        const finalDamage = Math.round(activeConfig.damage * mult);
-                        
-                        networkManager.sendHit(targetId, finalDamage);
-                        // Hitmarker is now handled authoritatively by networkManager.onHitConfirmed
+                const spreadDir = forward
+                    .add(right.scale(Math.sin(spreadAngle) * Math.cos(rot)))
+                    .add(up.scale(Math.sin(spreadAngle) * Math.sin(rot)))
+                    .normalize();
+
+                const endPoint = camera.globalPosition.add(spreadDir.scale(300)); 
+                let hitPoint = endPoint;
+                
+                const playerMesh = camera.parent as AbstractMesh;
+                const query: any = { shouldHitTriggers: true };
+                if (playerMesh && playerMesh.physicsBody) {
+                    query.ignoreBody = playerMesh.physicsBody;
+                }
+
+                const physResult = this.scene.getPhysicsEngine()?.raycast(camera.globalPosition, endPoint, query);
+
+                if (physResult && physResult.hasHit && physResult.body && physResult.body.transformNode) {
+                    hitPoint = physResult.hitPointWorld;
+                    const hitMesh = physResult.body.transformNode;
+
+                    if (hitMesh.physicsBody && hitMesh.physicsBody.getMotionType() === PhysicsMotionType.DYNAMIC) {
+                        hitMesh.physicsBody.applyImpulse(spreadDir.scale(10), hitPoint);
                     }
-                } else if (!hitMesh.metadata?.playerId) {
-                    // We hit a static environment object, spawn decal
-                    const normal = physResult.hitNormalWorld;
-                    const decal = MeshBuilder.CreatePlane("bulletHole", { size: 0.3 }, scene);
                     
-                    // Offset slightly to prevent Z-fighting
-                    decal.position = hitPoint.add(normal.scale(0.02)); 
-                    
-                    // Orient the plane so it faces outward from the surface
-                    decal.lookAt(decal.position.add(normal));
-                    
-                    decal.material = getBulletHoleMaterial(scene);
-                    decal.isPickable = false; // Bullets shouldn't hit other bullet holes
-                    
-                    decalQueue.push(decal);
-                    if (decalQueue.length > 50) {
-                        const oldDecal = decalQueue.shift();
-                        if (oldDecal) oldDecal.dispose();
+                    if (hitMesh.metadata && hitMesh.metadata.isHitbox && hitMesh.metadata.playerId && hitMesh.metadata.playerId !== this.networkManager?.username) {
+                        if (this.networkManager) {
+                            const targetId = hitMesh.metadata.playerId;
+                            const mult = hitMesh.metadata.multiplier || 1.0;
+                            const finalDamage = Math.round(this.activeConfig.damage * mult);
+                            this.networkManager.sendHit(targetId, finalDamage);
+                        }
+                    } else if (!hitMesh.metadata?.playerId) {
+                        const normal = physResult.hitNormalWorld;
+                        const decal = MeshBuilder.CreatePlane("bulletHole", { size: 0.3 }, this.scene);
+                        decal.position = hitPoint.add(normal.scale(0.02)); 
+                        decal.lookAt(decal.position.add(normal));
+                        decal.material = this.getBulletHoleMaterial();
+                        decal.isPickable = false; 
+                        
+                        this.decalQueue.push(decal);
+                        if (this.decalQueue.length > 50) {
+                            const oldDecal = this.decalQueue.shift();
+                            if (oldDecal) oldDecal.dispose();
+                        }
                     }
                 }
+
+                const startPoint = camera.globalPosition.add(new Vector3(0, -0.2, 0));
+                const tracer = MeshBuilder.CreateLines("tracer", { points: [startPoint, hitPoint] }, this.scene);
+                tracer.color = new Color3(1.0, 0.9, 0.5); 
+                setTimeout(() => tracer.dispose(), 50);
+
+                shellEjector.manualEmitCount = 1;
+                shellEjector.start();
             }
 
-            // Draw Tracer from camera
-            const startPoint = camera.globalPosition.add(new Vector3(0, -0.2, 0));
-            const tracer = MeshBuilder.CreateLines("tracer", { points: [startPoint, hitPoint] }, scene);
-            tracer.color = new Color3(1.0, 0.9, 0.5); // Bright yellow/white
-            setTimeout(() => tracer.dispose(), 50);
+            if ((input.reload || (wantsToFire && this.currentAmmo === 0)) && !this.isReloading && this.currentAmmo < this.activeConfig.magSize) {
+                this.isReloading = true;
+                this.reloadTimer = 0;
+                if (this.networkManager) this.networkManager.sendReload();
+            }
 
-            // Eject Shell
-            shellEjector.manualEmitCount = 1;
-            shellEjector.start();
+            this.currentSpread = Math.max(this.activeConfig.baseSpread, this.currentSpread - this.activeConfig.bloomRecovery * dt);
+            this.recoil.update(dt, this.activeConfig);
+            
+            camera.rotation.x += this.recoil.offsetY;
+            camera.rotation.y += this.recoil.offsetX;
+
+            const swayTargetX = -input.mouseDeltaX * 0.001;
+            const swayTargetY = -input.mouseDeltaY * 0.001;
+            this.swayX = Scalar.Lerp(this.swayX, swayTargetX, 10 * dt);
+            this.swayY = Scalar.Lerp(this.swayY, swayTargetY, 10 * dt);
+            
+            let bobX = 0;
+            let bobY = 0;
+            const isMoving = input.forward || input.backward || input.left || input.right;
+            
+            if (isMoving && !this.isReloading) {
+                const bobSpeed = input.sprint ? 15 : 10;
+                const bobAmp = input.sprint ? 0.02 : 0.01;
+                this.walkBobTimer += dt * bobSpeed;
+                bobX = Math.sin(this.walkBobTimer) * bobAmp;
+                bobY = Math.abs(Math.cos(this.walkBobTimer)) * bobAmp; 
+            } else {
+                this.walkBobTimer = 0;
+                const t = performance.now() * 0.001;
+                bobY = Math.sin(t * 1.5) * 0.003;
+            }
+
+            const desiredWorldPos = camera.globalPosition.add(camera.getDirection(Vector3.Forward()).scale(0.3));
+            const currentAimWorldPos = aimPoint.getAbsolutePosition();
+            const deltaWorldPos = desiredWorldPos.subtract(currentAimWorldPos);
+            const invertedCameraMatrix = camera.getWorldMatrix().clone().invert();
+            const localDelta = Vector3.TransformNormal(deltaWorldPos, invertedCameraMatrix);
+            const mathematicalADSPos = swayRoot.position.add(localDelta);
+
+            const hipfirePos = basePos.add(reloadOffset);
+            const currentTargetPos = Vector3.Lerp(hipfirePos, mathematicalADSPos, this.adsProgress);
+            
+            const adsSwayMult = 1.0 - (this.adsProgress * 0.8); 
+            swayRoot.rotation.y = this.swayX * adsSwayMult;
+            swayRoot.rotation.x = reloadRotX + (this.swayY * adsSwayMult) + this.kickbackRotX; 
+            
+            swayRoot.position.x = currentTargetPos.x + (bobX * adsSwayMult); 
+            swayRoot.position.y = currentTargetPos.y + (bobY * adsSwayMult);
+            swayRoot.position.z = currentTargetPos.z + this.kickbackZ;
+            
+            this.kickbackZ = Scalar.Lerp(this.kickbackZ, 0, 15 * dt); 
+            this.kickbackRotX = Scalar.Lerp(this.kickbackRotX, 0, 15 * dt); 
+
+            const isRecentFire = performance.now() - this.lastFireTime < 250;
+
+            if (isRecentFire) {
+                // Keep playing fire anim
+            } else if (!playerState.isGrounded) {
+                this.playAnim("jump");
+            } else if (isMoving) {
+                this.playAnim("run");
+            } else {
+                this.playAnim("idle");
+            }
+        });
+    }
+
+    private getBulletHoleMaterial(): StandardMaterial {
+        if (!this.bulletHoleMaterial) {
+            this.bulletHoleMaterial = new StandardMaterial("bulletHoleMat", this.scene);
+            this.bulletHoleMaterial.diffuseTexture = new Texture("https://playground.babylonjs.com/textures/impact.png", this.scene);
+            this.bulletHoleMaterial.diffuseTexture.hasAlpha = true;
+            this.bulletHoleMaterial.zOffset = -1; 
+            this.bulletHoleMaterial.specularColor = new Color3(0, 0, 0); 
         }
+        return this.bulletHoleMaterial;
+    }
 
-        // Auto-Reload
-        if ((input.reload || (wantsToFire && currentAmmo === 0)) && !isReloading && currentAmmo < activeConfig.magSize) {
-            isReloading = true;
-            reloadTimer = 0;
-            if (networkManager) networkManager.sendReload();
-        }
+    private createMuzzleFlash(parent: AbstractMesh): ParticleSystem {
+        const ps = new ParticleSystem("muzzleFlash", 15, this.scene);
+        ps.particleTexture = null as any; 
+        ps.emitter = parent;
+        ps.emitRate = 0;
+        ps.minLifeTime = 0.03;
+        ps.maxLifeTime = 0.08;
+        ps.minSize = 0.05;
+        ps.maxSize = 0.15;
+        ps.blendMode = ParticleSystem.BLENDMODE_ADD;
+        ps.color1 = new Color4(1.0, 0.8, 0.3, 1.0);
+        ps.colorDead = new Color4(1.0, 0.2, 0.0, 0.0);
+        return ps;
+    }
 
-        // Spread & Recoil Recovery
-        currentSpread = Math.max(activeConfig.baseSpread, currentSpread - activeConfig.bloomRecovery * dt);
-        recoil.update(dt, activeConfig);
-        
-        // Apply recoil to camera
-        camera.rotation.x += recoil.offsetY;
-        camera.rotation.y += recoil.offsetX;
-
-        // Weapon Sway (Mouse Inertia)
-        const swayTargetX = -input.mouseDeltaX * 0.001;
-        const swayTargetY = -input.mouseDeltaY * 0.001;
-        swayX = Scalar.Lerp(swayX, swayTargetX, 10 * dt);
-        swayY = Scalar.Lerp(swayY, swayTargetY, 10 * dt);
-        
-        // Weapon Bob (Movement)
-        let bobX = 0;
-        let bobY = 0;
-        const isMoving = input.forward || input.backward || input.left || input.right;
-        
-        if (isMoving && !isReloading) {
-            const bobSpeed = input.sprint ? 15 : 10;
-            const bobAmp = input.sprint ? 0.02 : 0.01;
-            walkBobTimer += dt * bobSpeed;
-            bobX = Math.sin(walkBobTimer) * bobAmp;
-            bobY = Math.abs(Math.cos(walkBobTimer)) * bobAmp; // absolute value for "bounce"
-        } else {
-            walkBobTimer = 0;
-            // Idle breathing
-            const t = performance.now() * 0.001;
-            bobY = Math.sin(t * 1.5) * 0.003;
-        }
-
-        // Calculate Mathematical ADS Offset to pin AimPoint to Camera Center
-        // 1. Where do we want the iron sights to be? (0.3 units in front of the camera lens)
-        const desiredWorldPos = camera.globalPosition.add(camera.getDirection(Vector3.Forward()).scale(0.3));
-        
-        // 2. Where are the iron sights right now?
-        const currentAimWorldPos = aimPoint.getAbsolutePosition();
-        
-        // 3. What is the world space delta required to bridge the gap?
-        const deltaWorldPos = desiredWorldPos.subtract(currentAimWorldPos);
-        
-        // 4. Convert that world delta into the Camera's local space (so we can move swayRoot)
-        const invertedCameraMatrix = camera.getWorldMatrix().clone().invert();
-        const localDelta = Vector3.TransformNormal(deltaWorldPos, invertedCameraMatrix);
-        
-        // 5. Calculate the final mathematically perfect ADS Position
-        const mathematicalADSPos = swayRoot.position.add(localDelta);
-
-        // Lerp SwayRoot position between Hipfire (basePos + reloadOffset) and Perfect ADS
-        const hipfirePos = basePos.add(reloadOffset);
-        const currentTargetPos = Vector3.Lerp(hipfirePos, mathematicalADSPos, adsProgress);
-        
-        // Apply Sway and Bob (diminished by ADS)
-        const adsSwayMult = 1.0 - (adsProgress * 0.8); 
-        swayRoot.rotation.y = swayX * adsSwayMult;
-        swayRoot.rotation.x = reloadRotX + (swayY * adsSwayMult) + kickbackRotX; 
-        
-        swayRoot.position.x = currentTargetPos.x + (bobX * adsSwayMult); 
-        swayRoot.position.y = currentTargetPos.y + (bobY * adsSwayMult);
-        swayRoot.position.z = currentTargetPos.z + kickbackZ; // Add kickback!
-        
-        kickbackZ = Scalar.Lerp(kickbackZ, 0, 15 * dt); // Spring back forward
-        kickbackRotX = Scalar.Lerp(kickbackRotX, 0, 15 * dt); // Spring back down
-
-        // Animation State Machine (unified — no additive layer)
-        // Priority: Firing > Jump > Run > Idle
-        
-        // We give the firing animation at least 250ms to play out before the state machine overrides it
-        const isRecentFire = performance.now() - lastFireTime < 250;
-
-        if (isRecentFire) {
-            // Let the firing animation (which was forced restarted on click) continue playing
-        } else if (!playerState.isGrounded) {
-            playAnim("jump");
-        } else if (isMoving) {
-            playAnim("run");
-        } else {
-            playAnim("idle");
-        }
-    });
+    private createShellEjector(parent: AbstractMesh): ParticleSystem {
+        const ps = new ParticleSystem("shells", 10, this.scene);
+        ps.particleTexture = null as any; 
+        ps.emitter = parent;
+        ps.emitRate = 0;
+        ps.minLifeTime = 1.0;
+        ps.maxLifeTime = 1.5;
+        ps.minSize = 0.03;
+        ps.maxSize = 0.04;
+        ps.color1 = new Color4(0.8, 0.7, 0.2, 1.0); 
+        ps.color2 = new Color4(0.7, 0.6, 0.1, 1.0);
+        ps.colorDead = new Color4(0.5, 0.4, 0.1, 0.0);
+        ps.direction1 = new Vector3(1, 1, 0);
+        ps.direction2 = new Vector3(2, 2, 0.5);
+        ps.gravity = new Vector3(0, -9.81, 0);
+        return ps;
+    }
 }

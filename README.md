@@ -62,10 +62,37 @@ The backend, written in Go, acting as the state synchronizer and authoritative h
 The critical bridge between the client and server.
 - **`proto/packets.proto`**: (Future) Protocol buffer definitions for ultra-fast, binary network synchronization replacing the current JSON payloads.
 
-## Running Locally
+## Building and Playtesting
 
-Use the root Makefile to start both the Go server and the Vite client concurrently:
+We have unified the frontend and backend. The Go server automatically serves the compiled Vite frontend, ensuring zero CORS issues and a single source of truth.
+
+### 1. Run the Unified Game Server
+
+To build the client and start the Go server on port `8080`, simply run the new Make command from the root directory:
 
 ```bash
-make dev
+make run
 ```
+*This command automatically runs `npm run build` in the `/client` directory, and then starts the Go server.*
+
+The game is now running locally! You can test it by opening `http://localhost:8080` in your browser.
+
+### 2. Share with Friends (Pinggy Tunneling)
+
+To share the game over the internet, you need to expose your local port `8080`. 
+
+**Option A: Pinggy (Recommended - No Installation Required)**
+Run this in a new terminal window to instantly get a public URL:
+```bash
+ssh -p 443 -o StrictHostKeyChecking=accept-new -R0:localhost:8080 a.pinggy.io
+```
+
+**Option B: Ngrok**
+```bash
+ngrok http 8080
+```
+
+Share the provided URL with your friends. When they visit it, the game engine will load instantly, they can type a username, and join the match!
+
+> ⚠️ **Do NOT use `localtunnel` (`loca.lt`)**
+> Localtunnel injects a "Click to Continue" warning page on your first visit which breaks Babylon.js background asset loading. Use Pinggy instead.

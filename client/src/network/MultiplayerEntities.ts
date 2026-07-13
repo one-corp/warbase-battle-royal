@@ -106,6 +106,25 @@ export class MultiplayerEntities {
                     ta.animation.enableBlending = !isFiring;
                     ta.animation.blendingSpeed = 0.05;
                 });
+
+                // Strip Root Motion from Jump animation programmatically
+                if (ag.name.toLowerCase().includes("jump")) {
+                    ag.targetedAnimations.forEach((ta: any) => {
+                        // Find the position track for the Hips/Root bone
+                        if (ta.target && ta.target.name && ta.target.name.toLowerCase().includes("hips") && ta.animation.targetProperty === "position") {
+                            const keys = ta.animation.getKeys();
+                            if (keys && keys.length > 0) {
+                                const firstFramePos = keys[0].value.clone();
+                                // Lock all frames to the first frame's position (strips X, Y, Z root motion, making it perfectly "In-Place")
+                                keys.forEach((key: any) => {
+                                    if (key.value && key.value.copyFrom) {
+                                        key.value.copyFrom(firstFramePos);
+                                    }
+                                });
+                            }
+                        }
+                    });
+                }
             }
             
             ag.stop();
@@ -390,25 +409,25 @@ export class MultiplayerEntities {
         // Note: The character was exported from Blender in meters. 
         // We must define these in meters (e.g. 0.2 instead of 20).
         // Head
-        makeHitbox("head", "sphere", { diameter: 0.2 }, 2.5, headNode, new Vector3(0, 0.1, 0));
+        makeHitbox("head", "cylinder", { diameter: 0.22, height: 0.4 }, 2.5, headNode, new Vector3(0, 0, 0));
         
         // Torso
         makeHitbox("torso", "box", { width: 0.35, height: 0.45, depth: 0.25 }, 1.0, spineNode, new Vector3(0, 0.1, 0));
         
         // Upper Arms
-        makeHitbox("arm", "cylinder", { diameter: 0.12, height: 0.25 }, 0.8, leftArmNode, new Vector3(0, 0.12, 0), new Vector3(0, 0, Math.PI/2));
-        makeHitbox("arm", "cylinder", { diameter: 0.12, height: 0.25 }, 0.8, rightArmNode, new Vector3(0, 0.12, 0), new Vector3(0, 0, -Math.PI/2));
+        makeHitbox("arm", "cylinder", { diameter: 0.12, height: 0.25 }, 0.8, leftArmNode, new Vector3(0, 0.12, 0), new Vector3(0, Math.PI/2, 0));
+        makeHitbox("arm", "cylinder", { diameter: 0.12, height: 0.25 }, 0.8, rightArmNode, new Vector3(0, 0.12, 0), new Vector3(0, Math.PI/2, 0));
         
         // Lower Arms
-        makeHitbox("arm", "cylinder", { diameter: 0.10, height: 0.25 }, 0.8, leftForeArmNode, new Vector3(0, 0.12, 0), new Vector3(0, 0, Math.PI/2));
-        makeHitbox("arm", "cylinder", { diameter: 0.10, height: 0.25 }, 0.8, rightForeArmNode, new Vector3(0, 0.12, 0), new Vector3(0, 0, -Math.PI/2));
+        makeHitbox("arm", "cylinder", { diameter: 0.10, height: 0.25 }, 0.8, leftForeArmNode, new Vector3(0, 0.12, 0), new Vector3(0, Math.PI/2, 0));
+        makeHitbox("arm", "cylinder", { diameter: 0.10, height: 0.25 }, 0.8, rightForeArmNode, new Vector3(0, 0.12, 0), new Vector3(0, Math.PI/2, 0));
         
         // Upper Legs
-        makeHitbox("leg", "cylinder", { diameter: 0.16, height: 0.45 }, 0.6, leftLegNode, new Vector3(0, 0.22, 0));
-        makeHitbox("leg", "cylinder", { diameter: 0.16, height: 0.45 }, 0.6, rightLegNode, new Vector3(0, 0.22, 0));
+        makeHitbox("leg", "cylinder", { diameter: 0.16, height: 0.45 }, 0.6, leftLegNode, new Vector3(0, 0.22, 0), new Vector3(0, Math.PI/2, 0));
+        makeHitbox("leg", "cylinder", { diameter: 0.16, height: 0.45 }, 0.6, rightLegNode, new Vector3(0, 0.22, 0), new Vector3(0, Math.PI/2, 0));
         
         // Lower Legs (Calves)
-        makeHitbox("leg", "cylinder", { diameter: 0.14, height: 0.45 }, 0.6, leftCalfNode, new Vector3(0, 0.22, 0));
-        makeHitbox("leg", "cylinder", { diameter: 0.14, height: 0.45 }, 0.6, rightCalfNode, new Vector3(0, 0.22, 0));
+        makeHitbox("leg", "cylinder", { diameter: 0.14, height: 0.45 }, 0.6, leftCalfNode, new Vector3(0, 0.22, 0), new Vector3(0, Math.PI/2, 0));
+        makeHitbox("leg", "cylinder", { diameter: 0.14, height: 0.45 }, 0.6, rightCalfNode, new Vector3(0, 0.22, 0), new Vector3(0, Math.PI/2, 0));
     }
 }
