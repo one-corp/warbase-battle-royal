@@ -4,20 +4,33 @@ This document is a comprehensive guide for building the Go game server backend f
 
 ---
 
-## 1. High-Level Architecture
+## 1. High-Level Architecture & Server Structure
 
 The game operates on a **Client-Server** model using **WebSockets**. WebRTC (UDP) is often preferred for fast-paced games, but WebSockets (TCP) are much easier to implement and are perfectly viable for web-based games if the payload size and tick rates are managed correctly.
 
 *   **Protocol:** WebSockets (`gorilla/websocket` in Go is highly recommended).
+*   **Route & Handler:** Clients connect via the `/connect` endpoint (handled by the updated connection handler, replacing the old `/ws` route).
 *   **Tick Rate:** 30Hz (The server broadcasts state 30 times per second).
 *   **Client Send Rate:** Clients also send their state up to the server at roughly 30-60Hz.
 *   **Format:** JSON (For production, Binary/Protobuf is better, but JSON is used here for rapid prototyping).
 
+### Production-Ready Features
+*   **JSON Logger:** The server utilizes structured JSON logging for better observability, debugging, and log aggregation in production environments.
+*   **Graceful Shutdown:** Implemented to catch OS signals (like SIGINT/SIGTERM), allowing the server to finish processing active ticks, safely disconnect clients, and clean up resources before exiting.
+
+### Directory Structure (Standard Go Layout)
+The server follows the idiomatic Go project layout for better separation of concerns:
+*   `cmd/game/`: Contains the main application entry point and server initialization.
+*   `internal/`: Houses the private application and domain logic.
+    *   `internal/engine/`: Core game loop, state management, WebSocket connections, Match logic, and Player handling.
+    *   `internal/jsonlog/`: Handles structured JSON logging for the application.
+    *   `internal/validator/`: Anti-cheat and authoritative action validation (fire rates, ammo, etc.).
+
 ### Concurrency Model in Go
-The Go server should use the standard Hub-and-Spoke pattern:
-*   **1 Hub Goroutine:** Manages the game loop (tick rate), global game state, and broadcasting.
+The Go server should use a standard concurrent Match pattern:
+*   **1 Match Goroutine:** Manages the game loop (tick rate), global game state, and broadcasting.
 *   **2 Goroutines per Client:** One `readPump` (listening for incoming WebSocket messages) and one `writePump` (flushing outgoing messages to the socket).
-*   **Channels:** The `readPump` sends parsed actions to the Hub via channels to avoid locking the game state with Mutexes whenever possible.
+*   **Channels:** The `readPump` sends parsed actions to the Match via channels to avoid locking the game state with Mutexes whenever possible.
 
 ---
 
@@ -107,12 +120,12 @@ When Client A sends a `"fire"` or `"reload"` event, the server instantly sends t
 
 ---
 
-## 3. The 30Hz Game Loop (The Hub)
+## 3. The 30Hz Game Loop (The Match)
 
 To keep all browsers in sync without lagging the server, the Go Server runs a massive "Tick" exactly 30 times a second.
 
 ```go
-func (h *Hub) Run() {
+func (m *Match) Run() {
     ticker := time.NewTicker(time.Second / 30) // 30 Hz Tick
     defer ticker.Stop()
 
@@ -402,10 +415,10 @@ What happens if the client experiences a lag spike and misses a 30Hz tick? The i
 *   **The Solution:** Implement Dead Reckoning. If a packet is missed, the client looks at the player's last known velocity and *extrapolates* (predicts) where they should be moving, keeping the animation smooth until the next packet arrives to correct the position.
 
 ### E. Matchmaking & Room Architecture in Go
-A single `Hub` struct works for one match, but real games need hundreds of matches running simultaneously.
+A single `Match` struct works for one active game, but real environments need hundreds of matches running simultaneously.
 *   **The Architecture:** 
     1.  A global `Lobby` API handles authentication, queuing, and matchmaking.
-    2.  When a match is found, the lobby spawns a new Go Goroutine running a completely isolated `Hub` (a Game Room).
+    2.  When a game is found, the lobby spawns a new Go Goroutine running a completely isolated `Match` (a Game Room).
     3.  The players' WebSockets are handed off to this specific Game Room.
     4.  When the match ends, the Game Room Goroutine cleanly shuts down and the memory is reclaimed by the Garbage Collector.
 
@@ -429,6 +442,6 @@ Glenn Fiedler is an absolute legend in game network programming. His website is 
 *   **Why read it:** It breaks down the math behind client-side prediction, how to sync physics over a network, and the tradeoffs between sending inputs vs. sending snapshot states. His article "Fix Your Timestep" is required reading for writing any game loop.
 
 ### C. Gorilla WebSocket Chat Example (Go-Specific)
-Since this backend is built in Go, the `gorilla/websocket` library is the gold standard. The official chat example provided in their repository is the exact Hub-and-Spoke concurrency pattern outlined in our blueprint.
+Since this backend is built in Go, the `gorilla/websocket` library is the gold standard. The official chat example provided in their repository is the exact concurrency pattern outlined in our blueprint (adapted from Hub to Match).
 *   **Link:** [Gorilla WebSocket Chat Example](https://github.com/gorilla/websocket/tree/master/examples/chat)
-*   **Why read it:** It shows the mathematically perfect, lock-free way to build a Go server with a `Hub` struct, `Client` structs, and channels for `readPumps` and `writePumps`. Using this architecture as the base for the game server will allow it to comfortably handle thousands of concurrent players without deadlocking or crashing.
+*   **Why read it:** It shows the mathematically perfect, lock-free way to build a Go server with a `Match` struct, `Client` structs, and channels for `readPumps` and `writePumps`. Using this architecture as the base for the game server will allow it to comfortably handle thousands of concurrent players without deadlocking or crashing.
