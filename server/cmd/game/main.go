@@ -1,40 +1,49 @@
 package main
 
 import (
-	"log"
+	"flag"
 	"os"
+	"sync"
 
-	"warbase-server/internal/sync"
+	"warbase-server/internal/engine"
+	"warbase-server/internal/jsonlog"
 )
 
 type config struct {
 	port int
+	env  string
 }
 
 type application struct {
 	config config
-	logger *log.Logger
-	hub    *sync.Hub
+	logger *jsonlog.Logger
+	match  *engine.Match
+	wg     sync.WaitGroup
 }
 
 func main() {
-	cfg := config{
-		port: 8080,
-	}
+	var cfg config
 
-	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
+	flag.IntVar(&cfg.port, "port", 8080, "Game server port")
+	flag.StringVar(&cfg.env, "env", "development", "Environment (Development | Production)")
 
-	hub := sync.NewHub()
-	go hub.Run()
+	flag.Parse()
+
+	// Initialize a new jsonlog.Logger which writes messages *at or above* the INFO
+	// severity level to the strandard out stream.
+	logger := jsonlog.New(os.Stdout, jsonlog.LevelInfo)
+
+	match := engine.NewMatch()
+	go match.Run()
 
 	app := &application{
 		config: cfg,
 		logger: logger,
-		hub:    hub,
+		match:  match,
 	}
 
 	err := app.serve()
 	if err != nil {
-		logger.Fatal(err)
+		logger.PrintFatal(err, nil)
 	}
 }

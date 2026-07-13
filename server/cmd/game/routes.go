@@ -8,7 +8,7 @@ func (app *application) routes() http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/healthcheck", app.healthcheckHandler)
-	mux.HandleFunc("/ws", app.wsHandler)
+	mux.HandleFunc("/connect", app.connectToServerHandler)
 
 	// Serve the compiled Vite frontend from ../client/dist
 	fileServer := http.FileServer(http.Dir("../client/dist"))

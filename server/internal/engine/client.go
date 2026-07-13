@@ -1,9 +1,8 @@
-package sync
+package engine
 
 import (
 	"bytes"
 	"log"
-	"net/http"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -21,26 +20,28 @@ var (
 	space   = []byte{' '}
 )
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request) bool {
-		return true // Allow all for prototype
-	},
-}
-
 // Client is a middleman between the websocket connection and the hub.
 type Client struct {
-	hub  *Hub
-	conn *websocket.Conn
-	send chan []byte
-	id   string
+	match *Match
+	conn  *websocket.Conn
+	send  chan []byte
+	id    string
 }
 
-// readPump pumps messages from the websocket connection to the hub.
-func (c *Client) readPump() {
+// NewClient initializes a new websocket client safely
+func NewClient(match *Match, conn *websocket.Conn, id string) *Client {
+	return &Client{
+		match: match,
+		conn:  conn,
+		send:  make(chan []byte, 256),
+		id:    id,
+	}
+}
+
+// ReadPump listens for messages coming from the frontend browser
+func (c *Client) ReadPump() {
 	defer func() {
-		c.hub.unregister <- c
+		c.match.unregister <- c
 		c.conn.Close()
 	}()
 	c.conn.SetReadLimit(maxMessageSize)
@@ -55,12 +56,13 @@ func (c *Client) readPump() {
 			break
 		}
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
-		c.hub.broadcast <- Message{SenderID: c.id, Data: message}
+		// Broadcast to the match using the exported Broadcast method
+		c.match.broadcast <- Message{SenderID: c.id, Data: message}
 	}
 }
 
-// writePump pumps messages from the hub to the websocket connection.
-func (c *Client) writePump() {
+// WritePump pushes server state updates back to the browser
+func (c *Client) WritePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
@@ -99,27 +101,4 @@ func (c *Client) writePump() {
 			}
 		}
 	}
-}
-
-// ServeWs handles websocket requests from the peer.
-func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	
-	// Get username from query string
-	username := r.URL.Query().Get("user")
-	if username == "" {
-		username = "Guest"
-	}
-
-	client := &Client{hub: hub, conn: conn, send: make(chan []byte, 256), id: username}
-	client.hub.register <- client
-
-	// Allow collection of memory referenced by the caller by doing all work in
-	// new goroutines.
-	go client.writePump()
-	go client.readPump()
 }
