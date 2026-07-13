@@ -385,7 +385,7 @@ export class MultiplayerEntities {
             
             mesh.setParent(parentNode);
             mesh.position = offset;
-            if (rotation) mesh.rotation = rotation;
+            mesh.rotation = rotation ? rotation : Vector3.Zero();
             
             mesh.material = hitboxMat;
             mesh.isPickable = false; // We use Havok raycast now, no need for Babylon picking
