@@ -11,3 +11,4 @@ build/
 *.out
 mixamo/
 ./dist
+.aider*

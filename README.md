@@ -82,9 +82,15 @@ The game is now running locally! You can test it by opening `http://localhost:80
 To share the game over the internet, you need to expose your local port `8080`. 
 
 **Option A: Pinggy (Recommended - No Installation Required)**
-Run this in a new terminal window to instantly get a public URL:
+Run this in a new terminal window to start a tunnel in the background:
 ```bash
-ssh -p 443 -o StrictHostKeyChecking=accept-new -R0:localhost:8080 a.pinggy.io
+nohup ssh -p 443 -o StrictHostKeyChecking=accept-new -R0:localhost:8080 a.pinggy.io > /tmp/pinggy.log 2>&1 &
+sleep 5
+cat /tmp/pinggy.log
+```
+This will output your public URLs. The tunnel runs in the background and expires in 60 minutes. To stop it:
+```bash
+pkill -f "ssh.*pinggy"
 ```
 
 **Option B: Ngrok**
