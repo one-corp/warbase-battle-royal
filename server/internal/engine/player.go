@@ -5,25 +5,9 @@ import (
 	"time"
 )
 
-// PlayerState represents the networked player payload sent to clients
-type PlayerState struct {
-	ID        string  `json:"id"`
-	X         float64 `json:"x"`
-	Y         float64 `json:"y"`
-	Z         float64 `json:"z"`
-	RotX      float64 `json:"rx"`
-	RotY      float64 `json:"ry"`
-	RotZ      float64 `json:"rz"`
-	RotW      float64 `json:"rw"`
-	Animation string  `json:"anim"`
-	Health    int     `json:"health"`
-	Kills     int     `json:"kills"`
-	Deaths    int     `json:"deaths"`
-	IsDead    bool    `json:"isDead"`
-}
-
 // Player represents the server's authoritative internal view
 type Player struct {
+	ID    string
 	State *PlayerState
 
 	// Authoritative Weapon & Ammo State
@@ -39,8 +23,8 @@ type Player struct {
 func NewPlayer(id string) *Player {
 	defaultWeapon := Weapons["ak47"]
 	return &Player{
+		ID: id,
 		State: &PlayerState{
-			ID:        id,
 			Health:    100,
 			Animation: "idle",
 		},
@@ -120,7 +104,7 @@ func (p *Player) ValidateAndApplyHit(target *Player, clientDamage int) (bool, er
 		return false, errors.New("impossible damage")
 	}
 
-	target.State.Health -= clientDamage
+	target.State.Health -= int32(clientDamage)
 	if target.State.Health <= 0 {
 		target.State.Health = 0
 		target.State.IsDead = true

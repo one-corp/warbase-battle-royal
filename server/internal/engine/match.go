@@ -1,12 +1,19 @@
 package engine
 
 import (
-	"encoding/json"
 	"log"
 	"math/rand"
 	"sync"
 	"time"
+
+	"google.golang.org/protobuf/proto"
 )
+
+// Internal server wrapper to identify who sent a raw network packet
+type Message struct {
+	SenderID string
+	Data     []byte
+}
 
 // Hub maintains the set of active clients and broadcasts messages to the clients.
 type Match struct {
@@ -52,8 +59,8 @@ func (m *Match) triggerServerRespawn(playerID string) {
 }
 
 // Helper to send events without re-locking (must be called inside an m.mu.Lock())
-func (m *Match) sendDirectEventLocked(playerID string, event ServerEvent) {
-	if outData, err := json.Marshal(event); err == nil {
+func (m *Match) sendDirectEventLocked(playerID string, event *ServerMessage) {
+	if outData, err := proto.Marshal(event); err == nil {
 		for client := range m.clients {
 			if client.id == playerID {
 				select {
@@ -111,12 +118,17 @@ func (m *Match) Run() {
 				newX := (rand.Float64() * 6) - 3
 				newZ := (rand.Float64() * 6) - 3
 
-				respawnEvt := ServerEvent{
-					Type: "respawn",
-					Payload: RespawnEvent{
-						X: newX,
-						Y: 10,
-						Z: newZ,
+				respawnEvt := &ServerMessage{
+					Message: &ServerMessage_ServerEvent{
+						ServerEvent: &ServerEvent{
+							Event: &ServerEvent_Respawn{
+								Respawn: &RespawnEvent{
+									X: float32(newX),
+									Y: 10,
+									Z: float32(newZ),
+								},
+							},
+						},
 					},
 				}
 				m.sendDirectEventLocked(playerID, respawnEvt)
@@ -124,71 +136,84 @@ func (m *Match) Run() {
 			m.mu.Unlock()
 
 		case message := <-m.broadcast:
-			var event ClientEvent
-			if err := json.Unmarshal(message.Data, &event); err == nil {
+			var clientEvent ClientEvent
+			if err := proto.Unmarshal(message.Data, &clientEvent); err == nil {
 				m.mu.Lock()
 
-				switch event.Type {
-				case "state":
-					var stateUpdate PlayerState
-					if err := json.Unmarshal(event.Payload, &stateUpdate); err == nil {
-						// SECURITY FIX: Ignore stateUpdate.ID to prevent spoofing
-						player, ok := m.players[message.SenderID]
-						if !ok {
-							player = NewPlayer(message.SenderID)
-							m.players[message.SenderID] = player
-						}
-
-						if player.State.IsDead {
-							player.State.Animation = "death"
-						} else {
-							// Update client-authoritative values (positions, rotations, anim)
-							player.State.X = stateUpdate.X
-							player.State.Y = stateUpdate.Y
-							player.State.Z = stateUpdate.Z
-							player.State.RotX = stateUpdate.RotX
-							player.State.RotY = stateUpdate.RotY
-							player.State.RotZ = stateUpdate.RotZ
-							player.State.RotW = stateUpdate.RotW
-							player.State.Animation = stateUpdate.Animation
-						}
+				switch event := clientEvent.Event.(type) {
+				case *ClientEvent_StateUpdate:
+					// SECURITY FIX: Ignore stateUpdate.ID to prevent spoofing
+					player, ok := m.players[message.SenderID]
+					if !ok {
+						player = NewPlayer(message.SenderID)
+						m.players[message.SenderID] = player
 					}
 
-				case "hit":
-					var hit HitEvent
-					if err := json.Unmarshal(event.Payload, &hit); err == nil {
-						target, okTarget := m.players[hit.Target]
-						shooter, okShooter := m.players[message.SenderID]
+					if player.State.IsDead {
+						player.State.Animation = "death"
+					} else {
+						// Update client-authoritative values (positions, rotations, anim)
+						player.State.X = event.StateUpdate.X
+						player.State.Y = event.StateUpdate.Y
+						player.State.Z = event.StateUpdate.Z
+						player.State.Rx = event.StateUpdate.Rx
+						player.State.Ry = event.StateUpdate.Ry
+						player.State.Rz = event.StateUpdate.Rz
+						player.State.Rw = event.StateUpdate.Rw
+						player.State.Animation = event.StateUpdate.Animation
+					}
 
-						if okTarget && okShooter {
-							isKill, err := shooter.ValidateAndApplyHit(target, hit.Damage)
-							if err == nil {
-								// Valid hit! Send feedback to shooter
-								if isKill {
-									// It was a lethal shot
-									m.sendDirectEventLocked(shooter.State.ID, ServerEvent{Type: "kill_confirmed"})
-									// Trigger respawn background task for target
-									go m.triggerServerRespawn(target.State.ID)
-								} else {
-									// Normal hit
-									m.sendDirectEventLocked(shooter.State.ID, ServerEvent{Type: "hit_confirmed"})
-								}
+				case *ClientEvent_Hit:
+					target, okTarget := m.players[event.Hit.TargetId]
+					shooter, okShooter := m.players[message.SenderID]
+
+					if okTarget && okShooter {
+						isKill, err := shooter.ValidateAndApplyHit(target, int(event.Hit.Damage))
+						if err == nil {
+							// Valid hit! Send feedback to shooter
+							if isKill {
+								// It was a lethal shot
+								m.sendDirectEventLocked(shooter.ID, &ServerMessage{
+									Message: &ServerMessage_ServerEvent{
+										ServerEvent: &ServerEvent{
+											Event: &ServerEvent_KillConfirmed{},
+										},
+									},
+								})
+								// Trigger respawn background task for target
+								go m.triggerServerRespawn(target.ID)
 							} else {
-								log.Printf("Hit denied from %s: %v", shooter.State.ID, err)
+								// Normal hit
+								m.sendDirectEventLocked(shooter.ID, &ServerMessage{
+									Message: &ServerMessage_ServerEvent{
+										ServerEvent: &ServerEvent{
+											Event: &ServerEvent_HitConfirmed{},
+										},
+									},
+								})
 							}
+						} else {
+							log.Printf("Hit denied from %s: %v", shooter.ID, err)
 						}
 					}
 
-				case "fire":
+				case *ClientEvent_Fire:
 					shooter, ok := m.players[message.SenderID]
 					if ok {
 						if err := shooter.ValidateAndApplyFire(); err == nil {
 							// Valid! Broadcast to everyone else
-							fireMsg := ServerEvent{
-								Type:    "fire",
-								Payload: FireEvent{Shooter: message.SenderID},
+							fireMsg := &ServerMessage{
+								Message: &ServerMessage_ServerEvent{
+									ServerEvent: &ServerEvent{
+										Event: &ServerEvent_Fire{
+											Fire: &ServerFireEvent{
+												ShooterId: message.SenderID,
+											},
+										},
+									},
+								},
 							}
-							if outData, err := json.Marshal(fireMsg); err == nil {
+							if outData, err := proto.Marshal(fireMsg); err == nil {
 								for client := range m.clients {
 									if client.id != message.SenderID {
 										select {
@@ -199,28 +224,25 @@ func (m *Match) Run() {
 								}
 							}
 						} else {
-							log.Printf("Fire denied from %s: %v", shooter.State.ID, err)
+							log.Printf("Fire denied from %s: %v", shooter.ID, err)
 						}
 					}
 
-				case "reload":
+				case *ClientEvent_Reload:
 					shooter, ok := m.players[message.SenderID]
 					if ok {
 						if err := shooter.ValidateAndApplyReload(); err != nil {
-							log.Printf("Reload denied from %s: %v", shooter.State.ID, err)
+							log.Printf("Reload denied from %s: %v", shooter.ID, err)
 						}
 					}
 
-				case "switch":
-					var sw SwitchEvent
-					if err := json.Unmarshal(event.Payload, &sw); err == nil {
-						shooter, ok := m.players[message.SenderID]
-						if ok && !shooter.State.IsDead {
-							if weapon, wOk := Weapons[sw.WeaponID]; wOk {
-								shooter.ActiveWeapon = weapon
-								shooter.AmmoCount = weapon.MagSize
-								shooter.IsReloading = false
-							}
+				case *ClientEvent_SwitchWeapon:
+					shooter, ok := m.players[message.SenderID]
+					if ok && !shooter.State.IsDead {
+						if weapon, wOk := Weapons[event.SwitchWeapon.WeaponId]; wOk {
+							shooter.ActiveWeapon = weapon
+							shooter.AmmoCount = weapon.MagSize
+							shooter.IsReloading = false
 						}
 					}
 				}
@@ -239,11 +261,31 @@ func (m *Match) Run() {
 			}
 
 			// Build broadcast payload (only PlayerStates)
-			states := make(map[string]*PlayerState)
-			for id, p := range m.players {
-				states[id] = p.State
+			gameState := &GameState{
+				Players: make(map[string]*PlayerState),
 			}
-			stateData, err := json.Marshal(states)
+			for id, p := range m.players {
+				gameState.Players[id] = &PlayerState{
+					X:         p.State.X,
+					Y:         p.State.Y,
+					Z:         p.State.Z,
+					Rx:        p.State.Rx,
+					Ry:        p.State.Ry,
+					Rz:        p.State.Rz,
+					Rw:        p.State.Rw,
+					Animation: p.State.Animation,
+					Health:    p.State.Health,
+					Kills:     p.State.Kills,
+					Deaths:    p.State.Deaths,
+					IsDead:    p.State.IsDead,
+				}
+			}
+			serverMsg := &ServerMessage{
+				Message: &ServerMessage_GameState{
+					GameState: gameState,
+				},
+			}
+			stateData, err := proto.Marshal(serverMsg)
 			m.mu.Unlock()
 
 			if err == nil {

@@ -1,1 +1,95 @@
-// Placeholder for Protocol Buffers
+syntax = "proto3";
+
+package warbase;
+
+option go_package = "warbase-server/internal/engine;engine";
+
+// --------------------------
+// CLIENT -> SERVER MESSAGES
+// --------------------------
+
+message ClientEvent {
+    oneof event {
+        PlayerStateUpdate state_update = 1;
+        HitEvent hit = 2;
+        FireEvent fire = 3;
+        ReloadEvent reload = 4;
+        SwitchWeaponEvent switch_weapon = 5;
+        RespawnRequestEvent respawn_request = 6;
+    }
+}
+
+message PlayerStateUpdate {
+    float x = 1;
+    float y = 2;
+    float z = 3;
+    float rx = 4; // rotation quaternion x
+    float ry = 5; // rotation quaternion y
+    float rz = 6; // rotation quaternion z
+    float rw = 7; // rotation quaternion w
+    string animation = 8;
+}
+
+message HitEvent {
+    string target_id = 1;
+    int32 damage = 2;
+}
+
+message FireEvent {}
+message ReloadEvent {}
+message SwitchWeaponEvent {
+    string weapon_id = 1;
+}
+message RespawnRequestEvent {}
+
+// --------------------------
+// SERVER -> CLIENT MESSAGES
+// --------------------------
+
+message ServerMessage {
+    oneof message {
+        GameState game_state = 1;
+        ServerEvent server_event = 2;
+    }
+}
+
+message GameState {
+    map<string, PlayerState> players = 1;
+}
+
+message PlayerState {
+    float x = 1;
+    float y = 2;
+    float z = 3;
+    float rx = 4;
+    float ry = 5;
+    float rz = 6;
+    float rw = 7;
+    string animation = 8;
+    int32 health = 9;
+    int32 kills = 10;
+    int32 deaths = 11;
+    bool is_dead = 12;
+}
+
+message ServerEvent {
+    oneof event {
+        RespawnEvent respawn = 1;
+        ServerFireEvent fire = 2;
+        HitConfirmedEvent hit_confirmed = 3;
+        KillConfirmedEvent kill_confirmed = 4;
+    }
+}
+
+message RespawnEvent {
+    float x = 1;
+    float y = 2;
+    float z = 3;
+}
+
+message ServerFireEvent {
+    string shooter_id = 1;
+}
+
+message HitConfirmedEvent {}
+message KillConfirmedEvent {}

@@ -1,4 +1,5 @@
 import { Vector3, Quaternion } from "@babylonjs/core";
+import { warbase } from "./packets";
 
 export interface PlayerState {
     id: string;
@@ -31,16 +32,14 @@ export class NetworkManager {
     constructor(username: string, onConnect: () => void) {
         this.username = username;
         this.onConnectCb = onConnect;
-        this.onStateReceived = () => {};
-        this.onRespawn = () => {};
         this.connect();
     }
 
     private connect() {
-
         // Connect dynamically based on where the game is hosted
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         this.ws = new WebSocket(`${protocol}//${window.location.host}/connect?user=${this.username}`);
+        this.ws.binaryType = 'arraybuffer';
 
         this.ws.onopen = () => {
             console.log("WebSocket Connected!");
@@ -62,22 +61,40 @@ export class NetworkManager {
 
         this.ws.onmessage = (event) => {
             try {
-                // Split by newline in case the Go server batched multiple states/events
-                const lines = event.data.split("\n");
-                for (const line of lines) {
-                    if (!line.trim()) continue;
-                    const data = JSON.parse(line);
-                    
-                    if (data.type === "respawn") {
-                        this.onRespawn(data.payload.x, data.payload.y, data.payload.z);
-                    } else if (data.type === "fire") {
-                        this.onFireReceived(data.payload.shooter);
-                    } else if (data.type === "hit_confirmed") {
+                const data = new Uint8Array(event.data as ArrayBuffer);
+                const serverMsg = warbase.ServerMessage.decode(data);
+                
+                if (serverMsg.message === "gameState" && serverMsg.gameState) {
+                    const state: Record<string, PlayerState> = {};
+                    for (const id in serverMsg.gameState.players) {
+                        const p = serverMsg.gameState.players[id]!;
+                        state[id] = {
+                            id,
+                            x: p.x ?? 0,
+                            y: p.y ?? 0,
+                            z: p.z ?? 0,
+                            rx: p.rx ?? 0,
+                            ry: p.ry ?? 0,
+                            rz: p.rz ?? 0,
+                            rw: p.rw ?? 1,
+                            anim: p.animation ?? "",
+                            health: p.health ?? 0,
+                            kills: p.kills ?? 0,
+                            deaths: p.deaths ?? 0,
+                            isDead: p.isDead ?? false
+                        };
+                    }
+                    this.onStateReceived(state);
+                } else if (serverMsg.message === "serverEvent" && serverMsg.serverEvent) {
+                    const evt = serverMsg.serverEvent;
+                    if (evt.event === "respawn" && evt.respawn) {
+                        this.onRespawn(evt.respawn.x ?? 0, evt.respawn.y ?? 0, evt.respawn.z ?? 0);
+                    } else if (evt.event === "fire" && evt.fire) {
+                        this.onFireReceived(evt.fire.shooterId ?? "");
+                    } else if (evt.event === "hitConfirmed") {
                         this.onHitConfirmed();
-                    } else if (data.type === "kill_confirmed") {
+                    } else if (evt.event === "killConfirmed") {
                         this.onKillConfirmed();
-                    } else {
-                        this.onStateReceived(data);
                     }
                 }
             } catch (e) {
@@ -88,13 +105,12 @@ export class NetworkManager {
 
     public sendFire() {
         if (this.ws.readyState !== WebSocket.OPEN) return;
-
-        const wrapper = {
-            type: "fire",
-            payload: {}
-        };
-
-        this.ws.send(JSON.stringify(wrapper));
+        const clientEvent = warbase.ClientEvent.create({
+            event: "fire",
+            fire: {}
+        });
+        const buffer = warbase.ClientEvent.encode(clientEvent).finish();
+        this.ws.send(buffer as BufferSource);
     }
 
     public sendState(pos: Vector3, rot: Quaternion, anim: string) {
@@ -106,63 +122,66 @@ export class NetworkManager {
             return;
         }
 
-        const state: Partial<PlayerState> = {
-            id: this.username,
-            x: pos.x,
-            y: pos.y,
-            z: pos.z,
-            rx: rot.x,
-            ry: rot.y,
-            rz: rot.z,
-            rw: rot.w,
-            anim: anim
-        };
-
-        const wrapper = {
-            type: "state",
-            payload: state
-        };
-
-        this.ws.send(JSON.stringify(wrapper));
+        const clientEvent = warbase.ClientEvent.create({
+            event: "stateUpdate",
+            stateUpdate: {
+                x: pos.x,
+                y: pos.y,
+                z: pos.z,
+                rx: rot.x,
+                ry: rot.y,
+                rz: rot.z,
+                rw: rot.w,
+                animation: anim
+            }
+        });
+        const buffer = warbase.ClientEvent.encode(clientEvent).finish();
+        this.ws.send(buffer as BufferSource);
     }
 
     public sendHit(targetId: string, damage: number) {
         if (this.ws.readyState !== WebSocket.OPEN) return;
 
-        const wrapper = {
-            type: "hit",
-            payload: {
-                target: targetId,
-                damage: damage
+        const clientEvent = warbase.ClientEvent.create({
+            event: "hit",
+            hit: {
+                targetId,
+                damage
             }
-        };
-
-        this.ws.send(JSON.stringify(wrapper));
+        });
+        const buffer = warbase.ClientEvent.encode(clientEvent).finish();
+        this.ws.send(buffer as BufferSource);
     }
 
     public sendReload() {
         if (this.ws.readyState !== WebSocket.OPEN) return;
-        const wrapper = { type: "reload", payload: {} };
-        this.ws.send(JSON.stringify(wrapper));
+        const clientEvent = warbase.ClientEvent.create({
+            event: "reload",
+            reload: {}
+        });
+        const buffer = warbase.ClientEvent.encode(clientEvent).finish();
+        this.ws.send(buffer as BufferSource);
     }
 
     public sendSwitchWeapon(weaponId: string) {
         if (this.ws.readyState !== WebSocket.OPEN) return;
-        const wrapper = {
-            type: "switch",
-            payload: { weaponId: weaponId }
-        };
-        this.ws.send(JSON.stringify(wrapper));
+        const clientEvent = warbase.ClientEvent.create({
+            event: "switchWeapon",
+            switchWeapon: {
+                weaponId
+            }
+        });
+        const buffer = warbase.ClientEvent.encode(clientEvent).finish();
+        this.ws.send(buffer as BufferSource);
     }
 
     public sendRespawnRequest() {
         if (this.ws.readyState !== WebSocket.OPEN) return;
-
-        const wrapper = {
-            type: "respawn",
-            payload: {}
-        };
-
-        this.ws.send(JSON.stringify(wrapper));
+        const clientEvent = warbase.ClientEvent.create({
+            event: "respawnRequest",
+            respawnRequest: {}
+        });
+        const buffer = warbase.ClientEvent.encode(clientEvent).finish();
+        this.ws.send(buffer as BufferSource);
     }
 }

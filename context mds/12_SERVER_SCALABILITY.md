@@ -1,6 +1,22 @@
 # Scalability Blueprint: Handling Massive Multiplayer Traffic
 
-While our current Go Server perfectly implements the authoritative anti-cheat logic, it will hit a CPU and Bandwidth bottleneck if we drop 100+ players into a single room. 
+---
+
+## Recent Performance Optimizations (2026-07-14)
+Below are immediate optimizations made to fix multiplayer lag without full architectural overhauls:
+
+### 1. WebSocket Buffer & Message Size Increases
+- **Files Modified:** `server/cmd/game/handlers.go`, `server/internal/engine/client.go`
+- **What Changed:**
+  - Increased `ReadBufferSize` & `WriteBufferSize` from 1KB → 8KB (8192 bytes)
+  - Increased `maxMessageSize` from 1KB → 8KB
+  - Increased client send channel capacity from 256 → 512
+- **Why:** Small buffers cause backpressure and truncation with larger payloads, especially with multiple players
+- **Impact:** Reduced network jitter and prevented packet loss during high-traffic moments
+
+---
+
+While our current Go Server perfectly implements the authoritative anti-cheat logic, it will hit a CPU and Bandwidth bottleneck if we drop 100+ players into a single room.
 
 This document outlines the exact architectural upgrades required to transition the server from a 10-player room to an MMO-scale backend capable of handling hundreds or thousands of concurrent players.
 

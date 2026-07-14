@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"bytes"
 	"log"
 	"time"
 
@@ -12,12 +11,7 @@ const (
 	writeWait      = 10 * time.Second
 	pongWait       = 60 * time.Second
 	pingPeriod     = (pongWait * 9) / 10
-	maxMessageSize = 1024
-)
-
-var (
-	newline = []byte{'\n'}
-	space   = []byte{' '}
+	maxMessageSize = 8192
 )
 
 // Client is a middleman between the websocket connection and the hub.
@@ -33,7 +27,7 @@ func NewClient(match *Match, conn *websocket.Conn, id string) *Client {
 	return &Client{
 		match: match,
 		conn:  conn,
-		send:  make(chan []byte, 256),
+		send:  make(chan []byte, 512),
 		id:    id,
 	}
 }
@@ -55,7 +49,6 @@ func (c *Client) ReadPump() {
 			}
 			break
 		}
-		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
 		// Broadcast to the match using the exported Broadcast method
 		c.match.broadcast <- Message{SenderID: c.id, Data: message}
 	}
@@ -78,20 +71,7 @@ func (c *Client) WritePump() {
 				return
 			}
 
-			w, err := c.conn.NextWriter(websocket.TextMessage)
-			if err != nil {
-				return
-			}
-			w.Write(message)
-
-			// Add queued chat messages to the current websocket message.
-			n := len(c.send)
-			for i := 0; i < n; i++ {
-				w.Write(newline)
-				w.Write(<-c.send)
-			}
-
-			if err := w.Close(); err != nil {
+			if err := c.conn.WriteMessage(websocket.BinaryMessage, message); err != nil {
 				return
 			}
 		case <-ticker.C:
