@@ -1,6 +1,6 @@
 import { defineQuery } from "bitecs";
 import { world } from "../World";
-import { Position, Velocity, InputComponent, PlayerComponent, PlayerTag } from "../Components";
+import { InputComponent, PlayerComponent, PlayerTag } from "../Components";
 import { entityPhysicsBodies, entityCameras, entityMeshes } from "../ViewMaps";
 import { Vector3, Scalar, Ray, PhysicsMotionType } from "@babylonjs/core";
 
@@ -29,6 +29,14 @@ function moveTowards(current: number, target: number, maxDelta: number): number 
 
 const playerQuery = defineQuery([PlayerTag, InputComponent, PlayerComponent]);
 
+const _groundRay = new Ray(Vector3.Zero(), new Vector3(0, -1, 0), 0.95);
+const _tempForward = new Vector3();
+const _tempRight = new Vector3();
+const _targetVel = new Vector3();
+const _currentVel = new Vector3();
+const _platformVel = new Vector3();
+const _newVel = new Vector3();
+
 export function playerMovementSystem(dt: number, scene: any) {
     const entities = playerQuery(world);
 
@@ -44,10 +52,8 @@ export function playerMovementSystem(dt: number, scene: any) {
         PlayerComponent.coyoteTimer[eid] = Math.max(0, PlayerComponent.coyoteTimer[eid] - dt);
 
         // Ground Check
-        const rayStart = mesh.position.clone();
-        const rayDir = new Vector3(0, -1, 0);
-        const ray = new Ray(rayStart, rayDir, 0.95); 
-        const rayResult = scene.pickWithRay(ray, (m: any) => m !== mesh && !m.isDescendantOf(mesh));
+        _groundRay.origin.copyFrom(mesh.position);
+        const rayResult = scene.pickWithRay(_groundRay, (m: any) => m !== mesh && !m.isDescendantOf(mesh));
         
         const wasGrounded = PlayerComponent.isGrounded[eid] === 1;
         const isGrounded = rayResult?.hit ?? false;
@@ -101,52 +107,55 @@ export function playerMovementSystem(dt: number, scene: any) {
         const localDir = new Vector3(dirX, 0, dirZ);
         if (localDir.length() > 0) localDir.normalize();
 
-        const forward = camera.getDirection(Vector3.Forward());
-        forward.y = 0;
-        const right = camera.getDirection(Vector3.Right());
-        right.y = 0;
+        camera.getDirectionToRef(Vector3.Forward(), _tempForward);
+        _tempForward.y = 0;
+        camera.getDirectionToRef(Vector3.Right(), _tempRight);
+        _tempRight.y = 0;
 
-        if (forward.lengthSquared() < 0.001) {
-            forward.set(Math.sin(PlayerComponent.yaw[eid]), 0, Math.cos(PlayerComponent.yaw[eid]));
-            right.set(Math.cos(PlayerComponent.yaw[eid]), 0, -Math.sin(PlayerComponent.yaw[eid]));
+        if (_tempForward.lengthSquared() < 0.001) {
+            _tempForward.set(Math.sin(PlayerComponent.yaw[eid]), 0, Math.cos(PlayerComponent.yaw[eid]));
+            _tempRight.set(Math.cos(PlayerComponent.yaw[eid]), 0, -Math.sin(PlayerComponent.yaw[eid]));
         } else {
-            forward.normalize();
-            right.normalize();
+            _tempForward.normalize();
+            _tempRight.normalize();
         }
 
         const STRAFE_MULTIPLIER = 0.5; 
-        const targetVel = forward.scale(localDir.z).add(right.scale(localDir.x * STRAFE_MULTIPLIER)).scale(targetSpeed);
+        
+        _targetVel.copyFrom(_tempForward).scaleInPlace(localDir.z);
+        _targetVel.addInPlace(_tempRight.scaleInPlace(localDir.x * STRAFE_MULTIPLIER));
+        _targetVel.scaleInPlace(targetSpeed);
 
         const accel = isGrounded ? (localDir.length() > 0 ? GROUND_ACCEL : GROUND_DECEL) : (localDir.length() > 0 ? AIR_ACCEL : AIR_DECEL);
 
-        const currentVel = body.getLinearVelocity();
+        body.getLinearVelocityToRef(_currentVel);
         
-        let platformVel = Vector3.Zero();
+        _platformVel.copyFrom(Vector3.Zero());
         if (isGrounded && rayResult?.pickedMesh?.physicsBody) {
             if (rayResult.pickedMesh.physicsBody.getMotionType() === PhysicsMotionType.ANIMATED) {
-                platformVel = rayResult.pickedMesh.physicsBody.getLinearVelocity();
+                rayResult.pickedMesh.physicsBody.getLinearVelocityToRef(_platformVel);
             }
         }
 
-        const localCurrentX = currentVel.x - platformVel.x;
-        const localCurrentZ = currentVel.z - platformVel.z;
+        const localCurrentX = _currentVel.x - _platformVel.x;
+        const localCurrentZ = _currentVel.z - _platformVel.z;
 
-        const newLocalX = moveTowards(localCurrentX, targetVel.x, accel * dt);
-        const newLocalZ = moveTowards(localCurrentZ, targetVel.z, accel * dt);
+        const newLocalX = moveTowards(localCurrentX, _targetVel.x, accel * dt);
+        const newLocalZ = moveTowards(localCurrentZ, _targetVel.z, accel * dt);
         
-        const newX = newLocalX + platformVel.x;
-        const newZ = newLocalZ + platformVel.z;
-        let newY = currentVel.y;
+        const newX = newLocalX + _platformVel.x;
+        const newZ = newLocalZ + _platformVel.z;
+        let newY = _currentVel.y;
 
         if (InputComponent.jump[eid] && (isGrounded || PlayerComponent.coyoteTimer[eid] > 0) && PlayerComponent.jumpCooldownTimer[eid] <= 0) {
             newY = JUMP_IMPULSE;
             PlayerComponent.isGrounded[eid] = 0;
             PlayerComponent.coyoteTimer[eid] = 0;
             PlayerComponent.jumpCooldownTimer[eid] = JUMP_COOLDOWN;
-            InputComponent.jump[eid] = 0; 
         }
 
-        body.setLinearVelocity(new Vector3(newX, newY, newZ));
+        _newVel.set(newX, newY, newZ);
+        body.setLinearVelocity(_newVel);
         body.setAngularVelocity(Vector3.Zero());
 
         // Camera Lerps
@@ -164,5 +173,8 @@ export function playerMovementSystem(dt: number, scene: any) {
         } else {
             camera.position.x = Scalar.Lerp(camera.position.x, 0, 10 * dt);
         }
+
+        // Always clear jump intent at the end of the frame so it doesn't get stuck if pressed mid-air
+        InputComponent.jump[eid] = 0;
     }
 }

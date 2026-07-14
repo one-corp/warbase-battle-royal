@@ -10,10 +10,11 @@ import (
 
 // Hub maintains the set of active clients and broadcasts messages to the clients.
 type Match struct {
-	clients    map[*Client]bool
-	broadcast  chan Message
-	register   chan *Client
-	unregister chan *Client
+	clients     map[*Client]bool
+	broadcast   chan Message
+	register    chan *Client
+	unregister  chan *Client
+	respawnChan chan string
 
 	// Game State
 	players map[string]*Player
@@ -22,11 +23,12 @@ type Match struct {
 
 func NewMatch() *Match {
 	return &Match{
-		broadcast:  make(chan Message),
-		register:   make(chan *Client),
-		unregister: make(chan *Client),
-		clients:    make(map[*Client]bool),
-		players:    make(map[string]*Player),
+		broadcast:   make(chan Message),
+		register:    make(chan *Client),
+		unregister:  make(chan *Client),
+		respawnChan: make(chan string),
+		clients:     make(map[*Client]bool),
+		players:     make(map[string]*Player),
 	}
 }
 
@@ -46,43 +48,7 @@ func (m *Match) Broadcast(msg Message) {
 func (m *Match) triggerServerRespawn(playerID string) {
 	// Wait 5 seconds
 	time.Sleep(5 * time.Second)
-
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	player, ok := m.players[playerID]
-	if !ok || !player.State.IsDead {
-		return // Disconnected or already revived
-	}
-
-	player.State.IsDead = false
-	player.State.Health = 100
-	player.State.Animation = "idle"
-	player.IsReloading = false
-	player.AmmoCount = player.ActiveWeapon.MagSize
-
-	// Dynamic Spawns at the far ends of the Corridors
-	var newX, newZ float64
-	if rand.Intn(2) == 0 {
-		// North Corridor (US Spawn)
-		newX = (rand.Float64() * 10) - 5
-		newZ = 45 + (rand.Float64() * 5)
-	} else {
-		// South Corridor (RU Spawn)
-		newX = (rand.Float64() * 10) - 5
-		newZ = -45 - (rand.Float64() * 5)
-	}
-
-	respawnEvt := ServerEvent{
-		Type: "respawn",
-		Payload: RespawnEvent{
-			X: newX,
-			Y: 10, // Drop from a bit high
-			Z: newZ,
-		},
-	}
-
-	m.sendDirectEventLocked(playerID, respawnEvt)
+	m.respawnChan <- playerID
 }
 
 // Helper to send events without re-locking (must be called inside an m.mu.Lock())
@@ -113,13 +79,49 @@ func (m *Match) Run() {
 			if _, ok := m.clients[client]; ok {
 				delete(m.clients, client)
 				close(client.send)
-
-				m.mu.Lock()
-				delete(m.players, client.id)
-				m.mu.Unlock()
-
-				log.Printf("Player %s disconnected", client.id)
 			}
+
+			// Zombie fix: Always try to delete player state, even if client was forcefully evicted.
+			// To avoid fast-reconnect bugs, ensure no other active client has the same ID.
+			m.mu.Lock()
+			stillConnected := false
+			for c := range m.clients {
+				if c.id == client.id {
+					stillConnected = true
+					break
+				}
+			}
+			if !stillConnected {
+				delete(m.players, client.id)
+			}
+			m.mu.Unlock()
+
+			log.Printf("Player %s disconnected", client.id)
+
+		case playerID := <-m.respawnChan:
+			m.mu.Lock()
+			player, ok := m.players[playerID]
+			if ok && player.State.IsDead {
+				player.State.IsDead = false
+				player.State.Health = 100
+				player.State.Animation = "idle"
+				player.IsReloading = false
+				player.AmmoCount = player.ActiveWeapon.MagSize
+
+				newX := (rand.Float64() * 6) - 3
+				newZ := (rand.Float64() * 6) - 3
+
+				respawnEvt := ServerEvent{
+					Type: "respawn",
+					Payload: RespawnEvent{
+						X: newX,
+						Y: 10,
+						Z: newZ,
+					},
+				}
+				m.sendDirectEventLocked(playerID, respawnEvt)
+			}
+			m.mu.Unlock()
 
 		case message := <-m.broadcast:
 			var event ClientEvent
@@ -130,10 +132,11 @@ func (m *Match) Run() {
 				case "state":
 					var stateUpdate PlayerState
 					if err := json.Unmarshal(event.Payload, &stateUpdate); err == nil {
-						player, ok := m.players[stateUpdate.ID]
+						// SECURITY FIX: Ignore stateUpdate.ID to prevent spoofing
+						player, ok := m.players[message.SenderID]
 						if !ok {
-							player = NewPlayer(stateUpdate.ID)
-							m.players[stateUpdate.ID] = player
+							player = NewPlayer(message.SenderID)
+							m.players[message.SenderID] = player
 						}
 
 						if player.State.IsDead {

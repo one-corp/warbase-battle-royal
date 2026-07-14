@@ -1,8 +1,8 @@
-import { addEntity, addComponent, defineQuery } from "bitecs";
+import { addEntity, addComponent } from "bitecs";
 import { world } from "../World";
 import { Position, Rotation, Velocity, InputComponent, PlayerComponent, PlayerTag, PhysicsBodyTag, Renderable } from "../Components";
 import { entityMeshes, entityPhysicsBodies, entityCameras } from "../ViewMaps";
-import { Scene, MeshBuilder, PhysicsAggregate, PhysicsShapeType, Vector3, UniversalCamera, Scalar, Ray, PhysicsMotionType } from "@babylonjs/core";
+import { Scene, MeshBuilder, PhysicsAggregate, PhysicsShapeType, Vector3, UniversalCamera } from "@babylonjs/core";
 
 export function initPlayer(scene: Scene, canvas: HTMLCanvasElement): number {
     const eid = addEntity(world);

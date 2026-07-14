@@ -11,12 +11,10 @@ import {
     Scalar,
     SceneLoader,
     StandardMaterial,
-    Texture,
     PhysicsMotionType
 } from "@babylonjs/core";
 import { AdvancedDynamicTexture, Rectangle } from "@babylonjs/gui";
 import { throwGrenade } from './GrenadeSystem';
-import type { PlayerController } from './PlayerController';
 import type { NetworkManager } from "../network/NetworkManager";
 import { initDecalSystem, spawnDecal } from "../ecs/systems/DecalSystem";
 import { initTracerSystem, spawnTracer, updateTracers } from "../ecs/systems/TracerSystem";
@@ -567,7 +565,7 @@ export class WeaponSystem {
             
             if (isMoving && !this.isReloading) {
                 const bobSpeed = input.sprint ? 15 : 10;
-                const bobAmp = input.sprint ? 0.02 : 0.01;
+                const bobAmp = input.sprint ? 0.012 : 0.01;
                 this.walkBobTimer += dt * bobSpeed;
                 bobX = Math.sin(this.walkBobTimer) * bobAmp;
                 bobY = Math.abs(Math.cos(this.walkBobTimer)) * bobAmp; 

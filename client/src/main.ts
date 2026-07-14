@@ -17,9 +17,8 @@ import "@babylonjs/loaders/glTF";
 import { EnvironmentManager } from './engine/Environment';
 import { initPlayer } from './ecs/systems/PlayerSystem';
 import { playerMovementSystem } from './ecs/systems/PlayerMovementSystem';
-import { RenderSystem } from './ecs/systems/RenderSystem';
 import { PhysicsSystem } from './ecs/systems/PhysicsSystem';
-import { InputComponent, PlayerComponent, Position, Rotation } from './ecs/Components';
+import { InputComponent, PlayerComponent, Position } from './ecs/Components';
 import { entityCameras, entityMeshes, entityPhysicsBodies } from './ecs/ViewMaps';
 import { world } from './ecs/World';
 import { WeaponSystem } from './physics/WeaponSystem';
@@ -235,6 +234,9 @@ async function startGame(username: string) {
 
         // Network Tick Loop (60Hz for smoother interpolation)
         let networkTickTimer = 0;
+        const _tempPos = new Vector3();
+        const _tempRot = new Quaternion();
+        
         scene.onBeforeRenderObservable.add(() => {
             if (isLocalDead) return;
             
@@ -243,7 +245,6 @@ async function startGame(username: string) {
             // Run ECS Systems
             playerMovementSystem(dt / 1000, scene);
             PhysicsSystem(world);
-            RenderSystem(world);
 
             networkTickTimer += dt;
             if (networkTickTimer >= 1000 / 60) {
@@ -254,7 +255,7 @@ async function startGame(username: string) {
                 
                 if (mesh && camera) {
                     const yaw = camera.rotation.y;
-                    const rot = Quaternion.RotationYawPitchRoll(yaw, 0, 0);
+                    Quaternion.RotationYawPitchRollToRef(yaw, 0, 0, _tempRot);
                     
                     const eid = playerEid;
                     let anim = "idle";
@@ -268,9 +269,11 @@ async function startGame(username: string) {
                         anim = "left";
                     }
 
+                    _tempPos.set(Position.x[eid], Position.y[eid], Position.z[eid]);
+                    
                     networkManager.sendState(
-                        new Vector3(Position.x[eid], Position.y[eid], Position.z[eid]),
-                        rot,
+                        _tempPos,
+                        _tempRot,
                         anim
                     );
                 }

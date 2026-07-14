@@ -1,4 +1,4 @@
-import { Scene, AssetContainer, SceneLoader, Vector3, Quaternion, AnimationGroup, TransformNode, Mesh, ParticleSystem, Texture, Color4, StandardMaterial, Color3, MeshBuilder, PhysicsAggregate, PhysicsShapeType, PhysicsMotionType } from "@babylonjs/core";
+import { Scene, AssetContainer, SceneLoader, Vector3, Quaternion, AnimationGroup, TransformNode, Mesh, ParticleSystem, Texture, Color4, StandardMaterial, Color3, MeshBuilder, PhysicsAggregate, PhysicsShapeType, PhysicsMotionType, PhysicsConstraint, PhysicsConstraintType } from "@babylonjs/core";
 import type { PlayerState } from "./NetworkManager";
 
 const RENDER_DELAY = 100; // ms
@@ -16,10 +16,17 @@ export class MultiplayerEntities {
     private scene: Scene;
     private assetContainer: AssetContainer | null = null;
     private remotePlayers: Record<string, RemotePlayer> = {};
+    private ragdolls: Map<string, PhysicsAggregate[]> = new Map();
+    private ragdollConstraints: Map<string, PhysicsConstraint[]> = new Map();
+    private hitboxMat: StandardMaterial;
 
     constructor(scene: Scene) {
         this.scene = scene;
         this.loadModel();
+
+        this.hitboxMat = new StandardMaterial("hitboxMat", this.scene);
+        this.hitboxMat.alpha = 0.0; // Invisible for gameplay
+        this.hitboxMat.diffuseColor = new Color3(1, 0, 0);
 
         // Interpolation Loop
         this.scene.onBeforeRenderObservable.add(() => {
@@ -42,6 +49,11 @@ export class MultiplayerEntities {
 
             const state = globalState[id];
 
+            // Detect respawns explicitly
+            if (this.remotePlayers[id] && this.remotePlayers[id].currentState === "death" && !state.isDead) {
+                this.removePlayer(id);
+            }
+
             // Spawn new player if not tracking
             if (!this.remotePlayers[id]) {
                 this.spawnPlayer(id, state);
@@ -50,19 +62,22 @@ export class MultiplayerEntities {
             const player = this.remotePlayers[id];
             
             // Buffer the new state for interpolation (offset Y by -0.9 to align feet to ground)
-            player.stateBuffer.push({
-                time: now,
-                position: new Vector3(state.x, state.y - 0.9, state.z),
-                rotation: new Quaternion(state.rx, state.ry, state.rz, state.rw)
-            });
-
-            // Keep buffer small
-            if (player.stateBuffer.length > 10) {
-                player.stateBuffer.shift();
+            if (player.stateBuffer.length >= 10) {
+                const popped = player.stateBuffer.shift()!;
+                popped.time = now;
+                popped.position.set(state.x, state.y - 0.9, state.z);
+                popped.rotation.set(state.rx, state.ry, state.rz, state.rw);
+                player.stateBuffer.push(popped);
+            } else {
+                player.stateBuffer.push({
+                    time: now,
+                    position: new Vector3(state.x, state.y - 0.9, state.z),
+                    rotation: new Quaternion(state.rx, state.ry, state.rz, state.rw)
+                });
             }
 
-            // Sync Animation
-            this.syncAnimation(player, state.anim, state.isDead);
+            // Sync animation state
+            this.syncAnimation(player, state.anim, state.isDead, false);
         }
 
         // Cleanup disconnected players
@@ -88,8 +103,8 @@ export class MultiplayerEntities {
         rootNode.getChildMeshes().forEach(mesh => {
             mesh.metadata = { playerId: id };
             mesh.isPickable = false;
-            mesh.doNotSyncBoundingInfo = true;
-            mesh.alwaysSelectAsActiveMesh = true; // Fix disappearing body bug!
+            // Prevent close-up frustum culling bugs for skeletal meshes by forcing them to always render
+            mesh.alwaysSelectAsActiveMesh = true;
         });
 
         // Create the invisible bone colliders
@@ -242,8 +257,28 @@ export class MultiplayerEntities {
     private removePlayer(id: string) {
         const player = this.remotePlayers[id];
         if (player) {
+            player.flashSystem.dispose();
             player.mesh.dispose();
             delete this.remotePlayers[id];
+        }
+
+        // Dispose Constraints
+        const constraints = this.ragdollConstraints.get(id);
+        if (constraints) {
+            constraints.forEach(c => c.dispose());
+            this.ragdollConstraints.delete(id);
+        }
+
+        // Dispose Ragdoll Bodies & Meshes
+        const bodies = this.ragdolls.get(id);
+        if (bodies) {
+            bodies.forEach(agg => {
+                if (agg.transformNode) {
+                    agg.transformNode.dispose(); // This deletes the invisible hitbox mesh
+                }
+                agg.dispose(); // This removes it from Havok
+            });
+            this.ragdolls.delete(id);
         }
     }
 
@@ -251,19 +286,17 @@ export class MultiplayerEntities {
         if (isDead) {
             player.mesh.getChildMeshes().forEach(m => m.isPickable = false);
             if (player.currentState !== "death") {
-                // Stop current
-                if (player.anims[player.currentState]) {
-                    player.anims[player.currentState].stop();
-                }
                 player.currentState = "death";
-                
-                // Find death anim
+                // Stop all animations and play death animation if available
                 for (const name in player.anims) {
-                    if (name.toLowerCase().includes("death") || name.toLowerCase().includes("dying")) {
-                        // Play once, don't loop
-                        player.anims[name].start(false, 1.0, player.anims[name].from, player.anims[name].to, false);
-                        break;
-                    }
+                    player.anims[name].stop();
+                }
+                // Try to play a death animation
+                const deathAnim = Object.values(player.anims).find(ag => 
+                    ag.name.toLowerCase().includes("death") || ag.name.toLowerCase().includes("dying")
+                );
+                if (deathAnim) {
+                    deathAnim.start(false, 1.0, deathAnim.from, deathAnim.to, false);
                 }
             }
             return;
@@ -361,15 +394,11 @@ export class MultiplayerEntities {
         const rightLegNode = findNode("RightUpLeg");
         const leftCalfNode = findNode("LeftLeg"); // mixamo usually calls calf "LeftLeg"
         const rightCalfNode = findNode("RightLeg");
+        const ragdollBodies: PhysicsAggregate[] = [];
+        this.ragdolls.set(id, ragdollBodies);
 
-        // We make them slightly visible for debugging purposes (alpha 0.0), 
-        // normally we would set isVisible = false
-        const hitboxMat = new StandardMaterial("hitboxMat", this.scene);
-        hitboxMat.alpha = 0.4; // Make hitboxes visible to debug hit registration!
-        hitboxMat.diffuseColor = new Color3(1, 0, 0);
-
-        const makeHitbox = (zone: string, type: "sphere"|"box"|"cylinder", size: any, mult: number, parentNode: TransformNode | undefined, offset: Vector3, rotation?: Vector3) => {
-            if (!parentNode) return;
+        const makeHitbox = (zone: string, type: "sphere"|"box"|"cylinder", size: any, mult: number, parentNode: TransformNode | undefined, offset: Vector3, rotation?: Vector3): PhysicsAggregate | null => {
+            if (!parentNode) return null;
             let mesh: Mesh;
             let shapeType: PhysicsShapeType;
             if (type === "sphere") {
@@ -387,15 +416,14 @@ export class MultiplayerEntities {
             mesh.position = offset;
             mesh.rotation = rotation ? rotation : Vector3.Zero();
             
-            mesh.material = hitboxMat;
+            mesh.material = this.hitboxMat;
             mesh.isPickable = false; // We use Havok raycast now, no need for Babylon picking
-            mesh.alwaysSelectAsActiveMesh = true; // prevent frustum culling issues when parent is out of view
             
             // Critical metadata for WeaponSystem raycast
-            mesh.metadata = { isHitbox: true, playerId: id, zone: zone, multiplier: mult };
+            mesh.metadata = { isHitbox: true, playerId: id, zone: zone, multiplier: mult, aggregateIndex: ragdollBodies.length };
 
             // Attach Havok Physics Aggregate
-            const aggregate = new PhysicsAggregate(mesh, shapeType, { mass: 0 }, this.scene);
+            const aggregate = new PhysicsAggregate(mesh, shapeType, { mass: 10 }, this.scene); // Give mass so it can fall as ragdoll
             
             // Fix 1: Make it follow the animation perfectly instead of being stuck at spawn
             aggregate.body.setMotionType(PhysicsMotionType.ANIMATED);
@@ -404,30 +432,82 @@ export class MultiplayerEntities {
             // Fix 2: Set as trigger so players don't walk into an invisible wall
             // Triggers don't physically bump into anything, but they CAN be raycasted!
             aggregate.shape.isTrigger = true; 
+            
+            ragdollBodies.push(aggregate);
+            return aggregate;
         };
 
         // Note: The character was exported from Blender in meters. 
         // We must define these in meters (e.g. 0.2 instead of 20).
-        // Head
-        makeHitbox("head", "cylinder", { diameter: 0.22, height: 0.4 }, 2.5, headNode, new Vector3(0, 0, 0));
         
-        // Torso
+        // We must push in exact order for ragdoll joints:
+        // Torso=0, Head=1, LArm=2, RArm=3, LFArm=4, RFArm=5, LLeg=6, RLeg=7, LCalf=8, RCalf=9
         makeHitbox("torso", "box", { width: 0.35, height: 0.45, depth: 0.25 }, 1.0, spineNode, new Vector3(0, 0.1, 0));
-        
-        // Upper Arms
+        makeHitbox("head", "cylinder", { diameter: 0.22, height: 0.4 }, 2.5, headNode, new Vector3(0, 0, 0));
         makeHitbox("arm", "cylinder", { diameter: 0.12, height: 0.25 }, 0.8, leftArmNode, new Vector3(0, 0.12, 0), new Vector3(0, Math.PI/2, 0));
         makeHitbox("arm", "cylinder", { diameter: 0.12, height: 0.25 }, 0.8, rightArmNode, new Vector3(0, 0.12, 0), new Vector3(0, Math.PI/2, 0));
-        
-        // Lower Arms
         makeHitbox("arm", "cylinder", { diameter: 0.10, height: 0.25 }, 0.8, leftForeArmNode, new Vector3(0, 0.12, 0), new Vector3(0, Math.PI/2, 0));
         makeHitbox("arm", "cylinder", { diameter: 0.10, height: 0.25 }, 0.8, rightForeArmNode, new Vector3(0, 0.12, 0), new Vector3(0, Math.PI/2, 0));
+        makeHitbox("leg", "cylinder", { diameter: 0.16, height: 0.65 }, 0.6, leftLegNode, new Vector3(0, 0.325, 0), new Vector3(0, Math.PI/2, 0));
+        makeHitbox("leg", "cylinder", { diameter: 0.16, height: 0.65 }, 0.6, rightLegNode, new Vector3(0, 0.325, 0), new Vector3(0, Math.PI/2, 0));
+        makeHitbox("leg", "cylinder", { diameter: 0.14, height: 0.65 }, 0.6, leftCalfNode, new Vector3(0, 0.325, 0), new Vector3(0, Math.PI/2, 0));
+        makeHitbox("leg", "cylinder", { diameter: 0.14, height: 0.65 }, 0.6, rightCalfNode, new Vector3(0, 0.325, 0), new Vector3(0, Math.PI/2, 0));
+    }
+
+    public triggerRagdoll(id: string, hitZone?: string, impulseDir?: Vector3) {
+        const bodies = this.ragdolls.get(id);
+        const player = this.remotePlayers[id];
         
-        // Upper Legs
-        makeHitbox("leg", "cylinder", { diameter: 0.16, height: 0.45 }, 0.6, leftLegNode, new Vector3(0, 0.22, 0), new Vector3(0, Math.PI/2, 0));
-        makeHitbox("leg", "cylinder", { diameter: 0.16, height: 0.45 }, 0.6, rightLegNode, new Vector3(0, 0.22, 0), new Vector3(0, Math.PI/2, 0));
+        // Stop all animations
+        if (player) {
+            for (const name in player.anims) {
+                player.anims[name].stop();
+            }
+        }
         
-        // Lower Legs (Calves)
-        makeHitbox("leg", "cylinder", { diameter: 0.14, height: 0.45 }, 0.6, leftCalfNode, new Vector3(0, 0.22, 0), new Vector3(0, Math.PI/2, 0));
-        makeHitbox("leg", "cylinder", { diameter: 0.14, height: 0.45 }, 0.6, rightCalfNode, new Vector3(0, 0.22, 0), new Vector3(0, Math.PI/2, 0));
+        if (bodies && bodies.length === 10) {
+            // First detach and make dynamic
+            bodies.forEach((agg) => {
+                if (agg.transformNode.parent) {
+                    const absPos = agg.transformNode.getAbsolutePosition();
+                    const absRot = agg.transformNode.absoluteRotationQuaternion;
+                    agg.transformNode.setParent(null);
+                    agg.transformNode.position.copyFrom(absPos);
+                    if (absRot) agg.transformNode.rotationQuaternion = absRot;
+                }
+                agg.shape.isTrigger = false;
+                agg.body.setMotionType(PhysicsMotionType.DYNAMIC);
+                
+                if (impulseDir && agg.transformNode.metadata?.zone === hitZone) {
+                    const mass = agg.body.getMassProperties()?.mass ?? 10;
+                    agg.body.applyImpulse(impulseDir.scale(mass * 5), agg.transformNode.position);
+                }
+            });
+
+            const constraints: PhysicsConstraint[] = [];
+            
+            // Now apply Constraints (so Havok doesn't crash from kinematic bodies)
+            const connect = (parent: PhysicsAggregate, child: PhysicsAggregate, pivotA: Vector3, pivotB: Vector3) => {
+                const constraint = new PhysicsConstraint(PhysicsConstraintType.BALL_AND_SOCKET, {
+                    pivotA: pivotA, pivotB: pivotB
+                }, this.scene);
+                parent.body.addConstraint(child.body, constraint);
+                constraints.push(constraint);
+            };
+
+            const [torso, head, lArm, rArm, lFArm, rFArm, lLeg, rLeg, lCalf, rCalf] = bodies;
+            
+            connect(torso, head, new Vector3(0, 0.3, 0), new Vector3(0, -0.2, 0));
+            connect(torso, lArm, new Vector3(-0.2, 0.2, 0), new Vector3(0, -0.12, 0));
+            connect(torso, rArm, new Vector3(0.2, 0.2, 0), new Vector3(0, -0.12, 0));
+            connect(lArm, lFArm, new Vector3(0, 0.12, 0), new Vector3(0, -0.12, 0));
+            connect(rArm, rFArm, new Vector3(0, 0.12, 0), new Vector3(0, -0.12, 0));
+            connect(torso, lLeg, new Vector3(-0.15, -0.2, 0), new Vector3(0, -0.275, 0));
+            connect(torso, rLeg, new Vector3(0.15, -0.2, 0), new Vector3(0, -0.275, 0));
+            connect(lLeg, lCalf, new Vector3(0, 0.275, 0), new Vector3(0, -0.275, 0));
+            connect(rLeg, rCalf, new Vector3(0, 0.275, 0), new Vector3(0, -0.275, 0));
+            
+            this.ragdollConstraints.set(id, constraints);
+        }
     }
 }

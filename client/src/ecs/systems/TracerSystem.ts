@@ -2,7 +2,7 @@ import { addEntity, addComponent, defineComponent, Types, defineQuery } from "bi
 import { world } from "../World";
 import { Position, Renderable } from "../Components";
 import { entityMeshes } from "../ViewMaps";
-import { MeshBuilder, Scene, Color3, Vector3 } from "@babylonjs/core";
+import { MeshBuilder, Scene, Vector3 } from "@babylonjs/core";
 
 // Custom component for tracers to track lifecycle
 export const Tracer = defineComponent({
@@ -23,6 +23,7 @@ export function initTracerSystem(scene: Scene) {
         // We use a cylinder to simulate a thick tracer line
         const mesh = MeshBuilder.CreateCylinder(`tracer_${eid}`, { height: 1, diameter: 0.05 }, scene);
         mesh.rotation.x = Math.PI / 2;
+        mesh.bakeCurrentTransformIntoVertices();
         mesh.isPickable = false;
         mesh.isVisible = false; // Hide initially
 
@@ -46,7 +47,7 @@ export function spawnTracer(start: Vector3, end: Vector3) {
     if (mesh) {
         // Calculate length
         const distance = Vector3.Distance(start, end);
-        mesh.scaling.y = distance; // Scale the cylinder height
+        mesh.scaling.z = distance; // Scale the cylinder along its new Z-forward length
 
         // Point the cylinder from start to end
         mesh.position.copyFrom(midPoint);

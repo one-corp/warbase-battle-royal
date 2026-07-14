@@ -17,7 +17,7 @@ export interface PlayerState {
 }
 
 export class NetworkManager {
-    private ws: WebSocket;
+    private ws!: WebSocket;
     public username: string;
     public onStateReceived: (state: Record<string, PlayerState>) => void = () => {};
     public onHitConfirmed: () => void = () => {};
@@ -25,18 +25,27 @@ export class NetworkManager {
     public onRespawn: (x: number, y: number, z: number) => void = () => {};
     public onFireReceived: (shooterId: string) => void = () => {};
 
+    private onConnectCb: () => void;
+    private reconnectAttempts = 0;
+    
     constructor(username: string, onConnect: () => void) {
         this.username = username;
+        this.onConnectCb = onConnect;
         this.onStateReceived = () => {};
         this.onRespawn = () => {};
+        this.connect();
+    }
+
+    private connect() {
 
         // Connect dynamically based on where the game is hosted
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        this.ws = new WebSocket(`${protocol}//${window.location.host}/connect?user=${username}`);
+        this.ws = new WebSocket(`${protocol}//${window.location.host}/connect?user=${this.username}`);
 
         this.ws.onopen = () => {
             console.log("WebSocket Connected!");
-            onConnect();
+            this.reconnectAttempts = 0;
+            this.onConnectCb();
         };
 
         this.ws.onerror = (e) => {
@@ -45,6 +54,10 @@ export class NetworkManager {
 
         this.ws.onclose = (e) => {
             console.warn("WebSocket Closed:", e);
+            const backoff = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 10000);
+            this.reconnectAttempts++;
+            console.log(`Reconnecting in ${backoff}ms... (Attempt ${this.reconnectAttempts})`);
+            setTimeout(() => this.connect(), backoff);
         };
 
         this.ws.onmessage = (event) => {
@@ -71,9 +84,6 @@ export class NetworkManager {
                 console.error("Error parsing game state:", e);
             }
         };
-
-        this.ws.onclose = () => {
-        };
     }
 
     public sendFire() {
@@ -89,6 +99,12 @@ export class NetworkManager {
 
     public sendState(pos: Vector3, rot: Quaternion, anim: string) {
         if (this.ws.readyState !== WebSocket.OPEN) return;
+
+        // Prevent poisoned payloads from crashing/teleporting the server
+        if (Number.isNaN(pos.x) || Number.isNaN(pos.y) || Number.isNaN(pos.z) || 
+            Number.isNaN(rot.x) || Number.isNaN(rot.y) || Number.isNaN(rot.z) || Number.isNaN(rot.w)) {
+            return;
+        }
 
         const state: Partial<PlayerState> = {
             id: this.username,
