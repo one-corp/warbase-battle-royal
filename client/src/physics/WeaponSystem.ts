@@ -14,10 +14,14 @@ import {
     Texture,
     PhysicsMotionType
 } from "@babylonjs/core";
-import { AdvancedDynamicTexture, Rectangle, TextBlock } from "@babylonjs/gui";
+import { AdvancedDynamicTexture, Rectangle } from "@babylonjs/gui";
 import { throwGrenade } from './GrenadeSystem';
 import type { PlayerController } from './PlayerController';
 import type { NetworkManager } from "../network/NetworkManager";
+import { initDecalSystem, spawnDecal } from "../ecs/systems/DecalSystem";
+import { initTracerSystem, spawnTracer, updateTracers } from "../ecs/systems/TracerSystem";
+import { entityCameras } from "../ecs/ViewMaps";
+import { InputComponent, PlayerComponent } from "../ecs/Components";
 
 interface WeaponConfig {
     id: string;
@@ -119,27 +123,29 @@ export class WeaponSystem {
     private swayY = 0;
     private walkBobTimer = 0;
 
-    private bulletHoleMaterial: StandardMaterial | null = null;
-    private decalQueue: Mesh[] = [];
     private currentAnim = "idle";
     private playAnim: (name: string, forceRestart?: boolean) => void = () => {};
 
     private scene: Scene;
-    private player: PlayerController;
+    private playerEid: number;
     private networkManager?: NetworkManager;
 
     constructor(
         scene: Scene, 
-        player: PlayerController, 
+        playerEid: number, 
         networkManager?: NetworkManager
     ) {
         this.scene = scene;
-        this.player = player;
+        this.playerEid = playerEid;
         this.networkManager = networkManager;
     }
 
     public async init() {
-        const camera = this.player.camera;
+        initDecalSystem(this.scene);
+        initTracerSystem(this.scene);
+        
+        const camera = entityCameras.get(this.playerEid);
+        if (!camera) throw new Error("Player camera not found in ECS view map");
         
         const oldRoot = this.scene.getNodeByName("swayRoot");
         if (oldRoot) oldRoot.dispose();
@@ -323,20 +329,7 @@ export class WeaponSystem {
             };
         }
 
-        const debugPanel = new Rectangle("debugPanel");
-        debugPanel.width = "350px";
-        debugPanel.height = "250px";
-        debugPanel.horizontalAlignment = 0;
-        debugPanel.verticalAlignment = 1;
-        debugPanel.background = "rgba(0,0,0,0.5)";
-        debugPanel.color = "white";
-        advancedTexture.addControl(debugPanel);
 
-        const debugText = new TextBlock("debugText");
-        debugText.text = "HAND OFFSET DEBUG\nPos X/Y/Z: U/I, O/P, K/L\nRot X/Y/Z: N/M, 1/2, 3/4\nSight Node Y/Z: 5/6, 7/8";
-        debugText.textWrapping = true;
-        debugText.fontSize = 14;
-        debugPanel.addControl(debugText);
 
         const ammoText = document.getElementById("ammoText");
         const updateUI = () => { if (ammoText) ammoText.innerText = `${this.activeConfig.id.toUpperCase()}: ${this.currentAmmo} / --`; };
@@ -346,8 +339,28 @@ export class WeaponSystem {
 
         this.scene.onBeforeRenderObservable.add(() => {
             const dt = this.scene.getEngine().getDeltaTime() / 1000;
-            const input = this.player.input;
-            const playerState = this.player.state;
+            updateTracers(dt);
+            
+            const eid = this.playerEid;
+            const input = {
+                weapon1: InputComponent.weapon1[eid] === 1,
+                weapon2: InputComponent.weapon2[eid] === 1,
+                fire: InputComponent.fire[eid] === 1,
+                ads: InputComponent.ads[eid] === 1,
+                reload: InputComponent.reload[eid] === 1,
+                grenade: InputComponent.grenade[eid] === 1,
+                forward: InputComponent.forward[eid] === 1,
+                backward: InputComponent.backward[eid] === 1,
+                left: InputComponent.left[eid] === 1,
+                right: InputComponent.right[eid] === 1,
+                sprint: InputComponent.sprint[eid] === 1,
+                mouseDeltaX: InputComponent.mouseDeltaX[eid],
+                mouseDeltaY: InputComponent.mouseDeltaY[eid]
+            };
+            const playerState = {
+                isSprinting: PlayerComponent.isSprinting[eid] === 1,
+                isGrounded: PlayerComponent.isGrounded[eid] === 1
+            };
             
             if (input.weapon1 && !this.justPressed1 && this.activeConfig.id !== 'ak47') {
                 this.activeConfig = AK47;
@@ -413,10 +426,7 @@ export class WeaponSystem {
                 weaponSocketOffset.rotation.copyFrom(socketRot);
             }
             
-            if (debugText) {
-                let activeRoot = this.activeConfig.id === 'ak47' ? akRoot : pistolRoot;
-                debugText.text = `SOCKET POS: ${socketPos.x.toFixed(3)}, ${socketPos.y.toFixed(3)}, ${socketPos.z.toFixed(3)}\nSOCKET ROT: ${socketRot.x.toFixed(2)}, ${socketRot.y.toFixed(2)}, ${socketRot.z.toFixed(2)}\nSCALE: ${activeRoot.scaling.x.toFixed(4)}\nAIM Y: ${aimPoint.position.y.toFixed(3)}`;
-            }
+
 
             let reloadOffset = new Vector3(0, 0, 0);
             let reloadRotX = 0;
@@ -516,24 +526,19 @@ export class WeaponSystem {
                         }
                     } else if (!hitMesh.metadata?.playerId) {
                         const normal = physResult.hitNormalWorld;
-                        const decal = MeshBuilder.CreatePlane("bulletHole", { size: 0.3 }, this.scene);
-                        decal.position = hitPoint.add(normal.scale(0.02)); 
-                        decal.lookAt(decal.position.add(normal));
-                        decal.material = this.getBulletHoleMaterial();
-                        decal.isPickable = false; 
+                        const decalPos = hitPoint.add(normal.scale(0.02));
                         
-                        this.decalQueue.push(decal);
-                        if (this.decalQueue.length > 50) {
-                            const oldDecal = this.decalQueue.shift();
-                            if (oldDecal) oldDecal.dispose();
-                        }
+                        // We need a dummy quaternion for lookAt, or we just pass a simple rotation
+                        // Wait, spawnDecal expects rx, ry, rz, rw. 
+                        // Instead, let's just let the ECS handle positions and have the RenderSystem lookAt the normal?
+                        // Actually, DecalSystem doesn't know about normals right now.
+                        // For now, let's just update the mesh directly inside spawnDecal. I'll modify spawnDecal.
+                        spawnDecal(decalPos, decalPos.add(normal));
                     }
                 }
 
                 const startPoint = camera.globalPosition.add(new Vector3(0, -0.2, 0));
-                const tracer = MeshBuilder.CreateLines("tracer", { points: [startPoint, hitPoint] }, this.scene);
-                tracer.color = new Color3(1.0, 0.9, 0.5); 
-                setTimeout(() => tracer.dispose(), 50);
+                spawnTracer(startPoint, hitPoint);
 
                 shellEjector.manualEmitCount = 1;
                 shellEjector.start();
@@ -607,16 +612,6 @@ export class WeaponSystem {
         });
     }
 
-    private getBulletHoleMaterial(): StandardMaterial {
-        if (!this.bulletHoleMaterial) {
-            this.bulletHoleMaterial = new StandardMaterial("bulletHoleMat", this.scene);
-            this.bulletHoleMaterial.diffuseTexture = new Texture("https://playground.babylonjs.com/textures/impact.png", this.scene);
-            this.bulletHoleMaterial.diffuseTexture.hasAlpha = true;
-            this.bulletHoleMaterial.zOffset = -1; 
-            this.bulletHoleMaterial.specularColor = new Color3(0, 0, 0); 
-        }
-        return this.bulletHoleMaterial;
-    }
 
     private createMuzzleFlash(parent: AbstractMesh): ParticleSystem {
         const ps = new ParticleSystem("muzzleFlash", 15, this.scene);

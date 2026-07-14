@@ -61,9 +61,17 @@ func (m *Match) triggerServerRespawn(playerID string) {
 	player.IsReloading = false
 	player.AmmoCount = player.ActiveWeapon.MagSize
 
-	// Random spawn point roughly around center
-	newX := (rand.Float64() * 20) - 10
-	newZ := (rand.Float64() * 20) - 10
+	// Dynamic Spawns at the far ends of the Corridors
+	var newX, newZ float64
+	if rand.Intn(2) == 0 {
+		// North Corridor (US Spawn)
+		newX = (rand.Float64() * 10) - 5
+		newZ = 45 + (rand.Float64() * 5)
+	} else {
+		// South Corridor (RU Spawn)
+		newX = (rand.Float64() * 10) - 5
+		newZ = -45 - (rand.Float64() * 5)
+	}
 
 	respawnEvt := ServerEvent{
 		Type: "respawn",
@@ -93,7 +101,7 @@ func (m *Match) sendDirectEventLocked(playerID string, event ServerEvent) {
 }
 
 func (m *Match) Run() {
-	ticker := time.NewTicker(time.Second / 30)
+	ticker := time.NewTicker(time.Second / 60)
 	defer ticker.Stop()
 
 	for {

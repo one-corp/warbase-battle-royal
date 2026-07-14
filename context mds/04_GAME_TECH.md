@@ -72,3 +72,22 @@ Enemy bots are a hybrid of physics and visual meshes:
 1. A Havok Physics Capsule acts as the root. It handles ground collision and takes damage (knockback impulses from bullets).
 2. The `Soldier.glb` visual mesh is instantiated and parented to the capsule, slightly offset downwards so the feet touch the bottom of the capsule.
 3. The visual mesh plays embedded skeletal animations (e.g., `Idle`, `Walk`, `Run`) independently of the physics simulation.
+
+## 5. Multiplayer Architecture & WebSockets
+
+Instead of traditional REST APIs (which are too slow due to HTTP connection overhead), the game uses a persistent **WebSocket** connection for real-time bidirectional communication between the browser clients and the Go server.
+
+### 5.1 Client-Side Prediction (The Browser)
+- The Babylon.js render loop (`scene.onBeforeRenderObservable`) runs as fast as the monitor refresh rate (e.g., 60-144 FPS).
+- Every frame, it reads keyboard/mouse inputs and immediately moves the local player's camera and physics body. This is called **Client-Side Prediction** and ensures the game feels instantly responsive without waiting for server confirmation.
+- At the end of the frame (or at a fixed network rate), the client sends a small JSON object containing position, rotation, and current animation state over the WebSocket to the server.
+
+### 5.2 Server Tick Rate (60 Hz)
+- The Go backend receives these JSON packets and stores the latest known state of all players in a central map in memory.
+- A Go `ticker` runs exactly **60 times per second (60 Hz)**.
+- At every tick (every 16.6ms), the server compiles a snapshot of the entire world (all player states) into one JSON packet and broadcasts it down the WebSocket to every connected client.
+
+### 5.3 Client Entity Interpolation
+- When the client receives the 60 Hz broadcast, it ignores its own data (since it's predicting locally).
+- It reads the data for all other players and updates the positions, rotations, and animations of their "dummy" meshes. 
+- (Future enhancement: The client should interpolate/lerp between the received network snapshots rather than snapping to coordinates instantly, to smooth out network jitter).

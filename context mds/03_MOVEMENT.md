@@ -74,16 +74,9 @@ The equipped weapon modifies base walk speed:
 
 ## 3. Physics-Based Character Controller
 
-### 3.1 Why Replace the Current System
+### 3.1 Architecture: Capsule + Havok
 
-The current prototype uses `UniversalCamera.checkCollisions` — this is Babylon's **legacy collision system**, not actual physics. It:
-- Doesn't interact with Havok physics bodies
-- Has poor step-climbing behavior
-- Can't apply impulses (explosions, knockback)
-- Gravity/jumping is hacked with manual position offsets
-
-### 3.2 Recommended Architecture: Capsule + Havok
-
+The game uses a Havok physics capsule for the player controller. This allows the player to correctly interact with elevators, jump pads, explosions, and dynamic objects in the scene.
 ```typescript
 // Character capsule (invisible — camera is parented to it)
 const playerMesh = MeshBuilder.CreateCapsule("player", {

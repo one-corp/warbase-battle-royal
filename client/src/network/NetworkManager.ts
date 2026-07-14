@@ -32,7 +32,7 @@ export class NetworkManager {
 
         // Connect dynamically based on where the game is hosted
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        this.ws = new WebSocket(`${protocol}//${window.location.host}/ws?user=${username}`);
+        this.ws = new WebSocket(`${protocol}//${window.location.host}/connect?user=${username}`);
 
         this.ws.onopen = () => {
             console.log("WebSocket Connected!");

@@ -12,7 +12,9 @@ import {
     ShadowGenerator,
     Texture,
     DynamicTexture,
-    StandardMaterial
+    StandardMaterial,
+    PhysicsMotionType,
+    Quaternion
 } from "@babylonjs/core";
 
 let wallTemplate: Mesh;
@@ -243,4 +245,48 @@ export function generateBuilding(
     signMat.backFaceCulling = false; // Ensure it can be seen from both sides just in case
     
     sign.material = signMat;
+
+    // Elevators for Tower 1 and Tower 4
+    if (index === 1 || index === 4) {
+        const eleWidth = 3;
+        const eleDepth = 3;
+        const elePlatform = MeshBuilder.CreateBox(`elevator_${index}`, { width: eleWidth, height: 0.5, depth: eleDepth }, scene);
+        
+        // Position it against the faceDirection wall
+        const offsetX = faceDirection.x * (width / 2 + eleWidth / 2);
+        const offsetZ = faceDirection.z * (depth / 2 + eleDepth / 2);
+        
+        elePlatform.position = new Vector3(positionX + offsetX, 0.25, positionZ + offsetZ);
+        
+        const eleMat = new PBRMaterial(`eleMat_${index}`, scene);
+        eleMat.albedoColor = new Color3(0.8, 0.8, 0.1); // Industrial Yellow
+        eleMat.metallic = 0.5;
+        eleMat.roughness = 0.5;
+        elePlatform.material = eleMat;
+        
+        const eleAgg = new PhysicsAggregate(elePlatform, PhysicsShapeType.BOX, { mass: 0, friction: 1.0 }, scene);
+        eleAgg.body.setMotionType(PhysicsMotionType.ANIMATED);
+
+        // Ping-pong animation
+        let time = 0;
+        scene.onBeforeRenderObservable.add(() => {
+            const dt = scene.getEngine().getDeltaTime() / 1000;
+            time += dt * 0.4; // Elevator speed
+            
+            // Normalized sine wave (0 to 1)
+            const t = (Math.sin(time) + 1) / 2;
+            
+            // Pause slightly at the top and bottom by clamping or just letting sine naturally slow down at peaks
+            const targetY = 0.25 + t * (roofY - 0.25);
+            
+            // Update mesh position visually
+            elePlatform.position.y = targetY;
+            
+            // CRITICAL: For Havok Physics, kinematic (ANIMATED) bodies must be moved using setTargetTransform 
+            // so the engine can calculate physical velocity and properly carry dynamic objects standing on it.
+            if (eleAgg.body) {
+                eleAgg.body.setTargetTransform(elePlatform.position, elePlatform.rotationQuaternion || new Quaternion(0,0,0,1));
+            }
+        });
+    }
 }

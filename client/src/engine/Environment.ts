@@ -7,7 +7,8 @@ import {
     PhysicsShapeType,
     ShadowGenerator,
     PBRMaterial,
-    Texture
+    Texture,
+    StandardMaterial
 } from "@babylonjs/core";
 import { generateBuilding } from "./BuildingGenerator";
 
@@ -23,165 +24,121 @@ export class EnvironmentManager {
 
     private init() {
         // 2. Create Ground (Asphalt/Roads)
-        const ground = MeshBuilder.CreateGround("ground", { width: 100, height: 100 }, this.scene);
+        const ground = MeshBuilder.CreateGround("ground", { width: 200, height: 200 }, this.scene);
         ground.checkCollisions = true;
         
         const roadMat = new PBRMaterial("roadMat", this.scene);
-        roadMat.albedoColor = new Color3(0.2, 0.2, 0.2);
-        roadMat.metallic = 0.1;
-        roadMat.roughness = 0.8;
+        roadMat.albedoColor = new Color3(0.15, 0.15, 0.15); // Dark asphalt
+        roadMat.metallic = 0.0;
+        roadMat.roughness = 0.9;
         const roadAlbedo = new Texture("https://playground.babylonjs.com/textures/floor.png", this.scene);
-        roadAlbedo.uScale = 20;
-        roadAlbedo.vScale = 20;
+        roadAlbedo.uScale = 40;
+        roadAlbedo.vScale = 40;
         const roadBump = new Texture("https://playground.babylonjs.com/textures/floor_bump.PNG", this.scene);
-        roadBump.uScale = 20;
-        roadBump.vScale = 20;
+        roadBump.uScale = 40;
+        roadBump.vScale = 40;
         roadMat.albedoTexture = roadAlbedo;
         roadMat.bumpTexture = roadBump;
         ground.material = roadMat;
 
         // Add static physics to ground
         new PhysicsAggregate(ground, PhysicsShapeType.BOX, { mass: 0 }, this.scene);
-
-        // 3. Central Park Ground
-        const parkGround = MeshBuilder.CreateGround("parkGround", { width: 50, height: 50 }, this.scene);
-        parkGround.position.y = 0.05; // Slightly above road to prevent Z-fighting
-        
-        const parkMat = new PBRMaterial("parkMat", this.scene);
-        parkMat.albedoColor = new Color3(0.3, 0.4, 0.25);
-        parkMat.metallic = 0.0;
-        parkMat.roughness = 0.9;
-        const parkAlbedo = new Texture("https://playground.babylonjs.com/textures/grass.jpg", this.scene);
-        parkAlbedo.uScale = 15;
-        parkAlbedo.vScale = 15;
-        parkMat.albedoTexture = parkAlbedo;
-        parkGround.material = parkMat;
-
         ground.receiveShadows = true;
-        parkGround.receiveShadows = true;
 
-        // 2. Map Layout: Enclosing Perimeter Buildings
-        const perimeterSize = 41; // Road goes up to 35, buildings centered at 41
-        const buildingSpacing = 12; // 4 tiles * 3m = 12m
+        // 3. Map Layout: Central Plaza & Spawn Corridors
+        // Central Plaza is 36x36m (from -18 to 18).
+        // North/South Corridors are 18m wide (from -9 to 9 on X) and extend to +/- 54 on Z.
+        
+        // North-East Block
+        generateBuilding(1, 15, 12, 12, 31.5, 36, new Vector3(-1, 0, 0), this.scene, this.shadowGenerator);
+        // North-West Block
+        generateBuilding(2, 15, 12, 10, -31.5, 36, new Vector3(1, 0, 0), this.scene, this.shadowGenerator);
+        // South-East Block
+        generateBuilding(3, 15, 12, 14, 31.5, -36, new Vector3(-1, 0, 0), this.scene, this.shadowGenerator);
+        // South-West Block
+        generateBuilding(4, 15, 12, 11, -31.5, -36, new Vector3(1, 0, 0), this.scene, this.shadowGenerator);
+        // East Plaza Wall Block
+        generateBuilding(5, 12, 12, 15, 36, 0, new Vector3(-1, 0, 0), this.scene, this.shadowGenerator);
+        // West Plaza Wall Block
+        generateBuilding(6, 12, 12, 12, -36, 0, new Vector3(1, 0, 0), this.scene, this.shadowGenerator);
 
-        let buildingIndex = 1;
-
-        // Generate solid wall of buildings on all 4 sides
-        const spawnBuildingEdge = (x: number, z: number, faceDirection: Vector3) => {
-            const heightTiles = 5 + Math.floor(Math.random() * 8); // 5 to 12 floors
-            const widthTiles = 4; // Constant width so they snap perfectly
-            const depthTiles = 4; 
-            generateBuilding(buildingIndex++, widthTiles, depthTiles, heightTiles, x, z, faceDirection, this.scene, this.shadowGenerator);
-        };
-
-        // Top & Bottom Walls
-        for (let x = -perimeterSize; x <= perimeterSize; x += buildingSpacing) {
-            spawnBuildingEdge(x, perimeterSize, new Vector3(0, 0, -1)); // Top faces -Z
-            spawnBuildingEdge(x, -perimeterSize, new Vector3(0, 0, 1)); // Bottom faces +Z
-        }
-
-        // Left & Right Walls (Avoid corners)
-        for (let z = -perimeterSize + buildingSpacing; z <= perimeterSize - buildingSpacing; z += buildingSpacing) {
-            spawnBuildingEdge(-perimeterSize, z, new Vector3(1, 0, 0)); // Left faces +X
-            spawnBuildingEdge(perimeterSize, z, new Vector3(-1, 0, 0)); // Right faces -X
-        }
-
-        // 1.5 Park Cover / Obstacles (Showcasing Babylon Primitives)
-        // Create Materials
+        // 4. Props, Cover, and Lamp Posts
+        const concreteMat = new PBRMaterial("concreteMat", this.scene);
+        concreteMat.albedoColor = new Color3(0.7, 0.7, 0.7);
+        concreteMat.roughness = 0.8;
+        concreteMat.metallic = 0.0;
+        concreteMat.albedoTexture = new Texture("https://playground.babylonjs.com/textures/floor.png", this.scene);
+        
         const woodMat = new PBRMaterial("woodMat", this.scene);
         woodMat.albedoColor = new Color3(0.6, 0.4, 0.2); // Wood brown
         woodMat.roughness = 0.9;
         woodMat.metallic = 0.0;
         woodMat.albedoTexture = new Texture("https://playground.babylonjs.com/textures/wood.jpg", this.scene);
-        
-        const concreteMat = new PBRMaterial("concreteMat", this.scene);
-        concreteMat.albedoColor = new Color3(0.7, 0.7, 0.7); // Concrete grey
-        concreteMat.roughness = 0.8;
-        concreteMat.metallic = 0.0;
-        concreteMat.albedoTexture = new Texture("https://playground.babylonjs.com/textures/floor.png", this.scene);
-        concreteMat.bumpTexture = new Texture("https://playground.babylonjs.com/textures/floor_bump.PNG", this.scene);
-        
-        const metalMat = new PBRMaterial("metalMat", this.scene);
-        metalMat.albedoColor = new Color3(0.4, 0.4, 0.45);
-        metalMat.metallic = 1.0;
-        metalMat.roughness = 0.3;
-        
-        // Create Templates
+
+        // Create basic cover templates
         const crateTemplate = MeshBuilder.CreateBox("crate", { size: 2 }, this.scene);
         crateTemplate.material = woodMat;
-        crateTemplate.position.y = 1;
+        crateTemplate.position.y = -100;
         
         const blockTemplate = MeshBuilder.CreateBox("block", { width: 4, height: 1.5, depth: 1 }, this.scene);
         blockTemplate.material = concreteMat;
-        blockTemplate.position.y = 0.75;
+        blockTemplate.position.y = -100;
         
-        const barrelTemplate = MeshBuilder.CreateCylinder("barrel", { diameter: 1, height: 1.5 }, this.scene);
-        barrelTemplate.material = metalMat;
-        barrelTemplate.position.y = 0.75;
-        
-        const sphereTemplate = MeshBuilder.CreateSphere("sphereCover", { diameter: 3 }, this.scene);
-        sphereTemplate.material = concreteMat;
-        sphereTemplate.position.y = 1.5;
-        
-        const templates = [crateTemplate, blockTemplate, barrelTemplate, sphereTemplate];
-        
-        // Hide templates out of bounds so we can clone them
-        templates.forEach(t => t.position.y = -100);
-        
-        // Spawn random obstacles in the park
-        for (let i = 0; i < 60; i++) {
-            const x = (Math.random() - 0.5) * 45; // Inside 50x50 park
-            const z = (Math.random() - 0.5) * 45;
+        // Spawn cover scattered around the central plaza (-15 to 15)
+        for (let i = 0; i < 40; i++) {
+            const isCrate = Math.random() > 0.5;
+            const clone = isCrate ? crateTemplate.createInstance("cover_" + i) : blockTemplate.createInstance("cover_" + i);
             
-            // Keep clear path in middle for combat
-            if (Math.abs(x) < 10 && Math.abs(z) < 10) continue;
+            const x = (Math.random() - 0.5) * 30; // within plaza
+            const z = (Math.random() - 0.5) * 30; // within plaza
             
-            // Pick random template
-            const template = templates[Math.floor(Math.random() * templates.length)];
-            const clone = template.createInstance("obstacle_" + i);
+            // Keep absolute center completely clear for chaos
+            if (Math.abs(x) < 5 && Math.abs(z) < 5) continue;
             
             clone.position.x = x;
             clone.position.z = z;
-            clone.position.y = template.name === "crate" ? 1 : (template.name === "block" || template.name === "barrel" ? 0.75 : 1.5);
+            clone.position.y = isCrate ? 1 : 0.75;
             clone.rotation.y = Math.random() * Math.PI;
             
-            if (this.shadowGenerator) {
-                this.shadowGenerator.addShadowCaster(clone, true);
-            }
+            if (this.shadowGenerator) this.shadowGenerator.addShadowCaster(clone, true);
             clone.receiveShadows = true;
-            
-            // Add Physics Hitbox
-            let shape = PhysicsShapeType.BOX;
-            if (template.name === "barrel") shape = PhysicsShapeType.CYLINDER;
-            if (template.name === "sphereCover") shape = PhysicsShapeType.SPHERE;
-            
-            new PhysicsAggregate(clone, shape, { mass: 0 }, this.scene);
+            new PhysicsAggregate(clone, PhysicsShapeType.BOX, { mass: 0 }, this.scene);
         }
 
-        const crateMat = new PBRMaterial("crateMat", this.scene);
-        crateMat.albedoColor = new Color3(0.8, 0.4, 0.1);
-        crateMat.roughness = 0.9;
-        crateMat.metallic = 0.0;
-        crateMat.albedoTexture = new Texture("https://playground.babylonjs.com/textures/wood.jpg", this.scene);
-
-        const dynamicCrateTemplate = MeshBuilder.CreateBox("dynamic_crate_template", { size: 2 }, this.scene);
-        dynamicCrateTemplate.material = crateMat;
-        dynamicCrateTemplate.position.y = -100; // hide it
-
-        for (let i = 0; i < 20; i++) {
-            const crate = dynamicCrateTemplate.createInstance(`crate_${i}`);
+        // Generate Random Lamp Posts
+        const lampMat = new PBRMaterial("lampMat", this.scene);
+        lampMat.albedoColor = new Color3(0.2, 0.2, 0.2);
+        lampMat.metallic = 1.0;
+        lampMat.roughness = 0.4;
+        
+        const spawnLamp = (x: number, z: number) => {
+            const pole = MeshBuilder.CreateCylinder("lampPole", { diameter: 0.2, height: 6 }, this.scene);
+            pole.position = new Vector3(x, 3, z);
+            pole.material = lampMat;
+            new PhysicsAggregate(pole, PhysicsShapeType.CYLINDER, { mass: 0 }, this.scene);
             
-            crate.position.x = (Math.random() - 0.5) * 40;
-            crate.position.z = (Math.random() - 0.5) * 40;
-            crate.position.y = 10 + Math.random() * 10; // Drop from sky
+            const lightBulb = MeshBuilder.CreateSphere("lightBulb", { diameter: 0.6 }, this.scene);
+            lightBulb.position = new Vector3(x, 6, z);
+            const emissiveMat = new StandardMaterial("emissiveMat", this.scene);
+            emissiveMat.emissiveColor = new Color3(1, 0.9, 0.6);
+            emissiveMat.disableLighting = true;
+            lightBulb.material = emissiveMat;
+        };
 
-            crate.checkCollisions = true;
-            if (this.shadowGenerator) {
-                this.shadowGenerator.addShadowCaster(crate, true);
+        // Randomly place a few lamps in the corridors and plaza edges
+        for (let i = 0; i < 10; i++) {
+            // Pick a spot along the corridor edges or plaza edges
+            let x = 0, z = 0;
+            if (Math.random() > 0.5) {
+                // Corridor
+                x = (Math.random() > 0.5 ? 1 : -1) * 8; // Edge of the 9m wide corridor
+                z = (Math.random() > 0.5 ? 1 : -1) * (20 + Math.random() * 30);
+            } else {
+                // Plaza
+                x = (Math.random() - 0.5) * 32;
+                z = (Math.random() > 0.5 ? 1 : -1) * 16;
             }
-
-            // Dynamic physics for crates (wood is heavy and not bouncy)
-            new PhysicsAggregate(crate, PhysicsShapeType.BOX, { mass: 20, restitution: 0.1, friction: 0.8 }, this.scene);
+            spawnLamp(x, z);
         }
     }
 }
