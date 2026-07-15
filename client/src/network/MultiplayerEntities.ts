@@ -1,13 +1,13 @@
 import { Scene, AssetContainer, SceneLoader, Vector3, Quaternion, AnimationGroup, TransformNode, Mesh, ParticleSystem, Texture, Color4, StandardMaterial, Color3, MeshBuilder, PhysicsAggregate, PhysicsShapeType, PhysicsMotionType, PhysicsConstraint, PhysicsConstraintType } from "@babylonjs/core";
 import type { PlayerState } from "./NetworkManager";
 
-const RENDER_DELAY = 100; // ms
+const RENDER_DELAY = 35; // ms
 
 interface RemotePlayer {
     mesh: TransformNode; // Root node
     anims: Record<string, AnimationGroup>;
     currentState: string;
-    stateBuffer: { time: number, position: Vector3, rotation: Quaternion }[];
+    stateBuffer: { time: number, position: Vector3, rotation: Quaternion, platformId?: string }[];
     flashSystem: ParticleSystem;
     fireAnimTimer: number;
 }
@@ -19,6 +19,9 @@ export class MultiplayerEntities {
     private ragdolls: Map<string, PhysicsAggregate[]> = new Map();
     private ragdollConstraints: Map<string, PhysicsConstraint[]> = new Map();
     private hitboxMat: StandardMaterial;
+    
+    private _tempPos0 = new Vector3();
+    private _tempPos1 = new Vector3();
 
     constructor(scene: Scene) {
         this.scene = scene;
@@ -67,12 +70,14 @@ export class MultiplayerEntities {
                 popped.time = now;
                 popped.position.set(state.x, state.y - 0.9, state.z);
                 popped.rotation.set(state.rx, state.ry, state.rz, state.rw);
+                popped.platformId = state.platformId;
                 player.stateBuffer.push(popped);
             } else {
                 player.stateBuffer.push({
                     time: now,
                     position: new Vector3(state.x, state.y - 0.9, state.z),
-                    rotation: new Quaternion(state.rx, state.ry, state.rz, state.rw)
+                    rotation: new Quaternion(state.rx, state.ry, state.rz, state.rw),
+                    platformId: state.platformId
                 });
             }
 
@@ -369,13 +374,33 @@ export class MultiplayerEntities {
             if (state0 && state1) {
                 const alpha = (renderTime - state0.time) / (state1.time - state0.time);
                 
-                // Interpolate Position
-                Vector3.LerpToRef(state0.position, state1.position, alpha, player.mesh.position);
+                this._tempPos0.copyFrom(state0.position);
+                if (state0.platformId) {
+                    const platform0 = this.scene.getMeshByName(state0.platformId);
+                    if (platform0) {
+                        Vector3.TransformCoordinatesToRef(this._tempPos0, platform0.getWorldMatrix(), this._tempPos0);
+                    }
+                }
+
+                this._tempPos1.copyFrom(state1.position);
+                if (state1.platformId) {
+                    const platform1 = this.scene.getMeshByName(state1.platformId);
+                    if (platform1) {
+                        Vector3.TransformCoordinatesToRef(this._tempPos1, platform1.getWorldMatrix(), this._tempPos1);
+                    }
+                }
+
+                // Interpolate Position in World Space
+                Vector3.LerpToRef(this._tempPos0, this._tempPos1, alpha, player.mesh.position);
                 
                 // Interpolate Rotation
                 if (player.mesh.rotationQuaternion) {
                     Quaternion.SlerpToRef(state0.rotation, state1.rotation, alpha, player.mesh.rotationQuaternion);
                 }
+
+                // Force update world matrix and bounding boxes to prevent frustum culling disappearance 
+                player.mesh.computeWorldMatrix(true);
+                player.mesh.getChildMeshes(false).forEach(m => m.refreshBoundingInfo(true, true));
             }
         }
     }

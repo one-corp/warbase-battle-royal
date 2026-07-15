@@ -210,6 +210,9 @@ export namespace warbase {
         /** PlayerStateUpdate animation. */
         animation: string;
 
+        /** PlayerStateUpdate platformId. */
+        platformId: string;
+
         /**
          * Creates a new PlayerStateUpdate instance using the specified properties.
          * @param [properties] Properties to set
@@ -317,6 +320,9 @@ export namespace warbase {
 
             /** PlayerStateUpdate animation */
             animation?: (string|null);
+
+            /** PlayerStateUpdate platformId */
+            platformId?: (string|null);
 
             /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
@@ -1206,6 +1212,9 @@ export namespace warbase {
         /** PlayerState isDead. */
         isDead: boolean;
 
+        /** PlayerState platformId. */
+        platformId: string;
+
         /**
          * Creates a new PlayerState instance using the specified properties.
          * @param [properties] Properties to set
@@ -1325,6 +1334,9 @@ export namespace warbase {
 
             /** PlayerState isDead */
             isDead?: (boolean|null);
+
+            /** PlayerState platformId */
+            platformId?: (string|null);
 
             /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];

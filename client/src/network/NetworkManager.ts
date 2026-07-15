@@ -15,6 +15,7 @@ export interface PlayerState {
     kills: number;
     deaths: number;
     isDead: boolean;
+    platformId?: string;
 }
 
 export class NetworkManager {
@@ -81,7 +82,8 @@ export class NetworkManager {
                             health: p.health ?? 0,
                             kills: p.kills ?? 0,
                             deaths: p.deaths ?? 0,
-                            isDead: p.isDead ?? false
+                            isDead: p.isDead ?? false,
+                            platformId: p.platformId ?? undefined
                         };
                     }
                     this.onStateReceived(state);
@@ -113,7 +115,7 @@ export class NetworkManager {
         this.ws.send(buffer as BufferSource);
     }
 
-    public sendState(pos: Vector3, rot: Quaternion, anim: string) {
+    public sendState(pos: Vector3, rot: Quaternion, anim: string, platformId?: string) {
         if (this.ws.readyState !== WebSocket.OPEN) return;
 
         // Prevent poisoned payloads from crashing/teleporting the server
@@ -132,7 +134,8 @@ export class NetworkManager {
                 ry: rot.y,
                 rz: rot.z,
                 rw: rot.w,
-                animation: anim
+                animation: anim,
+                platformId: platformId
             }
         });
         const buffer = warbase.ClientEvent.encode(clientEvent).finish();

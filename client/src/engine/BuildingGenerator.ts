@@ -115,7 +115,8 @@ export function generateBuilding(
     positionZ: number, 
     faceDirection: Vector3,
     scene: Scene,
-    shadowGenerator?: ShadowGenerator
+    shadowGenerator?: ShadowGenerator,
+    disableSigns: boolean = false
 ) {
     if (!wallTemplate) initBuildingTemplates(scene, shadowGenerator);
 
@@ -210,41 +211,43 @@ export function generateBuilding(
     physicsBox.position = new Vector3(positionX, roofY / 2, positionZ);
     physicsBox.isVisible = false; // Invisible physics barrier
     new PhysicsAggregate(physicsBox, PhysicsShapeType.BOX, { mass: 0, friction: 0.5, restitution: 0.0 }, scene);
-    // Generate a neon sign for the building number
-    const signSize = 2.0;
-    const sign = MeshBuilder.CreatePlane(`sign_${index}`, { width: signSize, height: signSize }, scene);
-    
-    // Position sign on the wall facing faceDirection
-    const signY = Math.max(3, (heightTiles * TILE_SIZE) - 2); 
-    // 0.15 is half the wall thickness (0.3), 0.05 is the padding
-    const offsetX = faceDirection.x * (width / 2 + 0.15 + 0.05);
-    const offsetZ = faceDirection.z * (depth / 2 + 0.15 + 0.05);
-    sign.position = new Vector3(positionX + offsetX, signY, positionZ + offsetZ);
-    
-    // Rotate sign to face the faceDirection
-    // A Babylon plane natively faces -Z (0, 0, -1)
-    if (faceDirection.x === 1) sign.rotation.y = -Math.PI / 2;
-    else if (faceDirection.x === -1) sign.rotation.y = Math.PI / 2;
-    else if (faceDirection.z === 1) sign.rotation.y = Math.PI;
-    else if (faceDirection.z === -1) sign.rotation.y = 0;
+    if (!disableSigns) {
+        // Generate a neon sign for the building number
+        const signSize = 2.0;
+        const sign = MeshBuilder.CreatePlane(`sign_${index}`, { width: signSize, height: signSize }, scene);
+        
+        // Position sign on the wall facing faceDirection
+        const signY = Math.max(3, (heightTiles * TILE_SIZE) - 2); 
+        // 0.15 is half the wall thickness (0.3), 0.05 is the padding
+        const offsetX = faceDirection.x * (width / 2 + 0.15 + 0.05);
+        const offsetZ = faceDirection.z * (depth / 2 + 0.15 + 0.05);
+        sign.position = new Vector3(positionX + offsetX, signY, positionZ + offsetZ);
+        
+        // Rotate sign to face the faceDirection
+        // A Babylon plane natively faces -Z (0, 0, -1)
+        if (faceDirection.x === 1) sign.rotation.y = -Math.PI / 2;
+        else if (faceDirection.x === -1) sign.rotation.y = Math.PI / 2;
+        else if (faceDirection.z === 1) sign.rotation.y = Math.PI;
+        else if (faceDirection.z === -1) sign.rotation.y = 0;
 
-    
-    // Create Emissive Dynamic Texture
-    const dt = new DynamicTexture(`dt_${index}`, { width: 512, height: 512 }, scene, false);
-    const font = "bold 250px Arial";
-    // Draw text: text, x, y, font, text color, background color, invertY
-    // Use clearColor = "transparent" so the rest of the plane is invisible
-    dt.drawText(index.toString().padStart(2, '0'), null, 350, font, "white", "transparent", true, true);
-    
-    const signMat = new StandardMaterial(`signMat_${index}`, scene);
-    signMat.diffuseTexture = dt;
-    signMat.diffuseTexture.hasAlpha = true;
-    signMat.useAlphaFromDiffuseTexture = true; // Crucial for proper transparency over the wall!
-    signMat.emissiveColor = new Color3(1.0, 0.2, 0.2); // Neon red
-    signMat.disableLighting = true; // Make it purely glowing, ignoring shadows/lights
-    signMat.backFaceCulling = false; // Ensure it can be seen from both sides just in case
-    
-    sign.material = signMat;
+        
+        // Create Emissive Dynamic Texture
+        const dt = new DynamicTexture(`dt_${index}`, { width: 512, height: 512 }, scene, false);
+        const font = "bold 250px Arial";
+        // Draw text: text, x, y, font, text color, background color, invertY
+        // Use clearColor = "transparent" so the rest of the plane is invisible
+        dt.drawText(index.toString().padStart(2, '0'), null, 350, font, "white", "transparent", true, true);
+        
+        const signMat = new StandardMaterial(`signMat_${index}`, scene);
+        signMat.diffuseTexture = dt;
+        signMat.diffuseTexture.hasAlpha = true;
+        signMat.useAlphaFromDiffuseTexture = true; // Crucial for proper transparency over the wall!
+        signMat.emissiveColor = new Color3(1.0, 0.2, 0.2); // Neon red
+        signMat.disableLighting = true; // Make it purely glowing, ignoring shadows/lights
+        signMat.backFaceCulling = false; // Ensure it can be seen from both sides just in case
+        
+        sign.material = signMat;
+    }
 
     // Elevators for Tower 1 and Tower 4
     if (index === 1 || index === 4) {
@@ -268,10 +271,8 @@ export function generateBuilding(
         eleAgg.body.setMotionType(PhysicsMotionType.ANIMATED);
 
         // Ping-pong animation
-        let time = 0;
         scene.onBeforeRenderObservable.add(() => {
-            const dt = scene.getEngine().getDeltaTime() / 1000;
-            time += dt * 0.4; // Elevator speed
+            const time = Date.now() / 1000 * 0.4; // Elevator speed synced globally
             
             // Normalized sine wave (0 to 1)
             const t = (Math.sin(time) + 1) / 2;

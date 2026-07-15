@@ -8,21 +8,25 @@ import {
     ShadowGenerator,
     PBRMaterial,
     Texture,
-    StandardMaterial
+    StandardMaterial,
+    SceneLoader
 } from "@babylonjs/core";
 import { generateBuilding } from "./BuildingGenerator";
+import { buildDust2Map } from "./Dust2Map";
+import { buildBulletForceMap } from "./BulletForceMap";
 
 export class EnvironmentManager {
     private scene: Scene;
     private shadowGenerator?: ShadowGenerator;
+    private mapChoice: string;
 
-    constructor(scene: Scene, shadowGenerator?: ShadowGenerator) {
+    constructor(scene: Scene, shadowGenerator?: ShadowGenerator, mapChoice: string = "original") {
         this.scene = scene;
         this.shadowGenerator = shadowGenerator;
-        this.init();
+        this.mapChoice = mapChoice;
     }
 
-    private init() {
+    public async init() {
         // 2. Create Ground (Asphalt/Roads)
         const ground = MeshBuilder.CreateGround("ground", { width: 200, height: 200 }, this.scene);
         ground.checkCollisions = true;
@@ -44,23 +48,6 @@ export class EnvironmentManager {
         // Add static physics to ground
         new PhysicsAggregate(ground, PhysicsShapeType.BOX, { mass: 0 }, this.scene);
         ground.receiveShadows = true;
-
-        // 3. Map Layout: Central Plaza & Spawn Corridors
-        // Central Plaza is 36x36m (from -18 to 18).
-        // North/South Corridors are 18m wide (from -9 to 9 on X) and extend to +/- 54 on Z.
-        
-        // North-East Block
-        generateBuilding(1, 15, 12, 12, 31.5, 36, new Vector3(-1, 0, 0), this.scene, this.shadowGenerator);
-        // North-West Block
-        generateBuilding(2, 15, 12, 10, -31.5, 36, new Vector3(1, 0, 0), this.scene, this.shadowGenerator);
-        // South-East Block
-        generateBuilding(3, 15, 12, 14, 31.5, -36, new Vector3(-1, 0, 0), this.scene, this.shadowGenerator);
-        // South-West Block
-        generateBuilding(4, 15, 12, 11, -31.5, -36, new Vector3(1, 0, 0), this.scene, this.shadowGenerator);
-        // East Plaza Wall Block
-        generateBuilding(5, 12, 12, 15, 36, 0, new Vector3(-1, 0, 0), this.scene, this.shadowGenerator);
-        // West Plaza Wall Block
-        generateBuilding(6, 12, 12, 12, -36, 0, new Vector3(1, 0, 0), this.scene, this.shadowGenerator);
 
         // 4. Props, Cover, and Lamp Posts
         const concreteMat = new PBRMaterial("concreteMat", this.scene);
@@ -84,6 +71,26 @@ export class EnvironmentManager {
         blockTemplate.material = concreteMat;
         blockTemplate.position.y = -100;
         
+        const lampMat = new PBRMaterial("lampMat", this.scene);
+        lampMat.albedoColor = new Color3(0.2, 0.2, 0.2);
+        lampMat.metallic = 1.0;
+        lampMat.roughness = 0.4;
+
+        if (this.mapChoice === "industrial") {
+            await this.loadGLBMap("low_poly_industrial_zone.glb");
+            return;
+        } else if (this.mapChoice === "dust2") {
+            buildDust2Map(this.scene, this.shadowGenerator, crateTemplate, blockTemplate, lampMat);
+            return;
+        } else if (this.mapChoice === "bulletforce") {
+            buildBulletForceMap(this.scene, this.shadowGenerator, crateTemplate, blockTemplate, lampMat);
+            return;
+        }
+
+        // Original Map 
+        // Tower 1 (Player Spawn / Central Hub)
+        generateBuilding(1, 30, 20, 10, 0, 0, new Vector3(0, 0, -1), this.scene, this.shadowGenerator, true);
+        
         // Spawn cover scattered around the central plaza (-15 to 15)
         for (let i = 0; i < 40; i++) {
             const isCrate = Math.random() > 0.5;
@@ -106,11 +113,6 @@ export class EnvironmentManager {
         }
 
         // Generate Random Lamp Posts
-        const lampMat = new PBRMaterial("lampMat", this.scene);
-        lampMat.albedoColor = new Color3(0.2, 0.2, 0.2);
-        lampMat.metallic = 1.0;
-        lampMat.roughness = 0.4;
-        
         const spawnLamp = (x: number, z: number) => {
             const pole = MeshBuilder.CreateCylinder("lampPole", { diameter: 0.2, height: 6 }, this.scene);
             pole.position = new Vector3(x, 3, z);
@@ -139,6 +141,47 @@ export class EnvironmentManager {
                 z = (Math.random() > 0.5 ? 1 : -1) * 16;
             }
             spawnLamp(x, z);
+        }
+    }
+
+    private async loadGLBMap(filename: string) {
+        try {
+            console.log(`Loading external map: ${filename}...`);
+            const container = await SceneLoader.LoadAssetContainerAsync("./maps/", filename, this.scene);
+            
+            // Strip any built-in cameras or lights from the GLB so they don't ruin our scene's carefully tuned lighting & camera setup
+            container.cameras = [];
+            container.lights = [];
+            
+            container.addAllToScene();
+            
+            console.log(`Successfully loaded map meshes:`, container.meshes.length);
+
+            container.meshes.forEach((mesh) => {
+                if (!mesh) return;
+                
+                // Add to shadow generator
+                if (this.shadowGenerator && mesh.name !== "__root__") {
+                    this.shadowGenerator.addShadowCaster(mesh, true);
+                    mesh.receiveShadows = true;
+                }
+
+                // Add physics hitboxes (only for visible geometry, skipping pure transforms/bones)
+                // In babylon, geometry is usually on meshes with getTotalVertices() > 0
+                if (mesh.getTotalVertices() > 0) {
+                    try {
+                        new PhysicsAggregate(mesh, PhysicsShapeType.MESH, { mass: 0, friction: 0.5, restitution: 0 }, this.scene);
+                    } catch (e) {
+                        console.warn(`Failed to create physics for ${mesh.name}:`, e);
+                    }
+                }
+            });
+
+            // If the map comes with animations (moving platforms etc.), play them
+            container.animationGroups.forEach(ag => ag.play(true));
+            
+        } catch (e) {
+            console.error(`Failed to load external map: ${filename}`, e);
         }
     }
 }

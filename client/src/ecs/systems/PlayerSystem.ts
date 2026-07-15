@@ -31,9 +31,10 @@ export function initPlayer(scene: Scene, canvas: HTMLCanvasElement): number {
     mesh.isVisible = false;
     
     // Initial Spawn
-    const spawnX = (Math.random() * 10) - 5;
-    const spawnZ = Math.random() > 0.5 ? 45 + (Math.random() * 5) : -45 - (Math.random() * 5);
-    mesh.position.set(spawnX, 10, spawnZ);
+    // For custom maps, center spawn is safest so we don't drop off the edge into the void.
+    const spawnX = (Math.random() * 4) - 2;
+    const spawnZ = (Math.random() * 4) - 2;
+    mesh.position.set(spawnX, 20, spawnZ);
 
     const aggregate = new PhysicsAggregate(
         mesh, PhysicsShapeType.CAPSULE, 

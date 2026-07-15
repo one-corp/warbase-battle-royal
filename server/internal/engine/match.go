@@ -162,14 +162,19 @@ func (m *Match) Run() {
 						player.State.Rz = event.StateUpdate.Rz
 						player.State.Rw = event.StateUpdate.Rw
 						player.State.Animation = event.StateUpdate.Animation
+						player.State.PlatformId = event.StateUpdate.PlatformId
 					}
 
 				case *ClientEvent_Hit:
 					target, okTarget := m.players[event.Hit.TargetId]
 					shooter, okShooter := m.players[message.SenderID]
+                    log.Printf("Received Hit: Shooter=%s, Target=%s, Damage=%d (okTarget=%v, okShooter=%v)", message.SenderID, event.Hit.TargetId, event.Hit.Damage, okTarget, okShooter)
 
 					if okTarget && okShooter {
 						isKill, err := shooter.ValidateAndApplyHit(target, int(event.Hit.Damage))
+                        if err != nil {
+                            log.Printf("Hit Invalid: %s", err.Error())
+                        }
 						if err == nil {
 							// Valid hit! Send feedback to shooter
 							if isKill {

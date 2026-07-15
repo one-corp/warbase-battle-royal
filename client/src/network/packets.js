@@ -512,6 +512,7 @@ export const warbase = $root.warbase = (() => {
          * @property {number|null} [rz] PlayerStateUpdate rz
          * @property {number|null} [rw] PlayerStateUpdate rw
          * @property {string|null} [animation] PlayerStateUpdate animation
+         * @property {string|null} [platformId] PlayerStateUpdate platformId
          * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
          */
 
@@ -608,6 +609,14 @@ export const warbase = $root.warbase = (() => {
         PlayerStateUpdate.prototype.animation = "";
 
         /**
+         * PlayerStateUpdate platformId.
+         * @member {string} platformId
+         * @memberof warbase.PlayerStateUpdate
+         * @instance
+         */
+        PlayerStateUpdate.prototype.platformId = "";
+
+        /**
          * Creates a new PlayerStateUpdate instance using the specified properties.
          * @function create
          * @memberof warbase.PlayerStateUpdate
@@ -655,6 +664,8 @@ export const warbase = $root.warbase = (() => {
                 writer.uint32(/* id 7, wireType 5 =*/61).float(message.rw);
             if (message.animation != null && $Object.hasOwnProperty.call(message, "animation") && message.animation !== "")
                 writer.uint32(/* id 8, wireType 2 =*/66).string(message.animation);
+            if (message.platformId != null && $Object.hasOwnProperty.call(message, "platformId") && message.platformId !== "")
+                writer.uint32(/* id 9, wireType 2 =*/74).string(message.platformId);
             if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                 for (let i = 0; i < message.$unknowns.length; ++i)
                     writer.raw(message.$unknowns[i]);
@@ -774,6 +785,15 @@ export const warbase = $root.warbase = (() => {
                             delete message.animation;
                         continue;
                     }
+                case 9: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.stringVerify()).length)
+                            message.platformId = value;
+                        else
+                            delete message.platformId;
+                        continue;
+                    }
                 }
                 reader.skipType(wireType, _depth, tag);
                 if (!reader.discardUnknown) {
@@ -841,6 +861,9 @@ export const warbase = $root.warbase = (() => {
             if (message.animation != null && $Object.hasOwnProperty.call(message, "animation"))
                 if (!$util.isString(message.animation))
                     return "animation: string expected";
+            if (message.platformId != null && $Object.hasOwnProperty.call(message, "platformId"))
+                if (!$util.isString(message.platformId))
+                    return "platformId: string expected";
             return null;
         };
 
@@ -886,6 +909,9 @@ export const warbase = $root.warbase = (() => {
             if (object.animation != null)
                 if (typeof object.animation !== "string" || object.animation.length)
                     message.animation = $String(object.animation);
+            if (object.platformId != null)
+                if (typeof object.platformId !== "string" || object.platformId.length)
+                    message.platformId = $String(object.platformId);
             return message;
         };
 
@@ -915,6 +941,7 @@ export const warbase = $root.warbase = (() => {
                 object.rz = 0;
                 object.rw = 0;
                 object.animation = "";
+                object.platformId = "";
             }
             if (message.x != null && $Object.hasOwnProperty.call(message, "x"))
                 object.x = options.json && !$isFinite(message.x) ? $String(message.x) : message.x;
@@ -932,6 +959,8 @@ export const warbase = $root.warbase = (() => {
                 object.rw = options.json && !$isFinite(message.rw) ? $String(message.rw) : message.rw;
             if (message.animation != null && $Object.hasOwnProperty.call(message, "animation"))
                 object.animation = message.animation;
+            if (message.platformId != null && $Object.hasOwnProperty.call(message, "platformId"))
+                object.platformId = message.platformId;
             return object;
         };
 
@@ -2821,6 +2850,7 @@ export const warbase = $root.warbase = (() => {
          * @property {number|null} [kills] PlayerState kills
          * @property {number|null} [deaths] PlayerState deaths
          * @property {boolean|null} [isDead] PlayerState isDead
+         * @property {string|null} [platformId] PlayerState platformId
          * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
          */
 
@@ -2949,6 +2979,14 @@ export const warbase = $root.warbase = (() => {
         PlayerState.prototype.isDead = false;
 
         /**
+         * PlayerState platformId.
+         * @member {string} platformId
+         * @memberof warbase.PlayerState
+         * @instance
+         */
+        PlayerState.prototype.platformId = "";
+
+        /**
          * Creates a new PlayerState instance using the specified properties.
          * @function create
          * @memberof warbase.PlayerState
@@ -3004,6 +3042,8 @@ export const warbase = $root.warbase = (() => {
                 writer.uint32(/* id 11, wireType 0 =*/88).int32(message.deaths);
             if (message.isDead != null && $Object.hasOwnProperty.call(message, "isDead") && message.isDead !== false)
                 writer.uint32(/* id 12, wireType 0 =*/96).bool(message.isDead);
+            if (message.platformId != null && $Object.hasOwnProperty.call(message, "platformId") && message.platformId !== "")
+                writer.uint32(/* id 13, wireType 2 =*/106).string(message.platformId);
             if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                 for (let i = 0; i < message.$unknowns.length; ++i)
                     writer.raw(message.$unknowns[i]);
@@ -3159,6 +3199,15 @@ export const warbase = $root.warbase = (() => {
                             delete message.isDead;
                         continue;
                     }
+                case 13: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.stringVerify()).length)
+                            message.platformId = value;
+                        else
+                            delete message.platformId;
+                        continue;
+                    }
                 }
                 reader.skipType(wireType, _depth, tag);
                 if (!reader.discardUnknown) {
@@ -3238,6 +3287,9 @@ export const warbase = $root.warbase = (() => {
             if (message.isDead != null && $Object.hasOwnProperty.call(message, "isDead"))
                 if (typeof message.isDead !== "boolean")
                     return "isDead: boolean expected";
+            if (message.platformId != null && $Object.hasOwnProperty.call(message, "platformId"))
+                if (!$util.isString(message.platformId))
+                    return "platformId: string expected";
             return null;
         };
 
@@ -3295,6 +3347,9 @@ export const warbase = $root.warbase = (() => {
             if (object.isDead != null)
                 if (object.isDead)
                     message.isDead = $Boolean(object.isDead);
+            if (object.platformId != null)
+                if (typeof object.platformId !== "string" || object.platformId.length)
+                    message.platformId = $String(object.platformId);
             return message;
         };
 
@@ -3328,6 +3383,7 @@ export const warbase = $root.warbase = (() => {
                 object.kills = 0;
                 object.deaths = 0;
                 object.isDead = false;
+                object.platformId = "";
             }
             if (message.x != null && $Object.hasOwnProperty.call(message, "x"))
                 object.x = options.json && !$isFinite(message.x) ? $String(message.x) : message.x;
@@ -3353,6 +3409,8 @@ export const warbase = $root.warbase = (() => {
                 object.deaths = message.deaths;
             if (message.isDead != null && $Object.hasOwnProperty.call(message, "isDead"))
                 object.isDead = message.isDead;
+            if (message.platformId != null && $Object.hasOwnProperty.call(message, "platformId"))
+                object.platformId = message.platformId;
             return object;
         };
 

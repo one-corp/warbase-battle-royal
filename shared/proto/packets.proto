@@ -28,6 +28,7 @@ message PlayerStateUpdate {
     float rz = 6; // rotation quaternion z
     float rw = 7; // rotation quaternion w
     string animation = 8;
+    string platform_id = 9;
 }
 
 message HitEvent {
@@ -70,6 +71,7 @@ message PlayerState {
     int32 kills = 10;
     int32 deaths = 11;
     bool is_dead = 12;
+    string platform_id = 13;
 }
 
 message ServerEvent {

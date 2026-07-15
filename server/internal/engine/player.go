@@ -54,8 +54,8 @@ func (p *Player) ValidateAndApplyFire() error {
 
 	// 2. Validate Fire Rate (RPM)
 	minInterval := time.Duration(float64(time.Minute) / float64(p.ActiveWeapon.RPM))
-	// Add 10ms tolerance for network jitter
-	if now.Sub(p.LastShotTime) < (minInterval - 10*time.Millisecond) {
+	// Add 200ms tolerance for network jitter (especially over Pinggy tunnels)
+	if now.Sub(p.LastShotTime) < (minInterval - 200*time.Millisecond) {
 		return errors.New("firing rate exceeds limits (hacking detected)")
 	}
 

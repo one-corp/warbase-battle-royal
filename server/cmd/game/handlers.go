@@ -1,6 +1,7 @@
 package main
 
 import (
+	"net"
 	"net/http"
 	"warbase-server/internal/engine"
 
@@ -9,7 +10,7 @@ import (
 
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  8192,
-	WriteBufferSize: 8192,
+	WriteBufferSize: 0, // Disable gorilla's write buffer — flush packets immediately
 	CheckOrigin: func(r *http.Request) bool {
 		return true // Allow all for prototype
 	},
@@ -37,6 +38,12 @@ func (app *application) connectToServerHandler(w http.ResponseWriter, r *http.Re
 	if err != nil {
 		app.logger.PrintError(err, nil)
 		return
+	}
+
+	// Disable Nagle's algorithm so small packets (protobuf ~35 bytes) are sent
+	// immediately without waiting for TCP buffer to fill up.
+	if tcpConn, ok := conn.NetConn().(*net.TCPConn); ok {
+		tcpConn.SetNoDelay(true)
 	}
 
 	// 2. Extract the username:

@@ -9,13 +9,12 @@ This document is a comprehensive guide for building the Go game server backend f
 The game operates on a **Client-Server** model using **WebSockets**. WebRTC (UDP) is often preferred for fast-paced games, but WebSockets (TCP) are much easier to implement and are perfectly viable for web-based games if the payload size and tick rates are managed correctly.
 
 *   **Protocol:** WebSockets (`gorilla/websocket` in Go is highly recommended).
-*   **Route & Handler:** Clients connect via the `/connect` endpoint (handled by the updated connection handler, replacing the old `/ws` route).
+*   **Route & Handler:** Clients connect via the `/connect` endpoint.
 *   **Tick Rate:** 30Hz (The server broadcasts state 30 times per second).
-*   **Client Send Rate:** Clients also send their state up to the server at roughly 30-60Hz.
-*   **Format:** JSON (For production, Binary/Protobuf is better, but JSON is used here for rapid prototyping).
+*   **Format:** Protobuf (Binary). JSON was previously used for prototyping, but Protobuf is now strictly enforced for minimal bandwidth and maximum parsing speed.
 
 ### Production-Ready Features
-*   **JSON Logger:** The server utilizes structured JSON logging for better observability, debugging, and log aggregation in production environments.
+*   **Binary Payloads:** All communication is strictly encoded via Protobuf schemas (`packets.proto`).
 *   **Graceful Shutdown:** Implemented to catch OS signals (like SIGINT/SIGTERM), allowing the server to finish processing active ticks, safely disconnect clients, and clean up resources before exiting.
 
 ### Directory Structure (Standard Go Layout)
@@ -23,89 +22,65 @@ The server follows the idiomatic Go project layout for better separation of conc
 *   `cmd/game/`: Contains the main application entry point and server initialization.
 *   `internal/`: Houses the private application and domain logic.
     *   `internal/engine/`: Core game loop, state management, WebSocket connections, Match logic, and Player handling.
-    *   `internal/jsonlog/`: Handles structured JSON logging for the application.
-    *   `internal/validator/`: Anti-cheat and authoritative action validation (fire rates, ammo, etc.).
+    *   `internal/proto/`: Auto-generated Protobuf Go bindings.
 
 ### Concurrency Model in Go
 The Go server should use a standard concurrent Match pattern:
-*   **1 Match Goroutine:** Manages the game loop (tick rate), global game state, and broadcasting.
+*   **1 Match Goroutine:** Manages the game loop (tick rate), global game state, and broadcasting via a `respawnChan` and state broadcast loop.
 *   **2 Goroutines per Client:** One `readPump` (listening for incoming WebSocket messages) and one `writePump` (flushing outgoing messages to the socket).
 *   **Channels:** The `readPump` sends parsed actions to the Match via channels to avoid locking the game state with Mutexes whenever possible.
 
 ---
 
-## 2. Payload Schemas & Protocols
+## 2. Payload Schemas & Protocols (Protobuf)
 
-All communication happens via JSON messages containing a `type` field to route the payload.
+All communication happens via Binary Protobuf messages defined in `packets.proto`.
 
-### From Client -> To Server
+### From Client -> To Server (`ClientEvent`)
 
 **1. Movement State Update (Sent continuously by client)**
-```json
-{
-  "type": "state",
-  "payload": {
-    "x": 12.5, "y": 0.5, "z": -4.2,     // Absolute World Position
-    "rx": 0.0, "ry": 1.57, "rz": 0.0, "rw": 1.0, // Rotation Quaternion
-    "anim": "run"                       // Current base animation ("idle", "run", "left", "right", "jump")
-  }
+```protobuf
+message PlayerStateUpdate {
+    float x = 1; float y = 2; float z = 3;
+    float rx = 4; float ry = 5; float rz = 6; float rw = 7;
+    string animation = 8;
+    optional string platform_id = 9; // Used for relative local-space coordinates on moving platforms
 }
 ```
 
 **2. Combat Event: Firing (Sent instantly when clicking)**
-```json
-{
-  "type": "fire"
+```protobuf
+message ClientFireEvent {
+    // Empty, implies local player fired
 }
 ```
 
 **3. Combat Event: Hit Registration (Sent instantly when the client's raycast hits an enemy)**
-```json
-{
-  "type": "hit",
-  "payload": {
-    "target": "player-uuid-456", // Who was hit
-    "damage": 34                 // How much damage to apply (calculated by client based on weapon/headshots)
-  }
+```protobuf
+message ClientHitEvent {
+    string target_id = 1;
+    int32 damage = 2;
 }
 ```
 
-**4. Combat Event: Reload (Sent when the player initiates a reload)**
-```json
-{
-  "type": "reload"
-}
-```
-
-**5. Weapon Event: Switch (Sent when the player changes weapons)**
-```json
-{
-  "type": "switch",
-  "payload": {
-    "weaponId": "ak47"
-  }
-}
-```
-
-### From Server -> To Client
+### From Server -> To Client (`ServerMessage`)
 
 **1. The 30Hz Global State Broadcast**
 Every 33ms, the server packages the state of ALL players and sends it to everyone.
-```json
-{
-  "type": "state",
-  "payload": {
-    "player-uuid-123": {
-      "x": 12.5, "y": 0.5, "z": -4.2,
-      "rx": 0.0, "ry": 1.57, "rz": 0.0, "rw": 1.0,
-      "anim": "run",
-      "health": 100,
-      "kills": 5,
-      "deaths": 1,
-      "isDead": false
-    },
-    "player-uuid-456": { ... }
-  }
+```protobuf
+message GameStateBroadcast {
+    map<string, PlayerState> players = 1;
+}
+
+message PlayerState {
+    float x = 1; float y = 2; float z = 3;
+    float rx = 4; float ry = 5; float rz = 6; float rw = 7;
+    string animation = 8;
+    optional string platform_id = 9;
+    int32 health = 10;
+    int32 kills = 11;
+    int32 deaths = 12;
+    bool is_dead = 13;
 }
 ```
 

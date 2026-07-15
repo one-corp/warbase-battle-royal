@@ -18,7 +18,7 @@ import { throwGrenade } from './GrenadeSystem';
 import type { NetworkManager } from "../network/NetworkManager";
 import { initDecalSystem, spawnDecal } from "../ecs/systems/DecalSystem";
 import { initTracerSystem, spawnTracer, updateTracers } from "../ecs/systems/TracerSystem";
-import { entityCameras } from "../ecs/ViewMaps";
+import { entityCameras, entityPhysicsBodies } from "../ecs/ViewMaps";
 import { InputComponent, PlayerComponent } from "../ecs/Components";
 
 interface WeaponConfig {
@@ -499,10 +499,10 @@ export class WeaponSystem {
                 const endPoint = camera.globalPosition.add(spreadDir.scale(300)); 
                 let hitPoint = endPoint;
                 
-                const playerMesh = camera.parent as AbstractMesh;
                 const query: any = { shouldHitTriggers: true };
-                if (playerMesh && playerMesh.physicsBody) {
-                    query.ignoreBody = playerMesh.physicsBody;
+                const localBody = entityPhysicsBodies.get(this.playerEid);
+                if (localBody) {
+                    query.ignoreBody = localBody;
                 }
 
                 const physResult = this.scene.getPhysicsEngine()?.raycast(camera.globalPosition, endPoint, query);

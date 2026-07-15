@@ -7,14 +7,33 @@
     <link rel="stylesheet" href="/src/style.css">
   </head>
   <body>
-    <!-- Multiplayer Login UI -->
-    <div id="loginUI" style="position: absolute; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; z-index: 10; background: rgba(0,0,0,0.8); font-family: sans-serif;">
-      <div style="background: white; padding: 30px; border-radius: 8px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-        <h2 style="margin-top: 0; color: #333;">Join FPS Match</h2>
-        <input type="text" id="usernameInput" placeholder="Enter Username" style="padding: 10px; font-size: 16px; width: 200px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 15px;" />
-        <br>
-        <button id="joinButton" disabled style="padding: 10px 20px; font-size: 16px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: not-allowed; transition: background 0.2s;">Loading Engine...</button>
-        <div id="errorLog" style="color: red; margin-top: 15px; font-size: 12px; word-wrap: break-word;"></div>
+    <!-- Multiplayer Login UI (Modern Main Menu) -->
+    <div id="loginUI" class="main-menu-container">
+      <div class="menu-glass-panel">
+        <h1 class="game-title">WARBASE</h1>
+        <p class="game-subtitle">WEB-BASED TACTICAL SHOOTER</p>
+        
+        <div class="menu-input-group">
+          <label for="usernameInput">CALLSIGN</label>
+          <input type="text" id="usernameInput" placeholder="Enter Callsign..." autocomplete="off" />
+        </div>
+        
+        <div class="menu-input-group">
+          <label for="mapSelector">DEPLOYMENT ZONE</label>
+          <select id="mapSelector">
+            <option value="industrial">Industrial Zone (GLB Map)</option>
+            <option value="bulletforce">City Center (Bullet Force)</option>
+            <option value="dust2">Dust2 Blueprint</option>
+            <option value="original">Training Grounds</option>
+          </select>
+        </div>
+        
+        <button id="joinButton" disabled class="btn-deploy">
+          <span class="btn-text">INITIALIZING ENGINE...</span>
+          <div class="btn-glow"></div>
+        </button>
+        
+        <div id="errorLog" class="error-log"></div>
       </div>
     </div>
     

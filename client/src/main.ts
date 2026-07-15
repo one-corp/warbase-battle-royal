@@ -10,7 +10,8 @@ import {
     CascadedShadowGenerator,
     DefaultRenderingPipeline,
     ImageProcessingConfiguration,
-    WebGPUEngine
+    WebGPUEngine,
+    Ray
 } from '@babylonjs/core';
 import HavokPhysics from '@babylonjs/havok';
 import "@babylonjs/loaders/glTF"; 
@@ -25,29 +26,34 @@ import { WeaponSystem } from './physics/WeaponSystem';
 import { NetworkManager } from "./network/NetworkManager";
 import { MultiplayerEntities } from "./network/MultiplayerEntities";
 import { initBuildingTemplates } from "./engine/BuildingGenerator";
+import { MainMenuScene } from "./engine/MainMenuScene";
 
 export let currentEngineType = "WebGL 2.0";
+export let activeScene: Scene | null = null;
 
 async function initEngine(canvas: HTMLCanvasElement): Promise<Engine | WebGPUEngine> {
-    const webgpuSupported = await WebGPUEngine.IsSupportedAsync;
-    if (webgpuSupported) {
-        try {
-            const engine = new WebGPUEngine(canvas);
-            await engine.initAsync();
-            currentEngineType = "WebGPU";
-            return engine;
-        } catch (e) {
-            console.warn("WebGPU initialization failed, falling back to WebGL", e);
-        }
-    } else {
-        console.warn("WebGPU not supported by this browser, falling back to WebGL 2.0");
-    }
+    // Temporarily disabled WebGPU because it's causing a RenderPipeline crash on the GLB map
+    // if (await WebGPUEngine.IsSupportedAsync) {
+    //     let engine;
+    //     try {
+    //         engine = new WebGPUEngine(canvas);
+    //         await engine.initAsync();
+    //         currentEngineType = "WebGPU";
+    //         return engine;
+    //     } catch (e) {
+    //         console.error("WebGPU initialization failed:", e);
+    //         const errorElement = document.getElementById("errorDisplay");
+    //         if (errorElement) errorElement.innerText = "Error: WebGPU failed to initialize. Please check your browser compatibility.";
+    //     }
+    // } else {
+    //     console.warn("WebGPU not supported by this browser, falling back to WebGL 2.0");
+    // }
     
     currentEngineType = "WebGL 2.0";
     return new Engine(canvas, true);
 }
 
-async function createScene(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElement) {
+async function createScene(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElement, mapChoice: string) {
     const scene = new Scene(engine);
     
     scene.collisionsEnabled = true;
@@ -75,9 +81,13 @@ async function createScene(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElem
 
     initBuildingTemplates(scene, shadowGenerator);
     
-    new EnvironmentManager(scene, shadowGenerator);
+    const envManager = new EnvironmentManager(scene, shadowGenerator, mapChoice);
+    await envManager.init();
     const playerEid = initPlayer(scene, canvas);
     const camera = entityCameras.get(playerEid);
+    
+    // Explicitly enforce the player camera as the active camera (in case a GLB somehow overrode it)
+    if (camera) scene.activeCamera = camera;
 
     // 3. Cinematic Post-Processing (Optimized for Web)
     const pipeline = new DefaultRenderingPipeline("defaultPipeline", true, scene, camera ? [camera] : []);
@@ -127,13 +137,10 @@ async function createScene(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElem
 
 let globalStateRef: Record<string, any> = {};
 
-async function startGame(username: string) {
-    const canvas = document.getElementById("renderCanvas") as HTMLCanvasElement;
-    if (!canvas) return;
-
+async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElement, username: string, mapChoice: string = "original") {
     try {
-        const engine = await initEngine(canvas);
-        const { scene, playerEid } = await createScene(engine, canvas);
+        const { scene, playerEid } = await createScene(engine, canvas, mapChoice);
+        activeScene = scene;
 
         // Network Setup
         const multiplayerEntities = new MultiplayerEntities(scene);
@@ -271,10 +278,22 @@ async function startGame(username: string) {
 
                     _tempPos.set(Position.x[eid], Position.y[eid], Position.z[eid]);
                     
+                    let platformId: string | undefined = undefined;
+                    if (PlayerComponent.isGrounded[eid]) {
+                        const ray = new Ray(_tempPos, Vector3.Down(), 1.5);
+                        const hit = scene.pickWithRay(ray, (mesh) => mesh.name.startsWith("elevator_"));
+                        if (hit?.hit && hit.pickedMesh) {
+                            platformId = hit.pickedMesh.name;
+                            const invWorld = hit.pickedMesh.getWorldMatrix().clone().invert();
+                            Vector3.TransformCoordinatesToRef(_tempPos, invWorld, _tempPos);
+                        }
+                    }
+
                     networkManager.sendState(
                         _tempPos,
                         _tempRot,
-                        anim
+                        anim,
+                        platformId
                     );
                 }
             }
@@ -339,41 +358,66 @@ async function startGame(username: string) {
             }
         });
 
+    } catch (e: any) {
+        console.error("Failed to initialize game scene.", e);
+        throw e;
+    }
+}
+
+// Global Initialization
+const canvas = document.getElementById("renderCanvas") as HTMLCanvasElement;
+if (canvas) {
+    initEngine(canvas).then((engine) => {
+        const mainMenu = new MainMenuScene(engine);
+        activeScene = mainMenu.scene;
+
         engine.runRenderLoop(() => {
-            scene.render();
+            if (activeScene) activeScene.render();
         });
 
         window.addEventListener("resize", () => {
             engine.resize();
         });
 
-    } catch (e: any) {
+        const joinBtn = document.getElementById("joinButton") as HTMLButtonElement;
+        const loginUI = document.getElementById("loginUI");
+        const usernameInput = document.getElementById("usernameInput") as HTMLInputElement;
+
+        if (joinBtn && loginUI && usernameInput) {
+            joinBtn.disabled = false;
+            joinBtn.innerHTML = `<span class="btn-text">DEPLOY TO COMBAT</span><div class="btn-glow"></div>`;
+
+            joinBtn.addEventListener("click", () => {
+                let username = usernameInput.value.trim();
+                if (!username) {
+                    username = "Guest_" + Math.floor(Math.random() * 1000);
+                }
+                let mapChoice = "original";
+                const mapSelector = document.getElementById("mapSelector") as HTMLSelectElement;
+                if (mapSelector) {
+                    mapChoice = mapSelector.value;
+                }
+                joinBtn.disabled = true; // Prevent double click
+                joinBtn.innerHTML = `<span class="btn-text">LOADING ENVIRONMENT...</span><div class="btn-glow"></div>`;
+                
+                // Do not dispose the main menu yet! We want to keep rendering it while the new scene loads asynchronously in the background.
+                startGame(engine, canvas, username, mapChoice).then(() => {
+                    // Once fully loaded, hide the UI and dispose the menu
+                    loginUI.style.display = "none";
+                    mainMenu.dispose();
+                }).catch(err => {
+                    joinBtn.disabled = false;
+                    joinBtn.innerHTML = `<span class="btn-text">DEPLOY TO COMBAT</span><div class="btn-glow"></div>`;
+                    const errorLog = document.getElementById("errorLog");
+                    if (errorLog) errorLog.innerText = "Error loading map: " + (err.message || err);
+                });
+            });
+        }
+    }).catch(e => {
         console.error("Failed to initialize Engine.", e);
         document.body.innerHTML = `<div style="color:white; padding: 20px; font-family: monospace;">
             <h2 style="color:red;">Engine failed to initialize.</h2>
             <pre style="background:#222; padding: 15px; border-radius: 5px; white-space: pre-wrap; word-wrap: break-word;">${e.stack || e.message || e}</pre>
         </div>`;
-    }
-}
-
-const joinBtn = document.getElementById("joinButton") as HTMLButtonElement;
-const loginUI = document.getElementById("loginUI");
-const usernameInput = document.getElementById("usernameInput") as HTMLInputElement;
-
-if (joinBtn && loginUI && usernameInput) {
-    joinBtn.disabled = false;
-    joinBtn.innerText = "Join Game";
-    joinBtn.style.background = "#28a745";
-    joinBtn.style.cursor = "pointer";
-
-    joinBtn.addEventListener("click", () => {
-        let username = usernameInput.value.trim();
-        if (!username) {
-            username = "Guest_" + Math.floor(Math.random() * 1000);
-        }
-        loginUI.style.display = "none";
-        startGame(username);
     });
-} else {
-    startGame("Guest");
 }

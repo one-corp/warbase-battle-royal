@@ -2,43 +2,47 @@
 
 This document covers best practices and technical gotchas when implementing physics for map elements (like moving platforms, elevators, and static cover) in Babylon.js using the Havok plugin.
 
-## Kinematic Bodies (Moving Platforms & Elevators)
+## Moving Platforms & Elevators (Multiplayer Sync)
 
-When creating objects that move autonomously but need to push or carry other physics bodies (like players or physics-enabled crates), you must configure them as **Kinematic** bodies.
+Previously, moving platforms were implemented using Havok's `PhysicsMotionType.ANIMATED` and `setTargetTransform`, relying on the physics engine to calculate velocities and push the player. However, in a multiplayer environment with network latency, this approach leads to heavy desynchronization, rubber-banding, and the notorious "Carry Problem."
 
-### 1. Motion Type
-The physics aggregate must be set to `PhysicsMotionType.ANIMATED`. This tells Havok that the body is not affected by gravity or collisions, but it can still affect other dynamic bodies.
+We have replaced pure physics-driven elevators with a **Global Time + Local Space Networking** architecture.
 
-```typescript
-const eleAgg = new PhysicsAggregate(elePlatform, PhysicsShapeType.BOX, { mass: 0, friction: 1.0 }, scene);
-eleAgg.body.setMotionType(PhysicsMotionType.ANIMATED);
-```
-
-### 2. The `disablePreStep` Teleportation Bug
-By default, Babylon.js Havok bodies have `disablePreStep = true`. **Do not set this to false for elevators.** 
-Setting it to `false` forces the physics engine to synchronize the body's position to the mesh's transform every frame, which essentially *teleports* the body. Teleporting skips continuous collision checks and zeros out the velocity, causing players to fall through.
-
-### 3. Movement using `setTargetTransform`
-To make a platform push objects, Havok needs to calculate its kinematic velocity. You must move the body using `setTargetTransform(position, rotation)`.
+### 1. Global Time Synchronization
+Elevators are animated procedurally (e.g., using sine waves). To ensure that the elevator is in the exact same physical position on every client's screen regardless of when they joined the server, the animation time is driven by a global clock rather than a local frame delta:
 
 ```typescript
-// Inside the render loop or animation observable
-const targetY = ...; // Calculate new position
-
-// Visually update the mesh
-elePlatform.position.y = targetY;
-
-// Physically update the body so it calculates velocity and pushes the player
-if (eleAgg.body) {
-    eleAgg.body.setTargetTransform(elePlatform.position, elePlatform.rotationQuaternion || new Quaternion(0,0,0,1));
-}
+// Elevator speed synced globally
+const time = Date.now() / 1000 * 0.4; 
+const t = (Math.sin(time) + 1) / 2;
+elePlatform.position.y = 0.25 + t * (roofY - 0.25);
 ```
 
-### 4. The "Carry Problem" (Player Controller Velocity Override)
-If your `PlayerController` manually calculates and sets `playerBody.setLinearVelocity(walkVelocity)` every frame, you will **destroy** the upward or lateral velocity the physics engine just granted you from standing on the moving platform. The player will slip off or fall through.
+### 2. Local Space Networking (Platform-Relative Coordinates)
+Even with synchronized platforms, sending standard World Coordinates over the network causes players to float or sink on other clients due to latency (the platform moves while the packet is in transit).
+
+**The Solution:**
+1. **Client Sending:** When the local player is grounded on an elevator (detected via a downward Raycast), their World Position is transformed into the elevator's **Local Space** using the elevator's inverse World Matrix. The client transmits these local coordinates along with a `platform_id`.
+2. **Server:** The Go server routes the `platform_id` alongside the spatial data in the `PlayerStateUpdate`.
+3. **Client Receiving:** When a remote client receives a position update containing a `platform_id`, it interpolates the *local* coordinates, and then multiplies the result by the elevator's current World Matrix.
+
+This mathematically guarantees that the remote player is "glued" to the moving surface, perfectly replicating AAA networking techniques for moving payloads/trains.
+
+### 3. The Frustum Culling Trap (Disappearing Meshes)
+When interpolating positions at high speeds on moving platforms using manual mathematics (e.g. `Vector3.LerpToRef`), a critical issue emerges: **Frustum Culling**.
+- Babylon.js does not automatically recalculate bounding boxes for highly complex skeletal meshes every frame.
+- If a remote player climbs a high platform, their visual mesh moves up, but their cached Bounding Box stays on the ground.
+- If the camera pans away from the ground, Babylon thinks the player is off-screen and **un-renders** them (the mesh disappears).
 
 **The Fix:**
-When calculating the player's movement, shoot a raycast down to check if the ground mesh has a `PhysicsMotionType.ANIMATED` physics body. If it does, retrieve its linear velocity and add it to your player's calculated walk velocity before applying it to the player body. Never manually reset the player's `y` velocity to `0` if you want them to ride elevators.
+Whenever manually setting the position of an interpolated player riding a platform, you must explicitly recalculate the bounding box using the new world matrix.
+
+```typescript
+// Force update world matrix and bounding boxes to prevent frustum culling disappearance
+player.mesh.computeWorldMatrix(true);
+player.mesh.getChildMeshes(false).forEach(m => m.refreshBoundingInfo(true, true));
+```
+Failure to include this step will cause remote players to vanish when standing on high platforms or fast-moving vehicles.
 
 ## Static Map Elements (Buildings & Cover)
 
