@@ -133,8 +133,6 @@ async function createScene(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElem
     return { scene, playerEid, engine };
 }
 
-let globalStateRef: Record<string, any> = {};
-
 async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElement, username: string, mapChoice: string = "original") {
     try {
         const { scene, playerEid } = await createScene(engine, canvas, mapChoice);
@@ -152,7 +150,6 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
         let respawnTimerActive = false;
 
         networkManager.onStateReceived = (globalState) => {
-            globalStateRef = globalState;
             multiplayerEntities.updateNetworkState(globalState, username);
             
             // Update local health UI
@@ -196,18 +193,19 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
             // Sync Scoreboard
             const scoreboardBody = document.getElementById("scoreboardBody");
             if (scoreboardBody) {
-                scoreboardBody.innerHTML = "";
-                for (const id in globalState) {
-                    const p = globalState[id];
-                    scoreboardBody.innerHTML += `
-                        <tr style="border-bottom: 1px solid #444;">
-                            <td style="padding: 8px;">${id === username ? id + ' (You)' : id}</td>
+                let html = "";
+                const sortedPlayers = Object.entries(globalState).sort((a, b) => (b[1].kills || 0) - (a[1].kills || 0) || a[0].localeCompare(b[0]));
+                for (const [id, p] of sortedPlayers) {
+                    html += `
+                        <tr style="border-bottom: 1px solid #444; color: ${p.isDead ? '#ff4444' : 'white'}">
+                            <td style="padding: 8px;">${id === username ? id + ' (You)' : id} ${p.isDead ? '(DEAD)' : ''}</td>
                             <td style="padding: 8px;">${p.kills || 0}</td>
                             <td style="padding: 8px;">${p.deaths || 0}</td>
                             <td style="padding: 8px; color: #4ade80;">12ms</td>
                         </tr>
                     `;
                 }
+                scoreboardBody.innerHTML = html;
             }
         };
 
@@ -333,19 +331,6 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
                         engineIndicator.innerText = currentEngineType;
                         engineIndicator.style.color = currentEngineType === "WebGPU" ? "#00FF00" : "#FFA500";
                     }
-
-                    let html = "";
-                    for (const id in globalStateRef) {
-                        const p = globalStateRef[id];
-                        html += `
-                        <tr style="border-bottom: 1px solid #444; color: ${p.isDead ? '#ff4444' : 'white'}">
-                            <td style="padding: 10px;">${id} ${p.isDead ? '(DEAD)' : ''}</td>
-                            <td style="padding: 10px;">${p.kills || 0}</td>
-                            <td style="padding: 10px;">${p.deaths || 0}</td>
-                            <td style="padding: 10px;">0ms</td>
-                        </tr>`;
-                    }
-                    scoreboardBody.innerHTML = html;
                 }
             }
         });
