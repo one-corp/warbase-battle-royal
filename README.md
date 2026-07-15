@@ -82,13 +82,29 @@ The game is now running locally! You can test it by opening `http://localhost:80
 To share the game over the internet, you need to expose your local port `8080`. 
 
 **Option A: Pinggy (Recommended - No Installation Required)**
-Run this in a new terminal window to start a tunnel in the background:
+
+You can run the tunnel either in the foreground or as a background process.
+
+**Foreground (Interactive UI)**
+Run this in a separate terminal tab to see a live dashboard with your URLs:
 ```bash
-nohup ssh -p 443 -o StrictHostKeyChecking=accept-new -R0:localhost:8080 a.pinggy.io > /tmp/pinggy.log 2>&1 &
-sleep 5
+ssh -p 443 -o StrictHostKeyChecking=accept-new -R0:localhost:8080 a.pinggy.io
+```
+
+**Background (Silent Tunnel)**
+If you want to run it in the background, you must use the `script` utility to fake a terminal. This prevents the SSH process from suspending itself and forces the URLs to write immediately without buffering:
+```bash
+# Clear any old suspended ssh tunnels
+killall ssh
+
+# Start the tunnel in the background
+nohup script -q /tmp/pinggy.log ssh -p 443 -o StrictHostKeyChecking=accept-new -R0:localhost:8080 a.pinggy.io >/dev/null 2>&1 &
+
+# Wait 3 seconds and print the generated URLs
+sleep 3
 cat /tmp/pinggy.log
 ```
-This will output your public URLs. The tunnel runs in the background and expires in 60 minutes. To stop it:
+The tunnel runs in the background and expires in 60 minutes. To stop it:
 ```bash
 pkill -f "ssh.*pinggy"
 ```

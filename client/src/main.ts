@@ -25,7 +25,7 @@ import { world } from './ecs/World';
 import { WeaponSystem } from './physics/WeaponSystem';
 import { NetworkManager } from "./network/NetworkManager";
 import { MultiplayerEntities } from "./network/MultiplayerEntities";
-import { initBuildingTemplates } from "./engine/BuildingGenerator";
+
 import { MainMenuScene } from "./engine/MainMenuScene";
 
 export let currentEngineType = "WebGL 2.0";
@@ -78,8 +78,6 @@ async function createScene(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElem
     shadowGenerator.forceBackFacesOnly = true;
     shadowGenerator.shadowMaxZ = 200;
     shadowGenerator.usePercentageCloserFiltering = true;
-
-    initBuildingTemplates(scene, shadowGenerator);
     
     const envManager = new EnvironmentManager(scene, shadowGenerator, mapChoice);
     await envManager.init();
@@ -327,6 +325,7 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
         window.addEventListener("keydown", (e) => {
             if (e.code === "Tab") {
                 e.preventDefault();
+                if (e.repeat) return;
                 if (scoreboard && scoreboardBody) {
                     scoreboard.style.display = "block";
                     
