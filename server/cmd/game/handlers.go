@@ -45,13 +45,13 @@ func (app *application) connectToServerHandler(w http.ResponseWriter, r *http.Re
 		username = "Guest"
 	}
 
-	// 3. Create the client and register it with Match:
-	client := engine.NewClient(app.match, conn, username)
+	// 3. Create the session:
+	session := engine.NewGameSession(app.match, conn, username)
 
-	// 4. Register the client with the central game Match
-	app.match.Register(client)
+	// 4. Register the session with the central game Match
+	app.match.Register(session)
 
-	// 5. Start the network pumps in background goroutines
-	go client.WritePump()
-	go client.ReadPump()
+	// 5. Start the network loops in background goroutines
+	go session.StreamUpdatesToPlayer()
+	go session.ListenForPlayerInputs()
 }

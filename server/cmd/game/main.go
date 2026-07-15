@@ -29,8 +29,6 @@ func main() {
 
 	flag.Parse()
 
-	// Initialize a new jsonlog.Logger which writes messages *at or above* the INFO
-	// severity level to the strandard out stream.
 	logger := jsonlog.New(os.Stdout, jsonlog.LevelInfo)
 
 	match := engine.NewMatch()

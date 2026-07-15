@@ -15,12 +15,12 @@ type Message struct {
 	Data     []byte
 }
 
-// Hub maintains the set of active clients and broadcasts messages to the clients.
+// Match maintains the set of active game sessions and orchestrates the game loop.
 type Match struct {
-	clients     map[*Client]bool
+	sessions    map[*GameSession]bool // Plain English: Tracking active player sessions
 	broadcast   chan Message
-	register    chan *Client
-	unregister  chan *Client
+	register    chan *GameSession
+	unregister  chan *GameSession
 	respawnChan chan string
 
 	// Game State
@@ -31,21 +31,21 @@ type Match struct {
 func NewMatch() *Match {
 	return &Match{
 		broadcast:   make(chan Message),
-		register:    make(chan *Client),
-		unregister:  make(chan *Client),
+		register:    make(chan *GameSession),
+		unregister:  make(chan *GameSession),
 		respawnChan: make(chan string),
-		clients:     make(map[*Client]bool),
+		sessions:    make(map[*GameSession]bool),
 		players:     make(map[string]*Player),
 	}
 }
 
 // Exported methods to allow external HTTP handlers to interact with the Match
-func (m *Match) Register(c *Client) {
-	m.register <- c
+func (m *Match) Register(s *GameSession) {
+	m.register <- s
 }
 
-func (m *Match) Unregister(c *Client) {
-	m.unregister <- c
+func (m *Match) Unregister(s *GameSession) {
+	m.unregister <- s
 }
 
 func (m *Match) Broadcast(msg Message) {
@@ -61,10 +61,10 @@ func (m *Match) triggerServerRespawn(playerID string) {
 // Helper to send events without re-locking (must be called inside an m.mu.Lock())
 func (m *Match) sendDirectEventLocked(playerID string, event *ServerMessage) {
 	if outData, err := proto.Marshal(event); err == nil {
-		for client := range m.clients {
-			if client.id == playerID {
+		for session := range m.sessions {
+			if session.PlayerID == playerID {
 				select {
-				case client.send <- outData:
+				case session.outputQueue <- outData:
 				default:
 				}
 				break
@@ -74,36 +74,37 @@ func (m *Match) sendDirectEventLocked(playerID string, event *ServerMessage) {
 }
 
 func (m *Match) Run() {
+	// Your friend upgraded the tick rate to 60Hz!
 	ticker := time.NewTicker(time.Second / 60)
 	defer ticker.Stop()
 
 	for {
 		select {
-		case client := <-m.register:
-			m.clients[client] = true
+		case session := <-m.register:
+			m.sessions[session] = true
 
-		case client := <-m.unregister:
-			if _, ok := m.clients[client]; ok {
-				delete(m.clients, client)
-				close(client.send)
+		case session := <-m.unregister:
+			if _, ok := m.sessions[session]; ok {
+				delete(m.sessions, session)
+				close(session.outputQueue)
 			}
 
-			// Zombie fix: Always try to delete player state, even if client was forcefully evicted.
-			// To avoid fast-reconnect bugs, ensure no other active client has the same ID.
+			// Zombie fix: Always try to delete player state, even if session was forcefully evicted.
+			// To avoid fast-reconnect bugs, ensure no other active session has the same ID.
 			m.mu.Lock()
 			stillConnected := false
-			for c := range m.clients {
-				if c.id == client.id {
+			for s := range m.sessions {
+				if s.PlayerID == session.PlayerID {
 					stillConnected = true
 					break
 				}
 			}
 			if !stillConnected {
-				delete(m.players, client.id)
+				delete(m.players, session.PlayerID)
 			}
 			m.mu.Unlock()
 
-			log.Printf("Player %s disconnected", client.id)
+			log.Printf("Player %s disconnected", session.PlayerID)
 
 		case playerID := <-m.respawnChan:
 			m.mu.Lock()
@@ -214,10 +215,10 @@ func (m *Match) Run() {
 								},
 							}
 							if outData, err := proto.Marshal(fireMsg); err == nil {
-								for client := range m.clients {
-									if client.id != message.SenderID {
+								for session := range m.sessions {
+									if session.PlayerID != message.SenderID {
 										select {
-										case client.send <- outData:
+										case session.outputQueue <- outData:
 										default:
 										}
 									}
@@ -289,12 +290,12 @@ func (m *Match) Run() {
 			m.mu.Unlock()
 
 			if err == nil {
-				for client := range m.clients {
+				for session := range m.sessions {
 					select {
-					case client.send <- stateData:
+					case session.outputQueue <- stateData:
 					default:
-						close(client.send)
-						delete(m.clients, client)
+						close(session.outputQueue)
+						delete(m.sessions, session)
 					}
 				}
 			}
