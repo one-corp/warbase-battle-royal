@@ -12,16 +12,17 @@ import {
 
 export class EnvironmentManager {
     private scene: Scene;
-    private shadowGenerator?: ShadowGenerator;
+    private shadowGenerator: ShadowGenerator;
     private mapChoice: string;
 
-    constructor(scene: Scene, shadowGenerator?: ShadowGenerator, mapChoice: string = "original") {
+    constructor(scene: Scene, shadowGenerator: ShadowGenerator, mapChoice: string = "original") {
         this.scene = scene;
         this.shadowGenerator = shadowGenerator;
         this.mapChoice = mapChoice;
     }
 
     public async init() {
+        if (this.shadowGenerator) console.log("Shadow generator is active in Environment.");
         // 2. Create Fallback Ground (Asphalt/Roads) - placed slightly below 0 to prevent z-fighting with GLB maps
         const ground = MeshBuilder.CreateGround("ground", { width: 200, height: 200 }, this.scene);
         ground.position.y = -0.5;
@@ -50,11 +51,11 @@ export class EnvironmentManager {
         } else if (this.mapChoice === "village") {
             await this.loadGLBMap("Village.glb");
         } else {
-            await this.loadGLBMap("low_poly_industrial_zone.glb");
+            await this.loadGLBMap("Village.glb");
         }
     }
 
-    private async loadGLBMap(filename: string) {
+    public async loadGLBMap(filename: string) {
         try {
             console.log(`Loading external map: ${filename}...`);
             const container = await SceneLoader.LoadAssetContainerAsync("./maps/", filename, this.scene);
@@ -71,14 +72,20 @@ export class EnvironmentManager {
                 if (!mesh) return;
                 
                 // Add to shadow generator
+                // Add to shadow generator
                 if (this.shadowGenerator && mesh.name !== "__root__") {
                     this.shadowGenerator.addShadowCaster(mesh, true);
                     mesh.receiveShadows = true;
                 }
 
                 // Add physics hitboxes (only for visible geometry, skipping pure transforms/bones)
+                // Add physics hitboxes (only for visible geometry, skipping pure transforms/bones)
                 // In babylon, geometry is usually on meshes with getTotalVertices() > 0
-                if (mesh.getTotalVertices() > 0) {
+                const vertexCount = mesh.getTotalVertices();
+                if (vertexCount > 0) {
+                    // CRITICAL WEBGPU FIX #2: Reduce varying interpolators to avoid `Total fragment input variables count (17) exceeds the maximum (16)`
+                    mesh.useVertexColors = false; // Saves 1 vec4 varying from being sent to the fragment shader
+
                     try {
                         new PhysicsAggregate(mesh, PhysicsShapeType.MESH, { mass: 0, friction: 0.5, restitution: 0 }, this.scene);
                     } catch (e) {

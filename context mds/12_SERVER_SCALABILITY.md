@@ -24,7 +24,7 @@ This document outlines the exact architectural upgrades required to transition t
 
 ## 1. Network Bandwidth Bottlenecks & Serialization
 
-Currently, we send the entire game state (positions, rotations, health) as a JSON string 30 times a second. JSON is highly unoptimized for game networking.
+Currently, we send the entire game state (positions, rotations, health) as a JSON string 60 times a second. JSON is highly unoptimized for game networking.
 
 ### A. Binary Serialization (Protocol Buffers)
 *   **The Problem:** A JSON string like `{"x": 10.51234, "y": 0.00000, "z": -5.12345}` takes up over 50 bytes of bandwidth per player, per tick.
@@ -32,7 +32,7 @@ Currently, we send the entire game state (positions, rotations, health) as a JSO
 *   **Impact:** Reduces server outgoing bandwidth by **70% to 80%**, preventing network cards from choking.
 
 ### B. Delta Compression (Snapshots)
-*   **The Problem:** We currently send the X, Y, Z position of every player *every 33ms*, even if the player is standing perfectly still AFK.
+*   **The Problem:** We currently send the X, Y, Z position of every player *every 16ms*, even if the player is standing perfectly still AFK.
 *   **The Solution:** Delta Compression. The server only transmits data that has *changed* since the last tick. If a player hasn't moved, the server sends a tiny packet that basically says `"Player 5: No Change."`
 *   **Impact:** Drastically reduces bandwidth during lulls in combat.
 
@@ -40,13 +40,13 @@ Currently, we send the entire game state (positions, rotations, health) as a JSO
 
 ## 2. CPU Bottlenecks: The O(N²) Broadcast Problem
 
-In our current `hub.go`, every 33ms we iterate through every connected player, construct a massive state payload of *every* player, and send it to *every* client. 
-If there are 100 players, the server does $100 \times 100 = 10,000$ state evaluations per tick. At 30Hz, that is 300,000 evaluations per second. This will melt the CPU.
+In a naive broadcast approach, every 16ms the server iterates through every connected player, constructs a massive state payload of *every* player, and sends it to *every* client. 
+If there are 100 players, the server does $100 \times 100 = 10,000$ state evaluations per tick. At 60Hz, that is 600,000 evaluations per second. This will melt the CPU.
 
 ### A. Spatial Partitioning (Area of Interest / AOI)
 *   **The Concept:** A player on the North side of a massive city map does not need to know the X, Y, Z coordinates of a player on the South side of the map. They can't see them anyway.
 *   **The Implementation:** Divide the map into a 2D Grid (e.g., 50x50 meter cells). As players move, they are assigned to a cell.
-*   **The Result:** During the 30Hz broadcast tick, the server looks at Player A's cell. It only sends Player A the state of other players in *the same cell* or the *8 adjacent cells*. The server completely ignores the other 90 players across the map.
+*   **The Result:** During the 60Hz broadcast tick, the server looks at Player A's cell. It only sends Player A the state of other players in *the same cell* or the *8 adjacent cells*. The server completely ignores the other 90 players across the map.
 *   **Impact:** Reduces CPU load from $O(N^2)$ down to $O(N)$, allowing a single Go process to handle massive open worlds.
 
 ---
@@ -78,7 +78,7 @@ If Player A (on Server 1) wants to send a global chat message or a clan invite t
 ## 4. Tick Rate Optimization
 
 ### A. Goroutine Per Match (Concurrency)
-Right now, our `hub.go` runs the 30Hz tick in a single `select` loop. While Go is fast, doing physics validation for 50 players sequentially might take longer than 33ms, causing the server to skip ticks and lag.
+Right now, if the server runs the 60Hz tick in a single `select` loop, doing physics validation for 50 players sequentially might take longer than 16ms, causing the server to skip ticks and lag.
 *   **The Solution:** Spawn a separate Goroutine for independent systems. For example, have one Goroutine handle incoming WebSocket reads, one handle physics validation, and one handle outgoing broadcasts.
 *   Go channels (`make(chan)`) are designed explicitly for this lock-free data passing.
 
@@ -109,3 +109,17 @@ Our server stores player state in an optimized Data-Oriented pipeline built to h
 ### C. Data-Oriented Design (DOD) & Entity Component System (ECS)
 *   **The Problem:** Traditional object-oriented layouts (like a giant `Player` struct containing physics, networking, and rendering data all jumbled together) cause frequent CPU Cache Misses.
 *   **The Solution:** Adopt an Entity Component System (ECS) architecture in Go (e.g., using libraries like `Arche` or `Donburi`). ECS physically organizes data contiguously in memory by component type (e.g., all `Position` structs packed tightly together in memory). This ensures maximum L1/L2 CPU cache hits, allowing systems to iterate over 10,000+ entities in milliseconds using SIMD-like speed.
+
+---
+
+## 6. Asset Delivery & CDN Scalability (OPFS)
+
+As the game scales to dozens of maps and large 3D character models (GLB files exceeding 30MB), standard HTTP delivery from a single server will bottleneck global bandwidth and increase load times unacceptably for returning players.
+
+### A. OPFS (Origin Private File System) Warm-Cache
+*   **The Problem:** Standard browser cache (`Cache-Control`) is volatile. The browser can silently evict a 30MB map to save space, forcing returning players to re-download massive assets, which incurs CDN costs and long loading screens.
+*   **The Solution:** Implement an OPFS (Origin Private File System) Asset Manager.
+    1. **Initial Download:** The game intercepts the asset request and downloads it from the CDN.
+    2. **Permanent Storage:** It writes the binary stream directly into the browser's OPFS sandboxed virtual disk.
+    3. **Subsequent Loads:** The game bypasses the network entirely, reading the binary `File` or `Blob` directly from the local SSD at native speeds.
+*   **Impact:** Massive reduction in CDN bandwidth costs (terabytes saved) and near-instantaneous map load times for returning players, regardless of network conditions.

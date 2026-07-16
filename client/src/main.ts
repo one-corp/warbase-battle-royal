@@ -7,13 +7,17 @@ import {
     HavokPlugin,
     Quaternion,
     CubeTexture,
-    CascadedShadowGenerator,
+    ShadowGenerator,
     DefaultRenderingPipeline,
     ImageProcessingConfiguration,
     WebGPUEngine,
-    Ray
+    Ray,
+    SceneInstrumentation,
+    EngineInstrumentation
 } from '@babylonjs/core';
+import '@babylonjs/core/Engines/WebGPU/Extensions/index.js';
 import HavokPhysics from '@babylonjs/havok';
+import './ui/style.css';
 import "@babylonjs/loaders/glTF"; 
 import { EnvironmentManager } from './engine/Environment';
 import { initPlayer } from './ecs/systems/PlayerSystem';
@@ -32,22 +36,23 @@ export let currentEngineType = "WebGL 2.0";
 export let activeScene: Scene | null = null;
 
 async function initEngine(canvas: HTMLCanvasElement): Promise<Engine | WebGPUEngine> {
-    // Temporarily disabled WebGPU because it's causing a RenderPipeline crash on the GLB map
-    // if (await WebGPUEngine.IsSupportedAsync) {
-    //     let engine;
-    //     try {
-    //         engine = new WebGPUEngine(canvas);
-    //         await engine.initAsync();
-    //         currentEngineType = "WebGPU";
-    //         return engine;
-    //     } catch (e) {
-    //         console.error("WebGPU initialization failed:", e);
-    //         const errorElement = document.getElementById("errorDisplay");
-    //         if (errorElement) errorElement.innerText = "Error: WebGPU failed to initialize. Please check your browser compatibility.";
-    //     }
-    // } else {
-    //     console.warn("WebGPU not supported by this browser, falling back to WebGL 2.0");
-    // }
+    const forceWebGL = localStorage.getItem("forceWebGL") === "true";
+
+    if (!forceWebGL && await WebGPUEngine.IsSupportedAsync) {
+        let engine;
+        try {
+            engine = new WebGPUEngine(canvas, { antialias: false, enableGPUDebugMarkers: true });
+            await engine.initAsync();
+            currentEngineType = "WebGPU";
+            return engine;
+        } catch (e) {
+            console.error("WebGPU initialization failed:", e);
+            const errorElement = document.getElementById("errorDisplay");
+            if (errorElement) errorElement.innerText = "Error: WebGPU failed to initialize. Please check your browser compatibility.";
+        }
+    } else if (!forceWebGL) {
+        console.warn("WebGPU not supported by this browser, falling back to WebGL 2.0");
+    }
     
     currentEngineType = "WebGL 2.0";
     return new Engine(canvas, true);
@@ -73,10 +78,10 @@ async function createScene(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElem
     sun.position = new Vector3(20, 40, 20);
     sun.intensity = 2.0;
 
-    const shadowGenerator = new CascadedShadowGenerator(2048, sun);
-    shadowGenerator.stabilizeCascades = true;
-    shadowGenerator.forceBackFacesOnly = true;
-    shadowGenerator.shadowMaxZ = 200;
+    const shadowGenerator = new ShadowGenerator(2048, sun);
+    // shadowGenerator.stabilizeCascades = true;
+    // shadowGenerator.forceBackFacesOnly = true;
+    // shadowGenerator.shadowMaxZ = 200;
     shadowGenerator.usePercentageCloserFiltering = true;
     
     const envManager = new EnvironmentManager(scene, shadowGenerator, mapChoice);
@@ -87,23 +92,20 @@ async function createScene(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElem
     // Explicitly enforce the player camera as the active camera (in case a GLB somehow overrode it)
     if (camera) scene.activeCamera = camera;
 
-    // 3. Cinematic Post-Processing (Optimized for Web)
-    const pipeline = new DefaultRenderingPipeline("defaultPipeline", true, scene, camera ? [camera] : []);
-    pipeline.fxaaEnabled = true; 
-
-    // Tone Mapping & Color Grading
-    pipeline.imageProcessing.toneMappingEnabled = true;
-    pipeline.imageProcessing.toneMappingType = ImageProcessingConfiguration.TONEMAPPING_ACES;
-    pipeline.imageProcessing.exposure = 1.0;
-    pipeline.imageProcessing.contrast = 1.2; // Adds a gritty, contrast-heavy FPS look (Zero cost)
-
-    // Stylized Camera Lens Effects
-    pipeline.chromaticAberrationEnabled = false;
-
-    // Bloom
+    // 3. Cinematic Post-Processing Pipeline
+    const pipeline = new DefaultRenderingPipeline("defaultPipeline", false, scene, camera ? [camera] : []);
+    pipeline.samples = 1; // Explicitly avoid MSAA
+    pipeline.fxaaEnabled = true;
     pipeline.bloomEnabled = true;
     pipeline.bloomThreshold = 0.8;
     pipeline.bloomWeight = 0.3;
+    pipeline.imageProcessingEnabled = true;
+    pipeline.imageProcessing.toneMappingEnabled = true;
+    pipeline.imageProcessing.toneMappingType = ImageProcessingConfiguration.TONEMAPPING_ACES;
+
+    // CRITICAL FIX: WebGPU requires the scene to be fully compiled.
+    // We MUST await scene.whenReadyAsync() AFTER adding all materials and pipelines!
+    await scene.whenReadyAsync();
 
     // --- Graphics UI Hookup ---
     const tChromatic = document.getElementById("toggleChromatic") as HTMLInputElement;
@@ -126,7 +128,6 @@ async function createScene(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElem
             pipeline.bloomEnabled = (e.target as HTMLInputElement).checked;
         });
     }
-
     // SSAO 2 and SSR have been completely removed to guarantee 60+ FPS on all devices.
     // The game will still look excellent with just the HDRI skybox and Bloom!
 
@@ -310,6 +311,8 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
             }
         });
 
+
+
         document.addEventListener("pointerlockchange", () => {
             if (document.pointerLockElement === canvas) {
                 isLocked = true;
@@ -347,6 +350,94 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
             }
         });
 
+        // Engine Select Logic
+        const engineSelector = document.getElementById("engineSelector") as HTMLSelectElement;
+        if (engineSelector) {
+            engineSelector.value = localStorage.getItem("forceWebGL") === "true" ? "webgl" : "auto";
+            engineSelector.addEventListener("change", (e) => {
+                const val = (e.target as HTMLSelectElement).value;
+                if (val === "webgl") {
+                    localStorage.setItem("forceWebGL", "true");
+                } else {
+                    localStorage.removeItem("forceWebGL");
+                }
+                // Reload to apply engine change
+                window.location.reload();
+            });
+        }
+
+        // Inspector/Metrics Toggle Logic
+        const toggleInspectorBtn = document.getElementById("toggleInspectorBtn");
+        const metricsPanel = document.getElementById("metricsPanel");
+        const metricEngine = document.getElementById("metricEngine");
+        if (metricEngine) metricEngine.innerText = currentEngineType;
+        
+        let showMetrics = false;
+        if (toggleInspectorBtn && metricsPanel) {
+            toggleInspectorBtn.addEventListener("click", () => {
+                showMetrics = !showMetrics;
+                metricsPanel.style.display = showMetrics ? "block" : "none";
+            });
+        }
+        
+        // Initialize Instrumentation for Metrics
+        const sceneInstr = new SceneInstrumentation(scene);
+        sceneInstr.captureActiveMeshesEvaluationTime = true;
+        sceneInstr.captureFrameTime = true;
+        
+        const engineInstr = new EngineInstrumentation(engine);
+        engineInstr.captureGPUFrameTime = true;
+
+        const metricFps = document.getElementById("metricFps");
+        const metricCpu = document.getElementById("metricCpu");
+        const metricGpu = document.getElementById("metricGpu");
+        const metricRam = document.getElementById("metricRam");
+        const metricDrawCalls = document.getElementById("metricDrawCalls");
+        const metricMeshes = document.getElementById("metricMeshes");
+        
+        let metricsTimer = 0;
+
+        scene.onBeforeRenderObservable.add(() => {
+            if (showMetrics) {
+                metricsTimer += engine.getDeltaTime();
+                if (metricsTimer > 250) { // Update 4 times a second
+                    metricsTimer = 0;
+                    if (metricFps) metricFps.innerText = engine.getFps().toFixed(0);
+                    
+                    // CPU Frame Time and Percentage
+                    const cpuTimeMs = sceneInstr.frameTimeCounter.current;
+                    const fps = engine.getFps();
+                    const cpuPercent = (cpuTimeMs * fps) / 10; // (ms * frames_per_sec) / 1000 * 100 = percent
+                    if (metricCpu) metricCpu.innerText = `${cpuTimeMs.toFixed(1)} ms (${cpuPercent.toFixed(1)}%)`;
+                    
+                    // GPU Frame Time (Requires compatible browser/extension)
+                    if (metricGpu) {
+                        const gpuTimeNano = engineInstr.gpuFrameTimeCounter.current;
+                        if (gpuTimeNano > 0) {
+                            const gpuTimeMs = gpuTimeNano / 1000000;
+                            const gpuPercent = (gpuTimeMs * fps) / 10;
+                            metricGpu.innerText = `${gpuTimeMs.toFixed(1)} ms (${gpuPercent.toFixed(1)}%)`;
+                        } else {
+                            metricGpu.innerText = "N/A (Blocked by Browser)"; 
+                        }
+                    }
+                    
+                    // RAM (Chrome/Edge only)
+                    if (metricRam) {
+                        const perf = window.performance as any;
+                        if (perf && perf.memory) {
+                            metricRam.innerText = (perf.memory.usedJSHeapSize / (1024 * 1024)).toFixed(0);
+                        } else {
+                            metricRam.innerText = "N/A";
+                        }
+                    }
+
+                    if (metricDrawCalls) metricDrawCalls.innerText = sceneInstr.drawCallsCounter.current.toString();
+                    if (metricMeshes) metricMeshes.innerText = scene.getActiveMeshes().length.toString();
+                }
+            }
+        });
+
     } catch (e: any) {
         console.error("Failed to initialize game scene.", e);
         throw e;
@@ -360,7 +451,19 @@ if (canvas) {
         const mainMenu = new MainMenuScene(engine);
         activeScene = mainMenu.scene;
 
+        // Frame limiter variables
+        const TARGET_FPS = 140;
+        const MIN_FRAME_TIME = 1000 / TARGET_FPS;
+        let lastRenderTime = performance.now();
+
         engine.runRenderLoop(() => {
+            const now = performance.now();
+            const dt = now - lastRenderTime;
+
+            if (dt < MIN_FRAME_TIME) return;
+
+            lastRenderTime = now;
+
             if (activeScene) activeScene.render();
         });
 

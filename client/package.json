@@ -19,6 +19,7 @@
     "@babylonjs/core": "^9.16.1",
     "@babylonjs/gui": "^9.16.1",
     "@babylonjs/havok": "^1.3.13",
+    "@babylonjs/inspector": "^9.16.2",
     "@babylonjs/loaders": "^9.16.1",
     "bitecs": "^0.3.40",
     "puppeteer": "^25.3.0"

@@ -3,8 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WebGPU FPS</title>
-    <link rel="stylesheet" href="/src/style.css">
+    <title>WebGPU FPS (V2)</title>
   </head>
   <body>
     <!-- Multiplayer Login UI (Modern Main Menu) -->
@@ -49,6 +48,18 @@
     <div id="uiLayer">
       <div id="crosshair"></div>
       
+      <!-- Performance Metrics (Top Left) -->
+      <div id="metricsPanel" style="display: none; position: absolute; top: 15px; left: 15px; background: rgba(0, 0, 0, 0.7); border: 1px solid #444; border-radius: 6px; padding: 10px; color: #00ffcc; font-family: monospace; font-size: 14px; pointer-events: none; z-index: 50;">
+        <div style="font-weight: bold; margin-bottom: 5px; color: white;">PERFORMANCE</div>
+        <div>FPS: <span id="metricFps">0</span></div>
+        <div>CPU Time: <span id="metricCpu">0.0</span> ms</div>
+        <div>GPU Time: <span id="metricGpu">0.0</span> ms</div>
+        <div>RAM: <span id="metricRam">0</span> MB</div>
+        <div style="margin-top: 5px;">Draw Calls: <span id="metricDrawCalls">0</span></div>
+        <div>Active Meshes: <span id="metricMeshes">0</span></div>
+        <div style="font-size: 11px; color: #aaa; margin-top: 5px;">Engine: <span id="metricEngine">Unknown</span></div>
+      </div>
+
       <div class="hud-bottom">
         <div class="health-bar-container">
             <div id="healthBar"></div>
@@ -71,7 +82,7 @@
       </div>
 
       <!-- Scoreboard Overlay -->
-      <div id="scoreboardUI" style="display: none; position: absolute; top: 10%; left: 20%; width: 60%; background: rgba(0,0,0,0.8); border: 2px solid #555; border-radius: 8px; color: white; font-family: monospace; padding: 20px;">
+      <div id="scoreboardUI" style="display: none; pointer-events: auto; position: absolute; top: 10%; left: 20%; width: 60%; background: rgba(0,0,0,0.8); border: 2px solid #555; border-radius: 8px; color: white; font-family: monospace; padding: 20px;">
         <h2 style="text-align: center; margin-top: 0;">SCOREBOARD</h2>
         <div style="text-align: center; margin-bottom: 20px; font-size: 14px; color: #aaa;">
           Active Engine: <span id="engineTypeIndicator" style="color: #4CAF50; font-weight: bold;">Loading...</span>
@@ -79,6 +90,16 @@
         
         <!-- Graphics Settings (Moved to Tab Screen) -->
         <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 4px; margin-bottom: 20px; text-align: center; font-family: sans-serif;">
+          <div style="margin-bottom: 10px;">
+            <strong style="margin-right: 15px;">Engine:</strong>
+            <select id="engineSelector" style="padding: 5px; background: #222; color: white; border: 1px solid #555; border-radius: 4px;">
+                <option value="auto">Auto (WebGPU prefer)</option>
+                <option value="webgl">Force WebGL 2.0</option>
+            </select>
+            <button id="toggleInspectorBtn" style="margin-left: 15px; padding: 5px 10px; background: #4a4a4a; color: white; border: 1px solid #666; border-radius: 4px; cursor: pointer;">
+                Toggle Performance Metrics
+            </button>
+          </div>
           <strong style="margin-right: 15px;">Graphics:</strong>
           <label style="cursor: pointer; margin-right: 15px;">
             <input type="checkbox" id="toggleChromatic"> Chromatic Aberration
