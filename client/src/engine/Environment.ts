@@ -1,12 +1,9 @@
 import {
     Scene,
-    MeshBuilder,
-    Color3,
+    Vector3,
     PhysicsAggregate,
     PhysicsShapeType,
     ShadowGenerator,
-    PBRMaterial,
-    Texture,
     SceneLoader
 } from "@babylonjs/core";
 
@@ -23,35 +20,17 @@ export class EnvironmentManager {
 
     public async init() {
         if (this.shadowGenerator) console.log("Shadow generator is active in Environment.");
-        // 2. Create Fallback Ground (Asphalt/Roads) - placed slightly below 0 to prevent z-fighting with GLB maps
-        const ground = MeshBuilder.CreateGround("ground", { width: 200, height: 200 }, this.scene);
-        ground.position.y = -0.5;
-        ground.checkCollisions = true;
-        
-        const roadMat = new PBRMaterial("roadMat", this.scene);
-        roadMat.albedoColor = new Color3(0.15, 0.15, 0.15); // Dark asphalt
-        roadMat.metallic = 0.0;
-        roadMat.roughness = 0.9;
-        const roadAlbedo = new Texture("https://playground.babylonjs.com/textures/floor.png", this.scene);
-        roadAlbedo.uScale = 40;
-        roadAlbedo.vScale = 40;
-        const roadBump = new Texture("https://playground.babylonjs.com/textures/floor_bump.PNG", this.scene);
-        roadBump.uScale = 40;
-        roadBump.vScale = 40;
-        roadMat.albedoTexture = roadAlbedo;
-        roadMat.bumpTexture = roadBump;
-        ground.material = roadMat;
-
-        // Add static physics to ground
-        new PhysicsAggregate(ground, PhysicsShapeType.BOX, { mass: 0 }, this.scene);
-        ground.receiveShadows = true;
 
         if (this.mapChoice === "industrial") {
             await this.loadGLBMap("low_poly_industrial_zone.glb");
         } else if (this.mapChoice === "village") {
-            await this.loadGLBMap("Village.glb");
+            await this.loadGLBMap("village_lowres.glb");
+        } else if (this.mapChoice === "arena") {
+            await this.loadGLBMap("fps_shooter_game_arena_map_v3.glb");
+        } else if (this.mapChoice === "ghost_city") {
+            await this.loadGLBMap("BLD_Ghost_city.glb");
         } else {
-            await this.loadGLBMap("Village.glb");
+            await this.loadGLBMap("village_lowres.glb");
         }
     }
 
@@ -61,10 +40,30 @@ export class EnvironmentManager {
             const container = await SceneLoader.LoadAssetContainerAsync("./maps/", filename, this.scene);
             
             // Strip any built-in cameras or lights from the GLB so they don't ruin our scene's carefully tuned lighting & camera setup
+            container.cameras.forEach(c => c.dispose());
+            container.lights.forEach(l => l.dispose());
             container.cameras = [];
             container.lights = [];
             
             container.addAllToScene();
+
+            // Find a valid object in the map to use as a dynamic spawn point
+            let spawnTarget = null;
+            for (const m of container.meshes) {
+                if (m.getTotalVertices() > 100 && m.name !== "__root__") { // Find a reasonably sized object
+                    spawnTarget = m;
+                    break; // Just grab the first decent mesh
+                }
+            }
+
+            if (spawnTarget) {
+                spawnTarget.computeWorldMatrix(true);
+                const bounds = spawnTarget.getBoundingInfo().boundingBox;
+                (window as any).SPAWN_POINT = bounds.centerWorld.add(new Vector3(0, Math.max(5, bounds.maximumWorld.y - bounds.centerWorld.y + 2), 0));
+                console.log("Dynamic Spawn Point set to:", (window as any).SPAWN_POINT, "above object:", spawnTarget.name);
+            } else {
+                (window as any).SPAWN_POINT = new Vector3(0, 10, 0);
+            }
             
             console.log(`Successfully loaded map meshes:`, container.meshes.length);
 
@@ -83,11 +82,13 @@ export class EnvironmentManager {
                 // In babylon, geometry is usually on meshes with getTotalVertices() > 0
                 const vertexCount = mesh.getTotalVertices();
                 if (vertexCount > 0) {
-                    // CRITICAL WEBGPU FIX #2: Reduce varying interpolators to avoid `Total fragment input variables count (17) exceeds the maximum (16)`
-                    mesh.useVertexColors = false; // Saves 1 vec4 varying from being sent to the fragment shader
+                    // CRITICAL WEBGPU FIX #2: Reduce varying interpolators
+                    mesh.useVertexColors = false; 
 
                     try {
-                        new PhysicsAggregate(mesh, PhysicsShapeType.MESH, { mass: 0, friction: 0.5, restitution: 0 }, this.scene);
+                        if (vertexCount > 0) {
+                            new PhysicsAggregate(mesh, PhysicsShapeType.MESH, { mass: 0, friction: 0.5, restitution: 0 }, this.scene);
+                        }
                     } catch (e) {
                         console.warn(`Failed to create physics for ${mesh.name}:`, e);
                     }

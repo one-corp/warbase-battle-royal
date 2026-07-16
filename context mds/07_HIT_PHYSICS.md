@@ -132,3 +132,24 @@ if (myState.isDead && !isLocalDead) {
 ### 4.2 Automated Respawn Loop
 A 3-second timer begins counting down on the death screen. Once the timer hits 0, the client fires a `sendRespawnRequest()` to the server. 
 The server resets the player's health to 100, sets `IsDead` to false, and the client teleports the player to a random coordinate within the spawn zone, instantly resuming gameplay.
+
+---
+
+## 5. Robust Input Architecture (Firing)
+
+### 5.1 Bypassing the HTML DOM
+When building a web-based FPS, relying on raw HTML DOM events (`canvas.addEventListener('mousedown')`) to trigger hitscan raycasts is fundamentally fragile. Depending on the browser, operating system, or whether the `Pointer Lock API` is actively engaged, the browser may eat `mousedown` or `pointerdown` events for internal drag-and-drop or gesture recognition.
+
+### 5.2 `scene.onPointerObservable`
+To guarantee 100% input reliability for weapon firing, we bypass the DOM entirely and hook directly into Babylon.js's internal WebGL event loop:
+```typescript
+scene.onPointerObservable.add((pointerInfo) => {
+    if (pointerInfo.type === PointerEventTypes.POINTERDOWN) {
+        if (pointerInfo.event.button === 0) InputComponent.fire[eid] = 1; // Left Click
+        if (document.pointerLockElement === canvas) {
+            if (pointerInfo.event.button === 2) InputComponent.ads[eid] = 1; // Right Click Aim
+        }
+    }
+});
+```
+This ensures that if a physical click occurs while the game is focused, the WebGL context registers it to fire the weapon before the browser has a chance to suppress it.

@@ -13,7 +13,8 @@ import {
     WebGPUEngine,
     Ray,
     SceneInstrumentation,
-    EngineInstrumentation
+    EngineInstrumentation,
+    KeyboardEventTypes
 } from '@babylonjs/core';
 import '@babylonjs/core/Engines/WebGPU/Extensions/index.js';
 import HavokPhysics from '@babylonjs/havok';
@@ -62,16 +63,18 @@ async function createScene(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElem
     const scene = new Scene(engine);
     
     scene.collisionsEnabled = true;
-    scene.gravity = new Vector3(0, -9.81, 0);
+    // Standard 9.81 gravity feels too floaty in FPS games. 
+    // Increasing gravity to 15.3 makes jumps 20% faster while we scale impulse to match height.
+    scene.gravity = new Vector3(0, -15.328, 0);
 
     const havokInstance = await HavokPhysics();
     const hk = new HavokPlugin(true, havokInstance);
-    scene.enablePhysics(new Vector3(0, -9.81, 0), hk);
+    scene.enablePhysics(new Vector3(0, -15.328, 0), hk);
 
     // 1. Image Based Lighting & Skybox (Switched to standard neutral environment)
     const envTexture = CubeTexture.CreateFromPrefilteredData("https://playground.babylonjs.com/textures/environment.env", scene);
     scene.environmentTexture = envTexture;
-    scene.createDefaultSkybox(envTexture, true, 1000, 0.3);
+    let currentSkybox = scene.createDefaultSkybox(envTexture, true, 1000, 0.3);
 
     // 2. Realistic Sun Lighting & Cascaded Shadows
     const sun = new DirectionalLight("sun", new Vector3(-1, -2, -1), scene);
@@ -96,9 +99,7 @@ async function createScene(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElem
     const pipeline = new DefaultRenderingPipeline("defaultPipeline", false, scene, camera ? [camera] : []);
     pipeline.samples = 1; // Explicitly avoid MSAA
     pipeline.fxaaEnabled = true;
-    pipeline.bloomEnabled = true;
-    pipeline.bloomThreshold = 0.8;
-    pipeline.bloomWeight = 0.3;
+    pipeline.bloomEnabled = false;
     pipeline.imageProcessingEnabled = true;
     pipeline.imageProcessing.toneMappingEnabled = true;
     pipeline.imageProcessing.toneMappingType = ImageProcessingConfiguration.TONEMAPPING_ACES;
@@ -109,8 +110,6 @@ async function createScene(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElem
 
     // --- Graphics UI Hookup ---
     const tChromatic = document.getElementById("toggleChromatic") as HTMLInputElement;
-    const tBloom = document.getElementById("toggleBloom") as HTMLInputElement;
-    
     if (tChromatic) {
         tChromatic.checked = pipeline.chromaticAberrationEnabled;
         tChromatic.addEventListener("change", (e) => {
@@ -122,10 +121,17 @@ async function createScene(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElem
         });
     }
 
-    if (tBloom) {
-        tBloom.checked = pipeline.bloomEnabled;
-        tBloom.addEventListener("change", (e) => {
-            pipeline.bloomEnabled = (e.target as HTMLInputElement).checked;
+
+    const tSkybox = document.getElementById("skyboxSelector") as HTMLSelectElement;
+    if (tSkybox) {
+        tSkybox.addEventListener("change", (e) => {
+            const envName = (e.target as HTMLSelectElement).value;
+            const newEnvTexture = CubeTexture.CreateFromPrefilteredData(`https://playground.babylonjs.com/textures/${envName}`, scene);
+            scene.environmentTexture = newEnvTexture;
+            if (currentSkybox) {
+                currentSkybox.dispose();
+            }
+            currentSkybox = scene.createDefaultSkybox(newEnvTexture, true, 1000, 0.3);
         });
     }
     // SSAO 2 and SSR have been completely removed to guarantee 60+ FPS on all devices.
@@ -141,7 +147,7 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
 
         // Network Setup
         const multiplayerEntities = new MultiplayerEntities(scene);
-        const networkManager = new NetworkManager(username, () => {
+        const networkManager = new NetworkManager(username, mapChoice, () => {
         });
 
         const weaponSystem = new WeaponSystem(scene, playerEid, networkManager);
@@ -223,11 +229,12 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
             const mesh = entityMeshes.get(playerEid);
             const body = entityPhysicsBodies.get(playerEid);
             if (mesh && body) {
-                const rx = (Math.random() - 0.5) * 20;
-                const rz = (Math.random() - 0.5) * 20;
+                const basePos = (window as any).SPAWN_POINT || new Vector3(0, 20, 0);
+                const rx = basePos.x + (Math.random() - 0.5) * 4;
+                const rz = basePos.z + (Math.random() - 0.5) * 4;
                 
                 // For Havok, we need to disable physics, move mesh, re-enable. But setting velocity to 0 and position on transformNode works if we use disablePreStep
-                mesh.position.set(rx, 5, rz);
+                mesh.position.set(rx, basePos.y, rz);
                 body.setLinearVelocity(Vector3.Zero());
             }
         };
@@ -328,25 +335,23 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
         const scoreboardBody = document.getElementById("scoreboardBody");
         const engineIndicator = document.getElementById("engineTypeIndicator");
         
-        window.addEventListener("keydown", (e) => {
-            if (e.code === "Tab") {
-                e.preventDefault();
-                if (e.repeat) return;
-                if (scoreboard && scoreboardBody) {
-                    scoreboard.style.display = "block";
-                    
-                    if (engineIndicator) {
-                        engineIndicator.innerText = currentEngineType;
-                        engineIndicator.style.color = currentEngineType === "WebGPU" ? "#00FF00" : "#FFA500";
+        scene.onKeyboardObservable.add((kbInfo) => {
+            if (kbInfo.event.code === "Tab") {
+                kbInfo.event.preventDefault();
+                if (kbInfo.type === KeyboardEventTypes.KEYDOWN) {
+                    if (kbInfo.event.repeat) return;
+                    if (scoreboard && scoreboardBody) {
+                        scoreboard.style.display = "block";
+                        if (engineIndicator) {
+                            engineIndicator.innerText = currentEngineType;
+                            engineIndicator.style.color = currentEngineType === "WebGPU" ? "#00FF00" : "#FFA500";
+                        }
+                    }
+                } else if (kbInfo.type === KeyboardEventTypes.KEYUP) {
+                    if (scoreboard) {
+                        scoreboard.style.display = "none";
                     }
                 }
-            }
-        });
-        
-        window.addEventListener("keyup", (e) => {
-            if (e.code === "Tab" && scoreboard) {
-                e.preventDefault();
-                scoreboard.style.display = "none";
             }
         });
 
@@ -481,8 +486,9 @@ if (canvas) {
 
             joinBtn.addEventListener("click", () => {
                 let username = usernameInput.value.trim();
-                if (!username) {
-                    username = "Guest_" + Math.floor(Math.random() * 1000);
+                if (!username || username.toLowerCase() === "guest") {
+                    username = "Guest_" + Math.floor(Math.random() * 10000);
+                    usernameInput.value = username;
                 }
                 let mapChoice = "original";
                 const mapSelector = document.getElementById("mapSelector") as HTMLSelectElement;

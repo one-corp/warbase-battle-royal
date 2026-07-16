@@ -21,6 +21,7 @@ export interface PlayerState {
 export class NetworkManager {
     private ws!: WebSocket;
     public username: string;
+    public room: string;
     public onStateReceived: (state: Record<string, PlayerState>) => void = () => {};
     public onHitConfirmed: () => void = () => {};
     public onKillConfirmed: () => void = () => {};
@@ -30,8 +31,9 @@ export class NetworkManager {
     private onConnectCb: () => void;
     private reconnectAttempts = 0;
     
-    constructor(username: string, onConnect: () => void) {
+    constructor(username: string, room: string, onConnect: () => void) {
         this.username = username;
+        this.room = room;
         this.onConnectCb = onConnect;
         this.connect();
     }
@@ -39,7 +41,7 @@ export class NetworkManager {
     private connect() {
         // Connect dynamically based on where the game is hosted
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        this.ws = new WebSocket(`${protocol}//${window.location.host}/connect?user=${this.username}`);
+        this.ws = new WebSocket(`${protocol}//${window.location.host}/connect?user=${this.username}&room=${this.room}`);
         this.ws.binaryType = 'arraybuffer';
 
         this.ws.onopen = () => {

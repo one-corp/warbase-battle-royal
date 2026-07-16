@@ -59,4 +59,20 @@ new PhysicsAggregate(blockMesh, PhysicsShapeType.BOX, { mass: 0 }, scene);
 new PhysicsAggregate(poleMesh, PhysicsShapeType.CYLINDER, { mass: 0 }, scene);
 ```
 
+### The "Walking in Air" Map Bug (Large Meshes)
+When loading large, complex GLB environments (like a detailed Village or Industrial Zone map), a common mistake is attempting to optimize Havok physics by falling back to simpler shapes if the vertex count exceeds an arbitrary threshold (e.g., >60,000 vertices).
+
+**The Problem:**
+If you fallback to a `PhysicsShapeType.BOX` on an entire level mesh because it is too large, Havok generates a gigantic cubic bounding box encompassing the farthest points of the entire map. If a player spawns on the ground but is inside this bounding box, Havok will instantly eject the player to the top surface of the box. This causes the player to be stranded 50 feet in the air, seemingly "walking in the sky" above the actual map.
+
+**The Solution:**
+Havok V2 natively handles complex environment meshes. You must strictly use `PhysicsShapeType.MESH` for environment topology regardless of how high the vertex count goes:
+```typescript
+// CRITICAL: Always use MESH for environment geometry to perfectly trace floors/walls
+if (mesh.getTotalVertices() > 0) {
+    new PhysicsAggregate(mesh, PhysicsShapeType.MESH, { mass: 0, friction: 0.5, restitution: 0 }, scene);
+}
+```
+This forces the physics engine to trace the precise triangles of the roads, stairs, and walls, ensuring players walk on the actual ground rather than a massive invisible wrapper.
+
 By adhering to these rules, the map environment remains physically stable, and complex interactions like working elevators function reliably in multiplayer.

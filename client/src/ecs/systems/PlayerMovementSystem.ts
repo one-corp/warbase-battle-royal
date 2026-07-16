@@ -6,13 +6,13 @@ import { Vector3, Scalar, Ray, PhysicsMotionType } from "@babylonjs/core";
 
 const DEG2RAD = Math.PI / 180;
 const WALK_SPEED = 4.5;
-const SPRINT_SPEED = 5.5; 
+const SPRINT_SPEED = 5.5;
 const CROUCH_SPEED = 2.0;
 const GROUND_ACCEL = 40;
 const GROUND_DECEL = 55;
 const AIR_ACCEL = 12;
 const AIR_DECEL = 5;
-const JUMP_IMPULSE = 3.5; 
+const JUMP_IMPULSE = 5.0; // Increased from 4.375 to boost max jump height slightly
 const JUMP_COOLDOWN = 0.15;
 const BASE_FOV = 75;
 const SPRINT_FOV_BOOST = 4; // Reduced from 8 for less intense FOV shift
@@ -58,6 +58,14 @@ export function playerMovementSystem(dt: number, scene: any) {
         const wasGrounded = PlayerComponent.isGrounded[eid] === 1;
         const isGrounded = rayResult?.hit ?? false;
         PlayerComponent.isGrounded[eid] = isGrounded ? 1 : 0;
+        
+        // Fall out of bounds check
+        const spawnPoint = (window as any).SPAWN_POINT || new Vector3(0, 20, 0);
+        if (mesh.position.y < spawnPoint.y - 30) {
+            mesh.position.copyFrom(spawnPoint);
+            body.setLinearVelocity(Vector3.Zero());
+            continue;
+        }
         
         if (wasGrounded && !isGrounded) PlayerComponent.coyoteTimer[eid] = 0.1;
 

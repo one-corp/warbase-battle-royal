@@ -32,8 +32,10 @@ The player does not see a floating pair of blocks. We use the full rigged model 
 A major hurdle with rigged models in Babylon.js is Frustum Culling. When the `Soldier` plays animations, its arms swing outside of its pre-calculated invisible bounding box. If that box leaves the screen, the engine deletes the model.
 - **The Fix:** We iterate through every sub-mesh of the instanced GLB (`getChildMeshes()`) and set `alwaysSelectAsActiveMesh = true` to force the engine to always render the characters.
 
-### 2.4 WebGL 2 Stability
-While WebGPU offers massive draw-call limits, the `WebGPUEngine` crashed silently when attempting to compile shaders for the `Soldier.glb`'s complex bone weights. To maintain perfect stability and compatibility, we execute the character pipeline entirely on the robust **WebGL 2 Engine** (`new Engine()`).
+### 2.4 WebGPU Stability and Interpolator Limits
+While WebGPU offers massive draw-call limits, the `WebGPUEngine` initially crashed silently when attempting to compile shaders for the `Soldier.glb`'s complex bone weights. 
+- **The Fix:** We discovered the crash was due to exceeding the WebGPU maximum fragment input variables (16). By explicitly disabling vertex colors on the instanced GLB meshes (`mesh.useVertexColors = false`), we save 1 `vec4` varying from being sent to the fragment shader. 
+- The character pipeline now perfectly executes on the hyper-performant **WebGPU Engine**.
 
 ---
 

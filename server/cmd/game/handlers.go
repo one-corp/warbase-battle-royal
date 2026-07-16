@@ -1,8 +1,10 @@
 package main
 
 import (
+	"math/rand"
 	"net"
 	"net/http"
+	"strconv"
 	"warbase-server/internal/engine"
 
 	"github.com/gorilla/websocket"
@@ -46,14 +48,18 @@ func (app *application) connectToServerHandler(w http.ResponseWriter, r *http.Re
 		tcpConn.SetNoDelay(true)
 	}
 
-	// 2. Extract the username:
+	// 2. Extract the username and room:
 	username := r.URL.Query().Get("user")
 	if username == "" {
-		username = "Guest"
+		username = "Guest_" + strconv.Itoa(rand.Intn(10000))
+	}
+	room := r.URL.Query().Get("room")
+	if room == "" {
+		room = "industrial"
 	}
 
 	// 3. Create the session:
-	session := engine.NewGameSession(app.match, conn, username)
+	session := engine.NewGameSession(app.match, conn, username, room)
 
 	// 4. Register the session with the central game Match
 	app.match.Register(session)

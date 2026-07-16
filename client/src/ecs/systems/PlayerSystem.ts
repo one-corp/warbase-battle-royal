@@ -2,7 +2,7 @@ import { addEntity, addComponent } from "bitecs";
 import { world } from "../World";
 import { Position, Rotation, Velocity, InputComponent, PlayerComponent, PlayerTag, PhysicsBodyTag, Renderable } from "../Components";
 import { entityMeshes, entityPhysicsBodies, entityCameras } from "../ViewMaps";
-import { Scene, MeshBuilder, PhysicsAggregate, PhysicsShapeType, Vector3, UniversalCamera } from "@babylonjs/core";
+import { Scene, MeshBuilder, PhysicsAggregate, PhysicsShapeType, Vector3, UniversalCamera, PointerEventTypes, KeyboardEventTypes } from "@babylonjs/core";
 
 export function initPlayer(scene: Scene, canvas: HTMLCanvasElement): number {
     const eid = addEntity(world);
@@ -32,9 +32,10 @@ export function initPlayer(scene: Scene, canvas: HTMLCanvasElement): number {
     
     // Initial Spawn
     // For custom maps, center spawn is safest so we don't drop off the edge into the void.
-    const spawnX = (Math.random() * 4) - 2;
-    const spawnZ = (Math.random() * 4) - 2;
-    mesh.position.set(spawnX, 20, spawnZ);
+    const basePos = (window as any).SPAWN_POINT || new Vector3(0, 20, 0);
+    const spawnX = basePos.x + (Math.random() * 4) - 2;
+    const spawnZ = basePos.z + (Math.random() * 4) - 2;
+    mesh.position.set(spawnX, basePos.y, spawnZ);
 
     const aggregate = new PhysicsAggregate(
         mesh, PhysicsShapeType.CAPSULE, 
@@ -59,7 +60,7 @@ export function initPlayer(scene: Scene, canvas: HTMLCanvasElement): number {
     Position.y[eid] = mesh.position.y;
     Position.z[eid] = mesh.position.z;
 
-    setupInputListeners(eid, canvas);
+    setupInputListeners(eid, canvas, scene);
 
     return eid;
 }
@@ -70,41 +71,36 @@ const KEY_MAP: Record<string, keyof typeof InputComponent> = {
     'Digit1': 'weapon1', 'Digit2': 'weapon2', 'KeyG': 'grenade'
 };
 
-function setupInputListeners(eid: number, canvas: HTMLCanvasElement) {
-    window.addEventListener('keydown', (e) => {
-        const key = KEY_MAP[e.code];
+function setupInputListeners(eid: number, canvas: HTMLCanvasElement, scene: Scene) {
+    scene.onKeyboardObservable.add((kbInfo) => {
+        const key = KEY_MAP[kbInfo.event.code];
         if (key && typeof key === "string") {
-            if (e.code === 'Space') {
-                if (!e.repeat) InputComponent.jump[eid] = 1;
-            } else {
-                (InputComponent as any)[key][eid] = 1;
+            if (kbInfo.type === KeyboardEventTypes.KEYDOWN) {
+                if (kbInfo.event.code === 'Space') {
+                    if (!kbInfo.event.repeat) InputComponent.jump[eid] = 1;
+                } else {
+                    (InputComponent as any)[key][eid] = 1;
+                }
+            } else if (kbInfo.type === KeyboardEventTypes.KEYUP) {
+                (InputComponent as any)[key][eid] = 0;
             }
         }
     });
 
-    window.addEventListener('keyup', (e) => {
-        const key = KEY_MAP[e.code];
-        if (key && typeof key === "string") (InputComponent as any)[key][eid] = 0;
-    });
-
-    canvas.addEventListener('mousemove', (e) => {
-        if (document.pointerLockElement === canvas) {
-            InputComponent.mouseDeltaX[eid] += e.movementX;
-            InputComponent.mouseDeltaY[eid] += e.movementY;
-        }
-    });
-
-    canvas.addEventListener('mousedown', (e) => {
-        if (document.pointerLockElement === canvas) {
-            if (e.button === 0) InputComponent.fire[eid] = 1;
-            if (e.button === 2) InputComponent.ads[eid] = 1;
-        }
-    });
-
-    canvas.addEventListener('mouseup', (e) => {
-        if (document.pointerLockElement === canvas) {
-            if (e.button === 0) InputComponent.fire[eid] = 0;
-            if (e.button === 2) InputComponent.ads[eid] = 0;
+    scene.onPointerObservable.add((pointerInfo) => {
+        if (pointerInfo.type === PointerEventTypes.POINTERDOWN) {
+            if (pointerInfo.event.button === 0) InputComponent.fire[eid] = 1;
+            if (document.pointerLockElement === canvas) {
+                if (pointerInfo.event.button === 2) InputComponent.ads[eid] = 1;
+            }
+        } else if (pointerInfo.type === PointerEventTypes.POINTERUP) {
+            if (pointerInfo.event.button === 0) InputComponent.fire[eid] = 0;
+            if (pointerInfo.event.button === 2) InputComponent.ads[eid] = 0;
+        } else if (pointerInfo.type === PointerEventTypes.POINTERMOVE) {
+            if (document.pointerLockElement === canvas) {
+                InputComponent.mouseDeltaX[eid] += (pointerInfo.event as PointerEvent).movementX || 0;
+                InputComponent.mouseDeltaY[eid] += (pointerInfo.event as PointerEvent).movementY || 0;
+            }
         }
     });
 }

@@ -1,4 +1,5 @@
 import { Scene, AssetContainer, SceneLoader, Vector3, Quaternion, AnimationGroup, TransformNode, Mesh, ParticleSystem, Texture, Color4, StandardMaterial, Color3, MeshBuilder, PhysicsAggregate, PhysicsShapeType, PhysicsMotionType, PhysicsConstraint, PhysicsConstraintType } from "@babylonjs/core";
+import { AdvancedDynamicTexture, Rectangle, TextBlock } from "@babylonjs/gui";
 import type { PlayerState } from "./NetworkManager";
 
 const RENDER_DELAY = 35; // ms
@@ -10,6 +11,8 @@ interface RemotePlayer {
     stateBuffer: { time: number, position: Vector3, rotation: Quaternion, platformId?: string }[];
     flashSystem: ParticleSystem;
     fireAnimTimer: number;
+    nameplate: Mesh;
+    nameplateTexture: AdvancedDynamicTexture;
 }
 
 export class MultiplayerEntities {
@@ -19,7 +22,6 @@ export class MultiplayerEntities {
     private ragdolls: Map<string, PhysicsAggregate[]> = new Map();
     private ragdollConstraints: Map<string, PhysicsConstraint[]> = new Map();
     private hitboxMat: StandardMaterial;
-    
     private _tempPos0 = new Vector3();
     private _tempPos1 = new Vector3();
 
@@ -231,13 +233,45 @@ export class MultiplayerEntities {
         flash.maxEmitPower = 0;
         flash.updateSpeed = 0.02;
 
+        // --- NAMEPLATE UI (3D World Space) ---
+        // Floating above head, facing camera
+        const nameplatePlane = MeshBuilder.CreatePlane(`nameplate_${id}`, { width: 1.5, height: 0.3 }, this.scene);
+        nameplatePlane.parent = rootNode;
+        nameplatePlane.position.y = 2.0; // Above head
+        nameplatePlane.position.z = 0;
+        nameplatePlane.billboardMode = Mesh.BILLBOARDMODE_ALL;
+        nameplatePlane.isPickable = false;
+        
+        // Use a specific texture resolution that matches the plane's aspect ratio (5:1)
+        const adt = AdvancedDynamicTexture.CreateForMesh(nameplatePlane, 512, 102);
+        
+        const rect = new Rectangle();
+        rect.width = "100%";
+        rect.height = "100%";
+        rect.color = "white";
+        rect.thickness = 0;
+        rect.background = "rgba(0, 0, 0, 0.4)";
+        rect.cornerRadius = 10;
+        adt.addControl(rect);
+        
+        const label = new TextBlock();
+        label.text = id;
+        label.color = "white";
+        // Font size is relative to the 102px height texture
+        label.fontSize = 75; 
+        label.fontFamily = "monospace";
+        label.fontWeight = "bold";
+        rect.addControl(label);
+
         this.remotePlayers[id] = {
             mesh: rootNode,
             anims: anims,
             currentState: "idle",
             stateBuffer: [],
             flashSystem: flash,
-            fireAnimTimer: 0
+            fireAnimTimer: 0,
+            nameplate: nameplatePlane,
+            nameplateTexture: adt
         };
     }
 
@@ -262,8 +296,10 @@ export class MultiplayerEntities {
     private removePlayer(id: string) {
         const player = this.remotePlayers[id];
         if (player) {
-            player.flashSystem.dispose();
-            player.mesh.dispose();
+            if (player.nameplateTexture) player.nameplateTexture.dispose();
+            if (player.nameplate) player.nameplate.dispose();
+            if (player.flashSystem) player.flashSystem.dispose();
+            if (player.mesh) player.mesh.dispose(false, true); // Dispose mesh and its materials to free GPU memory
             delete this.remotePlayers[id];
         }
 

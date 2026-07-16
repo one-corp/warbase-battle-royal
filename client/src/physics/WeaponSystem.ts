@@ -118,6 +118,20 @@ export class WeaponSystem {
     private lastGrenadeTime = 0;
     private justPressed1 = false;
     private justPressed2 = false;
+
+    // Pre-allocated vectors for the render loop to prevent GC thrashing
+    private _tempReloadOffset = new Vector3();
+    private _tempBasePos = new Vector3();
+    private _tempForward = new Vector3();
+    private _tempRight = new Vector3();
+    private _tempUp = new Vector3();
+    private _tempSpreadDir = new Vector3();
+    private _tempEndPoint = new Vector3();
+
+    private static readonly _Forward = new Vector3(0, 0, 1);
+    private static readonly _Right = new Vector3(1, 0, 0);
+    private static readonly _Up = new Vector3(0, 1, 0);
+
     private swayX = 0;
     private swayY = 0;
     private walkBobTimer = 0;
@@ -428,7 +442,7 @@ export class WeaponSystem {
             
 
 
-            let reloadOffset = new Vector3(0, 0, 0);
+            this._tempReloadOffset.set(0, 0, 0);
             let reloadRotX = 0;
 
             if (this.isReloading) {
@@ -437,14 +451,14 @@ export class WeaponSystem {
                 
                 if (progress < 0.2) {
                     const t = progress / 0.2;
-                    reloadOffset.y = Scalar.Lerp(0, -0.4, t);
+                    this._tempReloadOffset.y = Scalar.Lerp(0, -0.4, t);
                     reloadRotX = Scalar.Lerp(0, Math.PI / 4, t);
                 } else if (progress < 0.8) {
-                    reloadOffset.y = -0.4;
+                    this._tempReloadOffset.y = -0.4;
                     reloadRotX = Math.PI / 4;
                 } else {
                     const t = (progress - 0.8) / 0.2;
-                    reloadOffset.y = Scalar.Lerp(-0.4, 0, t);
+                    this._tempReloadOffset.y = Scalar.Lerp(-0.4, 0, t);
                     reloadRotX = Scalar.Lerp(Math.PI / 4, 0, t);
                 }
 
@@ -455,8 +469,8 @@ export class WeaponSystem {
                 }
             }
 
-            const basePos = Vector3.Lerp(Vector3.Zero(), this.activeConfig.adsPosition, this.adsProgress);
-            swayRoot.position = basePos.add(reloadOffset);
+            Vector3.LerpToRef(Vector3.ZeroReadOnly, this.activeConfig.adsPosition, this.adsProgress, this._tempBasePos);
+            swayRoot.position.copyFrom(this._tempBasePos).addInPlace(this._tempReloadOffset);
             swayRoot.rotation.x = reloadRotX;
 
             const canFire = this.currentAmmo > 0 && !this.isReloading;
@@ -482,9 +496,10 @@ export class WeaponSystem {
 
                 const spreadAngle = this.currentSpread * DEG2RAD * (isADS ? this.activeConfig.adsSpreadMult : 1.0);
                 const rot = Math.random() * Math.PI * 2;
-                const forward = camera.getDirection(Vector3.Forward());
-                const right = camera.getDirection(Vector3.Right());
-                const up = camera.getDirection(Vector3.Up());
+                
+                camera.getDirectionToRef(WeaponSystem._Forward, this._tempForward);
+                camera.getDirectionToRef(WeaponSystem._Right, this._tempRight);
+                camera.getDirectionToRef(WeaponSystem._Up, this._tempUp);
                 
                 const isMoving = input.forward || input.backward || input.left || input.right;
                 if (isMoving && playerState.isGrounded) {
@@ -493,13 +508,13 @@ export class WeaponSystem {
                     this.playAnim("firing", true);
                 }
                 
-                const spreadDir = forward
-                    .add(right.scale(Math.sin(spreadAngle) * Math.cos(rot)))
-                    .add(up.scale(Math.sin(spreadAngle) * Math.sin(rot)))
-                    .normalize();
+                this._tempSpreadDir.copyFrom(this._tempForward);
+                this._tempRight.scaleInPlace(Math.sin(spreadAngle) * Math.cos(rot));
+                this._tempUp.scaleInPlace(Math.sin(spreadAngle) * Math.sin(rot));
+                this._tempSpreadDir.addInPlace(this._tempRight).addInPlace(this._tempUp).normalize();
 
-                const endPoint = camera.globalPosition.add(spreadDir.scale(300)); 
-                let hitPoint = endPoint;
+                this._tempEndPoint.copyFrom(this._tempSpreadDir).scaleInPlace(300).addInPlace(camera.globalPosition);
+                let hitPoint = this._tempEndPoint;
                 
                 const query: any = { shouldHitTriggers: true };
                 const localBody = entityPhysicsBodies.get(this.playerEid);
@@ -507,14 +522,14 @@ export class WeaponSystem {
                     query.ignoreBody = localBody;
                 }
 
-                const physResult = this.scene.getPhysicsEngine()?.raycast(camera.globalPosition, endPoint, query);
+                const physResult = this.scene.getPhysicsEngine()?.raycast(camera.globalPosition, this._tempEndPoint, query);
 
                 if (physResult && physResult.hasHit && physResult.body && physResult.body.transformNode) {
                     hitPoint = physResult.hitPointWorld;
                     const hitMesh = physResult.body.transformNode;
 
                     if (hitMesh.physicsBody && hitMesh.physicsBody.getMotionType() === PhysicsMotionType.DYNAMIC) {
-                        hitMesh.physicsBody.applyImpulse(spreadDir.scale(10), hitPoint);
+                        hitMesh.physicsBody.applyImpulse(this._tempSpreadDir.scale(10), hitPoint);
                     }
                     
                     if (hitMesh.metadata && hitMesh.metadata.isHitbox && hitMesh.metadata.playerId && hitMesh.metadata.playerId !== this.networkManager?.username) {
@@ -538,7 +553,7 @@ export class WeaponSystem {
                     }
                 }
 
-                const startPoint = camera.globalPosition.add(new Vector3(0, -0.2, 0));
+                const startPoint = camera.globalPosition.clone().addInPlace(new Vector3(0, -0.2, 0));
                 spawnTracer(startPoint, hitPoint);
 
                 shellEjector.manualEmitCount = 1;
@@ -585,7 +600,7 @@ export class WeaponSystem {
             const localDelta = Vector3.TransformNormal(deltaWorldPos, invertedCameraMatrix);
             const mathematicalADSPos = swayRoot.position.add(localDelta);
 
-            const hipfirePos = basePos.add(reloadOffset);
+            const hipfirePos = this._tempBasePos.add(this._tempReloadOffset);
             const currentTargetPos = Vector3.Lerp(hipfirePos, mathematicalADSPos, this.adsProgress);
             
             const adsSwayMult = 1.0 - (this.adsProgress * 0.8); 

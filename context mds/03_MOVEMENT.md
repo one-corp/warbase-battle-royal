@@ -12,7 +12,7 @@
 |-------|-------------|-----------------|-------------------|----------|---------|
 | **Idle** | 0 | — | 1.7m | ✅ | ✅ |
 | **Walk** | 4.5 | 1.0× | 1.7m | ✅ | ✅ |
-| **Sprint** | 6.5 | 1.44× | 1.7m | ❌ | ❌ |
+| **Sprint** | 5.5 | 1.22× | 1.7m | ❌ | ❌ |
 | **Crouch Idle** | 0 | — | 1.0m | ✅ | ✅ |
 | **Crouch Walk** | 2.0 | 0.44× | 1.0m | ✅ | ✅ |
 | **ADS Walk** | 2.5 | 0.55× | 1.7m | ✅ | ✅ |
@@ -192,15 +192,15 @@ Small bar above health, only visible when stamina < 100%.
 
 | Parameter | Value | Notes |
 |-----------|-------|-------|
-| **Gravity** | -18 m/s² | Snappier than real (9.81). Tuned for game feel |
-| **Jump Impulse** | 4.0 m/s upward | Reduced for a shorter, tighter jump profile |
-| **Jump Height** | ~0.45m | Enough to hurdle small obstacles, prevents floating |
+| **Gravity** | -15.328 m/s² | Increased from 9.81 to drop floatiness by 20% |
+| **Jump Impulse** | 5.0 m/s upward | Slightly higher than previous 4.375 to boost max jump height |
+| **Jump Height** | ~0.81m | Taller jump while maintaining the fast 20% arc |
 | **Air Control** | 30% of ground accel | Slight trajectory adjustment |
 | **Jump Cooldown** | 150ms after landing | Prevents bunny hopping |
 
 ### 5.2 Jump Height Formula
 
-$$v_0 = \sqrt{2 \cdot |g| \cdot h} = \sqrt{2 \times 18 \times 0.45} \approx 4.0 \text{ m/s}$$
+$$v_0 = \sqrt{2 \cdot |g| \cdot h} = \sqrt{2 \times 15.328 \times 0.81} \approx 5.0 \text{ m/s}$$
 
 ### 5.3 Implementation
 
@@ -487,16 +487,16 @@ function onLanding() {
 
 ### 11.2 Height Reference
 
-With gravity = 18 m/s²:
+With gravity = 15.328 m/s²:
 
 | Fall Height | Impact Speed | Damage |
 |-------------|-------------|--------|
-| 1.2m (jump) | ~6.6 m/s | 0 |
-| 3m | ~10.4 m/s | ~3 |
-| 5m | ~13.4 m/s | ~23 |
-| 8m | ~17.0 m/s | ~47 |
-| 12m | ~20.8 m/s | ~72 |
-| 17m+ | ~25 m/s | **Death** |
+| 1.2m (jump) | ~6.0 m/s | 0 |
+| 3m | ~9.6 m/s | 0 |
+| 5m | ~12.4 m/s | ~16 |
+| 8m | ~15.7 m/s | ~38 |
+| 12m | ~19.2 m/s | ~61 |
+| 18m+ | ~23.5 m/s | **Death** |
 
 ---
 
@@ -646,15 +646,15 @@ function getInputDirection(): Vector3 {
 
 ```typescript
 // Physics
-const GRAVITY = -18;              // m/s² (snappier than real 9.81)
-const JUMP_IMPULSE = 6.6;         // m/s (gives ~1.2m height)
+const GRAVITY = -15.328;          // m/s² (snappier than real 9.81, 20% faster arc)
+const JUMP_IMPULSE = 5.0;         // m/s (gives ~0.81m height)
 const PLAYER_MASS = 80;           // kg
 const CAPSULE_HEIGHT = 1.8;       // meters
 const CAPSULE_RADIUS = 0.4;       // meters
 
 // Movement speeds (m/s)
 const WALK_SPEED = 4.5;
-const SPRINT_SPEED = 6.5;
+const SPRINT_SPEED = 5.5;
 const CROUCH_SPEED = 2.0;
 const ADS_SPEED = 2.5;
 

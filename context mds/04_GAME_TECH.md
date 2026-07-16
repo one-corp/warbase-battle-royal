@@ -2,21 +2,17 @@
 
 This document tracks technical decisions, engine configurations, and architectural learnings while building the FPS game in Babylon.js.
 
-## 1. Engine Initialization (WebGL 2 vs WebGPU)
+## 1. Engine Initialization (WebGPU)
 
-### 1.1 The WebGPU Crash with Skeletal Animations
-Babylon.js 6.0+ introduced the `WebGPUEngine`, which offers significant performance improvements over traditional WebGL in terms of draw calls and compute shaders. The project was initially bootstrapped using `WebGPUEngine`.
+### 1.1 The WebGPU Shader Compilation Limit
+Babylon.js 6.0+ introduced the `WebGPUEngine`, which offers significant performance improvements over traditional WebGL in terms of draw calls and compute shaders. The project defaults to `WebGPUEngine`.
 
-However, integrating `Soldier.glb` caused a silent, catastrophic crash resulting in a pitch-black screen.
+Initially, integrating `Soldier.glb` caused a silent crash.
+- **The Cause:** `Soldier.glb` relies heavily on Skeletal Animations (bone skinning). When Babylon's WebGPU pipeline attempts to compile the shaders, it exceeded the WebGPU limit for fragment input variables (`Total fragment input variables count (17) exceeds the maximum (16)`).
+- **The Solution:** We explicitly disable vertex colors (`mesh.useVertexColors = false`) when loading external GLB models. This removes one `vec4` varying from the fragment shader, bringing the total back under the hard limit of 16 and allowing WebGPU to compile successfully.
 
-**The Cause:**
-- `Soldier.glb` relies heavily on Skeletal Animations (bone skinning).
-- When Babylon's WebGPU pipeline attempts to compile the shaders for complex bone weights and indices without explicit buffer configurations or limits, it can fail a `GPUValidationError`.
-- The exact uncaptured error log was: `[Invalid RenderPipeline "RenderPipeline_bgra8unorm_depth24plus-stencil8_samples4_textureState1"] is invalid due to a previous error.`
-- Because `WebGPUEngine.initAsync()` failed to build the RenderPipeline for the soldier, the entire render loop was halted.
-
-### 1.2 The WebGL 2 Solution
-To guarantee stability across all devices and avoid experimental WebGPU validation errors with rigged GLTF models, we reverted to the highly stable **WebGL 2 Engine**.
+### 1.2 WebGL Fallback
+If the user's browser does not support WebGPU (or if they manually select WebGL in the deployment menu), the engine automatically falls back to `new Engine()` (WebGL 2.0).
 
 ```typescript
 import { Engine } from '@babylonjs/core';
@@ -91,3 +87,19 @@ Instead of traditional REST APIs (which are too slow due to HTTP connection over
 - When the client receives the 60 Hz broadcast, it ignores its own data (since it's predicting locally).
 - It reads the data for all other players and updates the positions, rotations, and animations of their "dummy" meshes. 
 - (Future enhancement: The client should interpolate/lerp between the received network snapshots rather than snapping to coordinates instantly, to smooth out network jitter).
+
+## 6. Robust Input Architecture
+
+### 6.1 Bypassing the HTML DOM
+When building a web-based FPS, relying on raw HTML DOM events (`canvas.addEventListener('mousedown')`) is fundamentally fragile. Depending on the browser, operating system, or whether the `Pointer Lock API` is actively engaged, the browser may eat `mousedown` or `pointerdown` events for internal drag-and-drop or gesture recognition.
+
+### 6.2 `scene.onPointerObservable`
+To guarantee 100% input reliability, we bypass the DOM entirely and hook directly into Babylon.js's internal WebGL event loop:
+```typescript
+scene.onPointerObservable.add((pointerInfo) => {
+    if (pointerInfo.type === PointerEventTypes.POINTERDOWN) {
+        if (pointerInfo.event.button === 0) fireWeapon();
+    }
+});
+```
+This ensures that if a physical click occurs while the game is focused, the WebGL context registers it before the browser has a chance to suppress it.

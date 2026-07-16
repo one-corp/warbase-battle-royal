@@ -21,7 +21,9 @@
           <label for="mapSelector">DEPLOYMENT ZONE</label>
           <select id="mapSelector">
             <option value="industrial">Industrial Zone (GLB Map)</option>
-            <option value="village">Village (GLB Map)</option>
+            <option value="village">Village (Low Res)</option>
+            <option value="arena">Game Arena</option>
+            <option value="ghost_city">Ghost City</option>
           </select>
         </div>
         
@@ -82,7 +84,7 @@
       </div>
 
       <!-- Scoreboard Overlay -->
-      <div id="scoreboardUI" style="display: none; pointer-events: auto; position: absolute; top: 10%; left: 20%; width: 60%; background: rgba(0,0,0,0.8); border: 2px solid #555; border-radius: 8px; color: white; font-family: monospace; padding: 20px;">
+      <div id="scoreboardUI" style="display: none; pointer-events: auto; position: absolute; top: 10%; left: 20%; width: 60%; background: rgba(0,0,0,0.8); border: 2px solid #555; border-radius: 8px; color: white; font-family: monospace; padding: 20px; z-index: 1000; overflow: visible;">
         <h2 style="text-align: center; margin-top: 0;">SCOREBOARD</h2>
         <div style="text-align: center; margin-bottom: 20px; font-size: 14px; color: #aaa;">
           Active Engine: <span id="engineTypeIndicator" style="color: #4CAF50; font-weight: bold;">Loading...</span>
@@ -104,9 +106,15 @@
           <label style="cursor: pointer; margin-right: 15px;">
             <input type="checkbox" id="toggleChromatic"> Chromatic Aberration
           </label>
-          <label style="cursor: pointer;">
-            <input type="checkbox" id="toggleBloom" checked> Bloom
-          </label>
+          <div style="margin-top: 10px;">
+            <strong style="margin-right: 15px;">Skybox:</strong>
+            <select id="skyboxSelector" style="padding: 5px; background: #222; color: white; border: 1px solid #555; border-radius: 4px;">
+                <option value="environment.env">Normal Day (Clear)</option>
+                <option value="country.env">Country</option>
+                <option value="Runyon_Canyon_A_2k_cube_specular.env">Canyon</option>
+                <option value="night.env">Night</option>
+            </select>
+          </div>
         </div>
         <table style="width: 100%; border-collapse: collapse; text-align: left;">
           <thead>

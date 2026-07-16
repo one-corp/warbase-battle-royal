@@ -20,15 +20,17 @@ type GameSession struct {
 	networkConn *websocket.Conn
 	outputQueue chan []byte
 	PlayerID    string
+	RoomID      string
 }
 
 // NewGameSession initializes a new websocket client safely
-func NewGameSession(match *Match, conn *websocket.Conn, playerID string) *GameSession {
+func NewGameSession(match *Match, conn *websocket.Conn, playerID string, roomID string) *GameSession {
 	return &GameSession{
 		match:       match,
 		networkConn: conn,
 		outputQueue: make(chan []byte, 512), // Kept your friend's increased buffer size
 		PlayerID:    playerID,
+		RoomID:      roomID,
 	}
 }
 
@@ -56,7 +58,7 @@ func (s *GameSession) ListenForPlayerInputs() {
 
 		// Broadcast to the match using the exported Broadcast method.
 		// Note: The text trimming logic was removed per your friend's update.
-		s.match.Broadcast(Message{SenderID: s.PlayerID, Data: message})
+		s.match.Broadcast(Message{SenderID: s.PlayerID, RoomID: s.RoomID, Data: message})
 	}
 }
 
