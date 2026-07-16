@@ -87,3 +87,25 @@ To make the game feel perfectly smooth regardless of server load:
 *   The client should not wait for the server to confirm movement. The client moves immediately (Prediction).
 *   The server simulates the movement in the background. If the server disagrees with the client's position (e.g., the client walked through a wall on their screen), the server sends a "Correction" packet.
 *   The client instantly snaps to the server's authoritative position (Reconciliation). This hides lag beautifully.
+
+---
+
+## 5. In-Memory Player State & Data Pipeline Optimizations
+
+**[IMPLEMENTED: 2026-07-16]** 
+Our server stores player state in an optimized Data-Oriented pipeline built to handle MMO-scale loads without GC pauses or thread contention.
+
+### A. Mitigating Mutex Contention (Lock-Free Actor Pattern)
+*   **The Problem:** At 60Hz with 100+ players, a single `sync.Mutex` acts as a traffic jam. Every incoming network packet and outgoing tick broadcast must wait in line to acquire the exact same lock.
+*   **The Solution (Implemented):** 
+    *   **Single-Threaded Simulation Loop (Actor Pattern):** We removed mutexes entirely for state reads/writes. Instead, we funnel all incoming actions via Go Channels into the single dedicated `Match.Run()` goroutine. Since only one thread mutates the state sequentially, no locks are required, achieving 100% lock-free concurrency.
+
+### B. Reducing Garbage Collection (GC) Pressure
+*   **The Problem:** Allocating new Protobuf message structs and byte buffers for every read/write creates massive memory churn. Furthermore, a `map[string]*Player` is a map of pointers. Go's GC must actively trace every single pointer in that map, leading to long GC pause times (micro-stutters in-game).
+*   **The Solution (Implemented):**
+    *   **Zero-Allocation Caching:** Instead of `sync.Pool`, we pre-allocate a `GameState` and `ServerMessage` struct directly onto the `Match` object. During the 60Hz tick, we simply overwrite its fields. This results in zero heap allocations during broadcasts.
+    *   **Pointer-Free Contiguous Slices (Data-Oriented Design):** We replaced the `map` of pointers with a flat, contiguous array (slice) of structs (`[]Player`). We use an index map (`map[string]int`) for lookups. When a player disconnects, we use an $O(1)$ Swap-and-Pop algorithm to instantly fill the hole without resizing the array.
+
+### C. Data-Oriented Design (DOD) & Entity Component System (ECS)
+*   **The Problem:** Traditional object-oriented layouts (like a giant `Player` struct containing physics, networking, and rendering data all jumbled together) cause frequent CPU Cache Misses.
+*   **The Solution:** Adopt an Entity Component System (ECS) architecture in Go (e.g., using libraries like `Arche` or `Donburi`). ECS physically organizes data contiguously in memory by component type (e.g., all `Position` structs packed tightly together in memory). This ensures maximum L1/L2 CPU cache hits, allowing systems to iterate over 10,000+ entities in milliseconds using SIMD-like speed.

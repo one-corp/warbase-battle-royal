@@ -2,14 +2,23 @@ import { addEntity, addComponent, defineComponent, Types, defineQuery } from "bi
 import { world } from "../World";
 import { Position, Renderable } from "../Components";
 import { entityMeshes } from "../ViewMaps";
-import { MeshBuilder, Scene, Vector3 } from "@babylonjs/core";
+import { MeshBuilder, Scene, Vector3, StandardMaterial, Color3 } from "@babylonjs/core";
 
 // Custom component for tracers to track lifecycle
 export const Tracer = defineComponent({
     activeTime: Types.f32
 });
 
-const MAX_TRACERS = 20;
+interface TracerData {
+    start: Vector3;
+    end: Vector3;
+    distance: number;
+    progress: number;
+    speed: number;
+}
+const tracerDataMap = new Map<number, TracerData>();
+
+const MAX_TRACERS = 30;
 const tracerEntities: number[] = [];
 let currentTracerIndex = 0;
 
@@ -20,14 +29,18 @@ export function initTracerSystem(scene: Scene) {
         addComponent(world, Renderable, eid);
         addComponent(world, Tracer, eid);
 
-        // We use a cylinder to simulate a thick tracer line
-        const mesh = MeshBuilder.CreateCylinder(`tracer_${eid}`, { height: 1, diameter: 0.05 }, scene);
+        // We use an ultra-thin cylinder for high-velocity look
+        const mesh = MeshBuilder.CreateCylinder(`tracer_${eid}`, { height: 1, diameter: 0.008 }, scene);
         mesh.rotation.x = Math.PI / 2;
         mesh.bakeCurrentTransformIntoVertices();
         mesh.isPickable = false;
         mesh.isVisible = false; // Hide initially
 
-        // Give it a bright emissive material (we'll reuse the scene's default material or create one)
+        // Give it a bright emissive material
+        const mat = new StandardMaterial(`tracerMat_${eid}`, scene);
+        mat.emissiveColor = new Color3(1.0, 0.95, 0.7); // Pale yellow/white
+        mat.disableLighting = true; // Unaffected by shadows/lights
+        mesh.material = mat;
         
         entityMeshes.set(eid, mesh);
         tracerEntities.push(eid);
@@ -37,25 +50,27 @@ export function initTracerSystem(scene: Scene) {
 export function spawnTracer(start: Vector3, end: Vector3) {
     const eid = tracerEntities[currentTracerIndex];
     
-    // Position at the midpoint
-    const midPoint = start.add(end).scale(0.5);
-    Position.x[eid] = midPoint.x;
-    Position.y[eid] = midPoint.y;
-    Position.z[eid] = midPoint.z;
+    const distance = Vector3.Distance(start, end);
+    tracerDataMap.set(eid, {
+        start: start.clone(),
+        end: end.clone(),
+        distance: distance,
+        progress: 0,
+        speed: 300 // 300 units per second visually
+    });
 
     const mesh = entityMeshes.get(eid);
     if (mesh) {
-        // Calculate length
-        const distance = Vector3.Distance(start, end);
-        mesh.scaling.z = distance; // Scale the cylinder along its new Z-forward length
-
-        // Point the cylinder from start to end
-        mesh.position.copyFrom(midPoint);
+        // Tracer streak is a fixed length (or capped by distance if shot is very close)
+        mesh.scaling.z = Math.min(3, distance); 
+        
+        mesh.position.copyFrom(start);
         mesh.lookAt(end);
         mesh.isVisible = true;
+        mesh.visibility = 1.0; 
     }
 
-    Tracer.activeTime[eid] = 0.05; // Visible for 50ms
+    Tracer.activeTime[eid] = 2.0; // Max lifetime 2 seconds (safety kill)
 
     currentTracerIndex = (currentTracerIndex + 1) % MAX_TRACERS;
 }
@@ -68,8 +83,25 @@ export function updateTracers(dt: number) {
         const eid = entities[i];
         if (Tracer.activeTime[eid] > 0) {
             Tracer.activeTime[eid] -= dt;
+            
+            const data = tracerDataMap.get(eid);
+            const mesh = entityMeshes.get(eid);
+            
+            if (data && mesh) {
+                data.progress += (data.speed * dt);
+                
+                if (data.progress >= data.distance) {
+                    // Reached the wall
+                    Tracer.activeTime[eid] = 0;
+                    mesh.isVisible = false;
+                } else {
+                    // Move tracer forward
+                    const dir = data.end.subtract(data.start).normalize();
+                    mesh.position = data.start.add(dir.scale(data.progress));
+                }
+            }
+
             if (Tracer.activeTime[eid] <= 0) {
-                const mesh = entityMeshes.get(eid);
                 if (mesh) mesh.isVisible = false;
             }
         }

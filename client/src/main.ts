@@ -277,7 +277,12 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
                     let platformId: string | undefined = undefined;
                     if (PlayerComponent.isGrounded[eid]) {
                         const ray = new Ray(_tempPos, Vector3.Down(), 1.5);
-                        const hit = scene.pickWithRay(ray, (mesh) => mesh.name.startsWith("elevator_"));
+                        // Generalistic platform detection: works with any mesh named 'elevator', 'platform', or 'moving' in your GLB
+                        const hit = scene.pickWithRay(ray, (mesh) => 
+                            mesh.name.toLowerCase().includes("elevator") || 
+                            mesh.name.toLowerCase().includes("platform") || 
+                            mesh.name.toLowerCase().includes("moving")
+                        );
                         if (hit?.hit && hit.pickedMesh) {
                             platformId = hit.pickedMesh.name;
                             const invWorld = hit.pickedMesh.getWorldMatrix().clone().invert();

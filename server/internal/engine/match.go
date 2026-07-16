@@ -3,7 +3,6 @@ package engine
 import (
 	"log"
 	"math/rand"
-	"sync"
 	"time"
 
 	"google.golang.org/protobuf/proto"
@@ -24,8 +23,10 @@ type Match struct {
 	respawnChan chan string
 
 	// Game State
-	players map[string]*Player
-	mu      sync.Mutex
+	playerEntities  []Player
+	playerIndices   map[string]int
+	cachedGameState *GameState
+	cachedServerMsg *ServerMessage
 }
 
 func NewMatch() *Match {
@@ -34,8 +35,11 @@ func NewMatch() *Match {
 		register:    make(chan *GameSession),
 		unregister:  make(chan *GameSession),
 		respawnChan: make(chan string),
-		sessions:    make(map[*GameSession]bool),
-		players:     make(map[string]*Player),
+		sessions:        make(map[*GameSession]bool),
+		playerEntities:  make([]Player, 0, 128),
+		playerIndices:   make(map[string]int),
+		cachedGameState: &GameState{Players: make(map[string]*PlayerState)},
+		cachedServerMsg: &ServerMessage{},
 	}
 }
 
@@ -91,7 +95,6 @@ func (m *Match) Run() {
 
 			// Zombie fix: Always try to delete player state, even if session was forcefully evicted.
 			// To avoid fast-reconnect bugs, ensure no other active session has the same ID.
-			m.mu.Lock()
 			stillConnected := false
 			for s := range m.sessions {
 				if s.PlayerID == session.PlayerID {
@@ -100,16 +103,29 @@ func (m *Match) Run() {
 				}
 			}
 			if !stillConnected {
-				delete(m.players, session.PlayerID)
+				idx, ok := m.playerIndices[session.PlayerID]
+				if ok {
+					lastIdx := len(m.playerEntities) - 1
+					if idx != lastIdx {
+						// Swap last player into deleted spot
+						m.playerEntities[idx] = m.playerEntities[lastIdx]
+						// Update the moved player's index in the map
+						m.playerIndices[m.playerEntities[idx].ID] = idx
+					}
+					// Pop the last element
+					m.playerEntities = m.playerEntities[:lastIdx]
+					delete(m.playerIndices, session.PlayerID)
+					delete(m.cachedGameState.Players, session.PlayerID)
+				}
 			}
-			m.mu.Unlock()
 
 			log.Printf("Player %s disconnected", session.PlayerID)
 
 		case playerID := <-m.respawnChan:
-			m.mu.Lock()
-			player, ok := m.players[playerID]
-			if ok && player.State.IsDead {
+			idx, ok := m.playerIndices[playerID]
+			if ok {
+				player := &m.playerEntities[idx]
+				if player.State.IsDead {
 				player.State.IsDead = false
 				player.State.Health = 100
 				player.State.Animation = "idle"
@@ -133,22 +149,25 @@ func (m *Match) Run() {
 					},
 				}
 				m.sendDirectEventLocked(playerID, respawnEvt)
+				}
 			}
-			m.mu.Unlock()
 
 		case message := <-m.broadcast:
 			var clientEvent ClientEvent
 			if err := proto.Unmarshal(message.Data, &clientEvent); err == nil {
-				m.mu.Lock()
 
 				switch event := clientEvent.Event.(type) {
 				case *ClientEvent_StateUpdate:
 					// SECURITY FIX: Ignore stateUpdate.ID to prevent spoofing
-					player, ok := m.players[message.SenderID]
+					idx, ok := m.playerIndices[message.SenderID]
 					if !ok {
-						player = NewPlayer(message.SenderID)
-						m.players[message.SenderID] = player
+						newPlayer := NewPlayer(message.SenderID)
+						m.playerEntities = append(m.playerEntities, *newPlayer)
+						idx = len(m.playerEntities) - 1
+						m.playerIndices[message.SenderID] = idx
+						m.cachedGameState.Players[message.SenderID] = &PlayerState{}
 					}
+					player := &m.playerEntities[idx]
 
 					if player.State.IsDead {
 						player.State.Animation = "death"
@@ -166,11 +185,13 @@ func (m *Match) Run() {
 					}
 
 				case *ClientEvent_Hit:
-					target, okTarget := m.players[event.Hit.TargetId]
-					shooter, okShooter := m.players[message.SenderID]
+					targetIdx, okTarget := m.playerIndices[event.Hit.TargetId]
+					shooterIdx, okShooter := m.playerIndices[message.SenderID]
                     log.Printf("Received Hit: Shooter=%s, Target=%s, Damage=%d (okTarget=%v, okShooter=%v)", message.SenderID, event.Hit.TargetId, event.Hit.Damage, okTarget, okShooter)
 
 					if okTarget && okShooter {
+						target := &m.playerEntities[targetIdx]
+						shooter := &m.playerEntities[shooterIdx]
 						isKill, err := shooter.ValidateAndApplyHit(target, int(event.Hit.Damage))
                         if err != nil {
                             log.Printf("Hit Invalid: %s", err.Error())
@@ -204,8 +225,9 @@ func (m *Match) Run() {
 					}
 
 				case *ClientEvent_Fire:
-					shooter, ok := m.players[message.SenderID]
+					idx, ok := m.playerIndices[message.SenderID]
 					if ok {
+						shooter := &m.playerEntities[idx]
 						if err := shooter.ValidateAndApplyFire(); err == nil {
 							// Valid! Broadcast to everyone else
 							fireMsg := &ServerMessage{
@@ -235,64 +257,62 @@ func (m *Match) Run() {
 					}
 
 				case *ClientEvent_Reload:
-					shooter, ok := m.players[message.SenderID]
+					idx, ok := m.playerIndices[message.SenderID]
 					if ok {
+						shooter := &m.playerEntities[idx]
 						if err := shooter.ValidateAndApplyReload(); err != nil {
 							log.Printf("Reload denied from %s: %v", shooter.ID, err)
 						}
 					}
 
 				case *ClientEvent_SwitchWeapon:
-					shooter, ok := m.players[message.SenderID]
-					if ok && !shooter.State.IsDead {
-						if weapon, wOk := Weapons[event.SwitchWeapon.WeaponId]; wOk {
-							shooter.ActiveWeapon = weapon
-							shooter.AmmoCount = weapon.MagSize
-							shooter.IsReloading = false
+					idx, ok := m.playerIndices[message.SenderID]
+					if ok {
+						shooter := &m.playerEntities[idx]
+						if !shooter.State.IsDead {
+							if weapon, wOk := Weapons[event.SwitchWeapon.WeaponId]; wOk {
+								shooter.ActiveWeapon = weapon
+								shooter.AmmoCount = weapon.MagSize
+								shooter.IsReloading = false
+							}
 						}
 					}
 				}
 
-				m.mu.Unlock()
 			}
 		case <-ticker.C:
-			m.mu.Lock()
 			// Resolve naturally completed reloads
 			now := time.Now()
-			for _, player := range m.players {
+			for i := range m.playerEntities {
+				player := &m.playerEntities[i]
 				if player.IsReloading && now.Sub(player.ReloadStart) >= player.ActiveWeapon.ReloadTime {
 					player.IsReloading = false
 					player.AmmoCount = player.ActiveWeapon.MagSize
 				}
 			}
 
-			// Build broadcast payload (only PlayerStates)
-			gameState := &GameState{
-				Players: make(map[string]*PlayerState),
+			// Update cached broadcast payload
+			for i := range m.playerEntities {
+				p := &m.playerEntities[i]
+				cachedP := m.cachedGameState.Players[p.ID]
+				cachedP.X = p.State.X
+				cachedP.Y = p.State.Y
+				cachedP.Z = p.State.Z
+				cachedP.Rx = p.State.Rx
+				cachedP.Ry = p.State.Ry
+				cachedP.Rz = p.State.Rz
+				cachedP.Rw = p.State.Rw
+				cachedP.Animation = p.State.Animation
+				cachedP.Health = p.State.Health
+				cachedP.Kills = p.State.Kills
+				cachedP.Deaths = p.State.Deaths
+				cachedP.IsDead = p.State.IsDead
+				cachedP.PlatformId = p.State.PlatformId
 			}
-			for id, p := range m.players {
-				gameState.Players[id] = &PlayerState{
-					X:         p.State.X,
-					Y:         p.State.Y,
-					Z:         p.State.Z,
-					Rx:        p.State.Rx,
-					Ry:        p.State.Ry,
-					Rz:        p.State.Rz,
-					Rw:        p.State.Rw,
-					Animation: p.State.Animation,
-					Health:    p.State.Health,
-					Kills:     p.State.Kills,
-					Deaths:    p.State.Deaths,
-					IsDead:    p.State.IsDead,
-				}
+			m.cachedServerMsg.Message = &ServerMessage_GameState{
+				GameState: m.cachedGameState,
 			}
-			serverMsg := &ServerMessage{
-				Message: &ServerMessage_GameState{
-					GameState: gameState,
-				},
-			}
-			stateData, err := proto.Marshal(serverMsg)
-			m.mu.Unlock()
+			stateData, err := proto.Marshal(m.cachedServerMsg)
 
 			if err == nil {
 				for session := range m.sessions {

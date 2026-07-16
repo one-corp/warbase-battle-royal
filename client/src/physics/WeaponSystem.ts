@@ -18,6 +18,7 @@ import { throwGrenade } from './GrenadeSystem';
 import type { NetworkManager } from "../network/NetworkManager";
 import { initDecalSystem, spawnDecal } from "../ecs/systems/DecalSystem";
 import { initTracerSystem, spawnTracer, updateTracers } from "../ecs/systems/TracerSystem";
+import { initImpactSystem, spawnImpact } from "../ecs/systems/ImpactSystem";
 import { entityCameras, entityPhysicsBodies } from "../ecs/ViewMaps";
 import { InputComponent, PlayerComponent } from "../ecs/Components";
 
@@ -141,6 +142,7 @@ export class WeaponSystem {
     public async init() {
         initDecalSystem(this.scene);
         initTracerSystem(this.scene);
+        initImpactSystem(this.scene);
         
         const camera = entityCameras.get(this.playerEid);
         if (!camera) throw new Error("Player camera not found in ECS view map");
@@ -528,10 +530,11 @@ export class WeaponSystem {
                         
                         // We need a dummy quaternion for lookAt, or we just pass a simple rotation
                         // Wait, spawnDecal expects rx, ry, rz, rw. 
-                        // Instead, let's just let the ECS handle positions and have the RenderSystem lookAt the normal?
-                        // Actually, DecalSystem doesn't know about normals right now.
                         // For now, let's just update the mesh directly inside spawnDecal. I'll modify spawnDecal.
                         spawnDecal(decalPos, decalPos.add(normal));
+                        
+                        // Spawn physical 3D sparks bouncing off the wall!
+                        spawnImpact(hitPoint, normal);
                     }
                 }
 

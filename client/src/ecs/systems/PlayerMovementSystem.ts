@@ -15,7 +15,7 @@ const AIR_DECEL = 5;
 const JUMP_IMPULSE = 3.5; 
 const JUMP_COOLDOWN = 0.15;
 const BASE_FOV = 75;
-const SPRINT_FOV_BOOST = 8;
+const SPRINT_FOV_BOOST = 4; // Reduced from 8 for less intense FOV shift
 const FOV_LERP_SPEED = 6;
 const STAND_CAM_Y = 0.6;
 const CROUCH_CAM_Y = 0.3;
@@ -164,8 +164,8 @@ export function playerMovementSystem(dt: number, scene: any) {
 
         if (isGrounded && localDir.length() > 0) {
             const freq = isSprinting ? 2.8 : 2.0;
-            const ampY = isSprinting ? 0.012 : 0.006;
-            const ampX = isSprinting ? 0.010 : 0.005;
+            const ampY = isSprinting ? 0.008 : 0.006; // Reduced sprint bob
+            const ampX = isSprinting ? 0.007 : 0.005; // Reduced sprint bob
             const time = performance.now() * 0.001;
             
             camera.position.y += Math.sin(time * Math.PI * 2 * freq) * ampY;
