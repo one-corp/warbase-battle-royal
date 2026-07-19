@@ -11,7 +11,8 @@
 | State | Speed (m/s) | Base Multiplier | Camera Height (Y) | Can Fire | Can ADS |
 |-------|-------------|-----------------|-------------------|----------|---------|
 | **Idle** | 0 | — | 1.7m | ✅ | ✅ |
-| **Walk** | 4.5 | 1.0× | 1.7m | ✅ | ✅ |
+| **Walk (Forward/Strafe)** | 4.5 | 1.0× | 1.7m | ✅ | ✅ |
+| **Walk (Backward)** | 2.7 | 0.6× | 1.7m | ✅ | ✅ |
 | **Sprint** | 5.5 | 1.22× | 1.7m | ❌ | ❌ |
 | **Crouch Idle** | 0 | — | 1.0m | ✅ | ✅ |
 | **Crouch Walk** | 2.0 | 0.44× | 1.0m | ✅ | ✅ |
@@ -102,49 +103,9 @@ camera.parent = playerMesh;
 camera.position = new Vector3(0, 0.7, 0); // Eye height from capsule center
 ```
 
-### 3.3 Movement Loop
+### 3.2 ECS Movement System
 
-```typescript
-scene.onBeforeRenderObservable.add(() => {
-    const dt = engine.getDeltaTime() / 1000;
-
-    // 1. Read input state
-    const inputDir = getInputDirection(); // Normalized WASD vector in camera space
-
-    // 2. Determine target speed
-    let targetSpeed = walkSpeed;
-    if (isSprinting && inputDir.z > 0) targetSpeed = sprintSpeed;
-    if (isCrouching) targetSpeed = crouchSpeed;
-    if (isADS) targetSpeed = adsSpeed;
-    targetSpeed *= weaponSpeedMult;
-
-    // 3. Calculate target velocity (world space)
-    const forward = camera.getDirection(Vector3.Forward());
-    const right = camera.getDirection(Vector3.Right());
-    forward.y = 0; forward.normalize();
-    right.y = 0; right.normalize();
-
-    const targetVelocity = forward.scale(inputDir.z)
-        .add(right.scale(inputDir.x))
-        .normalize()
-        .scale(targetSpeed);
-
-    // 4. Apply acceleration/deceleration
-    const currentVel = playerAggregate.body.getLinearVelocity();
-    const accel = isGrounded ? groundAccel : airAccel;
-    const newVelX = moveTowards(currentVel.x, targetVelocity.x, accel * dt);
-    const newVelZ = moveTowards(currentVel.z, targetVelocity.z, accel * dt);
-
-    // 5. Preserve vertical velocity (gravity handled by Havok)
-    playerAggregate.body.setLinearVelocity(new Vector3(newVelX, currentVel.y, newVelZ));
-
-    // 6. Ground detection
-    updateGroundState();
-
-    // 7. Camera rotation (mouse look)
-    applyCameraRotation(dt);
-});
-```
+Movement is fully handled within `PlayerMovementSystem.ts` using the bitECS architecture to ensure top-tier efficiency. The system processes player input, calculates target velocities (including backward walk reduction and sprint modifiers), applies ground/air acceleration, and updates the Havok physics body's linear velocity each frame.
 
 ---
 
@@ -550,93 +511,9 @@ For guaranteed smooth stair traversal, place **invisible ramp collision meshes**
 
 ## 13. Input System Architecture
 
-### 13.1 State-Poll Pattern
-
-Decouple input events from game logic. Events only update state; the game loop reads state.
-
-```typescript
-interface InputState {
-    forward: boolean;
-    backward: boolean;
-    left: boolean;
-    right: boolean;
-    sprint: boolean;
-    jump: boolean;
-    crouch: boolean;
-    fire: boolean;
-    ads: boolean;
-    reload: boolean;
-    weapon1: boolean;
-    weapon2: boolean;
-    weapon3: boolean;
-    quickSwitch: boolean;
-    mouseDeltaX: number;
-    mouseDeltaY: number;
-}
-
-const input: InputState = { /* all false/zero */ };
-
-// Key bindings
-const KEY_MAP: Record<string, keyof InputState> = {
-    'KeyW': 'forward',
-    'KeyS': 'backward',
-    'KeyA': 'left',
-    'KeyD': 'right',
-    'ShiftLeft': 'sprint',
-    'Space': 'jump',
-    'KeyC': 'crouch',
-    'KeyR': 'reload',
-    'Digit1': 'weapon1',
-    'Digit2': 'weapon2',
-    'Digit3': 'weapon3',
-    'KeyQ': 'quickSwitch',
-};
-
-window.addEventListener('keydown', (e) => {
-    const key = KEY_MAP[e.code];
-    if (key) input[key] = true;
-    e.preventDefault();
-});
-
-window.addEventListener('keyup', (e) => {
-    const key = KEY_MAP[e.code];
-    if (key) input[key] = false;
-});
-
-canvas.addEventListener('mousedown', (e) => {
-    if (e.button === 0) input.fire = true;
-    if (e.button === 2) input.ads = true;
-});
-
-canvas.addEventListener('mouseup', (e) => {
-    if (e.button === 0) input.fire = false;
-    if (e.button === 2) input.ads = false;
-});
-
-canvas.addEventListener('mousemove', (e) => {
-    input.mouseDeltaX += e.movementX;
-    input.mouseDeltaY += e.movementY;
-});
-
-// Prevent right-click context menu
-canvas.addEventListener('contextmenu', (e) => e.preventDefault());
-```
-
-### 13.2 Input Direction Helper
-
-```typescript
-function getInputDirection(): Vector3 {
-    let x = 0, z = 0;
-    if (input.forward) z += 1;
-    if (input.backward) z -= 1;
-    if (input.left) x -= 1;
-    if (input.right) x += 1;
-
-    const dir = new Vector3(x, 0, z);
-    if (dir.length() > 0) dir.normalize();
-    return dir;
-}
-```
+### 13.1 ECS Input Pattern
+Input is decoupled from game logic using bitECS. The browser's DOM event listeners update the `InputComponent` arrays (e.g., `InputComponent.forward[eid] = 1`). 
+Game systems like the `PlayerMovementSystem` simply read these component values each frame without relying on event callbacks or object-oriented state tracking.
 
 ---
 
@@ -698,133 +575,7 @@ const BASE_SENSITIVITY = 0.002;   // radians per pixel
 const PITCH_LIMIT = 89;           // degrees
 ```
 
----
 
-## 15. Camera Shake (Events)
-
-### 15.1 Trigger Events
-
-| Event | Intensity | Duration | Frequency |
-|-------|-----------|----------|-----------|
-| Firing | 0.002 | Per shot | High |
-| Landing (hard) | 0.01–0.03 | 0.3s | Low |
-| Explosion nearby | 0.02–0.05 | 0.5s | Medium |
-| Getting hit | 0.01 | 0.2s | Medium |
-
-### 15.2 Implementation
-
-```typescript
-class CameraShake {
-    private trauma = 0;      // 0–1, decays over time
-    private decayRate = 3;
-
-    addTrauma(amount: number) {
-        this.trauma = Math.min(1, this.trauma + amount);
-    }
-
-    update(dt: number): { x: number; y: number } {
-        if (this.trauma <= 0) return { x: 0, y: 0 };
-
-        // Shake intensity = trauma² (quadratic for dramatic spikes)
-        const shake = this.trauma * this.trauma;
-        const t = performance.now() * 0.01;
-
-        const offsetX = (Math.sin(t * 17.3) + Math.sin(t * 31.7)) * 0.5 * shake * 0.02;
-        const offsetY = (Math.sin(t * 23.1) + Math.sin(t * 29.3)) * 0.5 * shake * 0.02;
-
-        // Decay
-        this.trauma = Math.max(0, this.trauma - this.decayRate * dt);
-
-        return { x: offsetX, y: offsetY };
-    }
-}
-```
-
----
-
-## 16. Full Movement Update Loop (Pseudocode)
-
-```typescript
-function updateMovement(dt: number) {
-    // 1. Update timers
-    jumpCooldownTimer = Math.max(0, jumpCooldownTimer - dt);
-    coyoteTimer = Math.max(0, coyoteTimer - dt);
-
-    // 2. Ground check
-    updateGroundState();
-
-    // 3. Crouch toggle
-    if (input.crouch && justPressed('crouch')) {
-        if (isCrouching && canStandUp()) isCrouching = false;
-        else if (!isCrouching) isCrouching = true;
-    }
-
-    // 4. Sprint check
-    const canSprint = input.sprint && input.forward && isGrounded
-        && !isCrouching && !isADS && !isReloading && stamina > MIN_STAMINA_TO_SPRINT;
-    isSprinting = canSprint;
-
-    // 5. Stamina
-    if (isSprinting && isMoving) {
-        stamina -= STAMINA_DRAIN * dt;
-        if (stamina <= 0) { stamina = 0; isSprinting = false; }
-    } else {
-        stamina = Math.min(MAX_STAMINA, stamina + STAMINA_REGEN * dt);
-    }
-
-    // 6. Determine speed
-    let speed = WALK_SPEED;
-    if (isSprinting) speed = SPRINT_SPEED;
-    if (isCrouching) speed = CROUCH_SPEED;
-    if (isADS) speed = ADS_SPEED;
-    speed *= weaponSpeedMult;
-
-    // 7. Build target velocity
-    const inputDir = getInputDirection();
-    const targetVel = worldDirection(inputDir).scale(speed);
-
-    // 8. Accelerate / decelerate
-    const accel = isGrounded
-        ? (inputDir.length() > 0 ? GROUND_ACCEL : GROUND_DECEL)
-        : (inputDir.length() > 0 ? AIR_ACCEL : AIR_DECEL);
-    const vel = playerBody.getLinearVelocity();
-    const newX = moveTowards(vel.x, targetVel.x, accel * dt);
-    const newZ = moveTowards(vel.z, targetVel.z, accel * dt);
-
-    // 9. Jump
-    let newY = vel.y;
-    if (input.jump && (isGrounded || coyoteTimer > 0) && jumpCooldownTimer <= 0) {
-        newY = JUMP_IMPULSE;
-        isGrounded = false;
-        coyoteTimer = 0;
-        jumpCooldownTimer = JUMP_COOLDOWN;
-    }
-
-    // 10. Apply velocity
-    playerBody.setLinearVelocity(new Vector3(newX, newY, newZ));
-
-    // 11. Camera rotation
-    applyCameraRotation(dt);
-
-    // 12. Head bob
-    updateHeadBob(dt, new Vector3(newX, 0, newZ).length());
-
-    // 13. Crouch camera lerp
-    const targetCamY = isCrouching ? CROUCH_CAM_Y : STAND_CAM_Y;
-    camera.position.y = Scalar.Lerp(camera.position.y, targetCamY, CROUCH_LERP_SPEED * dt);
-
-    // 14. Sprint FOV
-    const targetFOV = isSprinting ? BASE_FOV + SPRINT_FOV_BOOST : BASE_FOV;
-    camera.fov = Scalar.Lerp(camera.fov, targetFOV * DEG2RAD, FOV_LERP_SPEED * dt);
-
-    // 15. Camera shake
-    const shake = cameraShake.update(dt);
-    camera.rotation.x += shake.y;
-    camera.rotation.y += shake.x;
-}
-```
-
----
 
 ## 17. Networked Animation Architecture (Multiplayer)
 

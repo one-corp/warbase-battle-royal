@@ -19,6 +19,7 @@ We have officially transitioned from procedural primitive shapes to a high-poly 
 ### 2.1 The `Soldier.glb` Asset
 We are utilizing the community-standard `Soldier.glb` model. It packages a high-poly mesh, PBR textures, and a full skeletal rig into a single binary file.
 - **Embedded Animations:** The file natively comes packaged with perfectly baked skeletal animations: `Idle`, `Walk`, `Run`, and `TPose`.
+- **Animation Pipeline (Blender):** Additional animations (e.g., `Walking Backwards.fbx`, `Strafe Left.fbx`) are downloaded from Mixamo and stitched into the GLB using a headless Blender python script (`scratch/blender_merge.py`). Using Babylon.js' internal `GLTF2Export` to combine animations at runtime causes catastrophic loss of skinned mesh vertex weights, making the Blender NLA pipeline mandatory for robust multi-animation setups.
 - **Asynchronous Instancing:** We load the model once into memory using `SceneLoader.LoadAssetContainerAsync`. We then stamp copies of it across all Enemy Bots and the Player Viewmodel using `container.instantiateModelsToScene()`. This ensures we only pay the memory cost of the model once, even if there are 100 bots on screen.
 
 ### 2.2 First-Person True Viewmodel Arms (The Player)

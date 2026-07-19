@@ -68,18 +68,23 @@ We have unified the frontend and backend. The Go server automatically serves the
 
 ### 1. Run the Unified Game Server
 
-To build the client and start the Go server on port `8080`, simply run the new Make command from the root directory:
+To build the client and start the Go server on port `8081`, simply run the new Make command from the root directory:
 
 ```bash
 make run
 ```
 *This command automatically runs `npm run build` in the `/client` directory, and then starts the Go server.*
 
-The game is now running locally! You can test it by opening `http://localhost:8080` in your browser.
+The game is now running locally! You can test it by opening `http://localhost:8081` in your browser.
 
-### 2. Share with Friends (Pinggy Tunneling)
+### 2. View 3D Animations
 
-To share the game over the internet, you need to expose your local port `8080`. 
+We have a built-in animation viewer to test the `.glb` character animations (Idle, Running, Firing, Reloading, etc.). Once the server is running, you can view the animations at:
+`http://localhost:8081/test_anim.html`
+
+### 3. Share with Friends (Pinggy Tunneling)
+
+To share the game over the internet, you need to expose your local port `8081`. 
 
 **Option A: Pinggy (Recommended - No Installation Required)**
 
@@ -88,7 +93,7 @@ You can run the tunnel either in the foreground or as a background process.
 **Foreground (Interactive UI)**
 Run this in a separate terminal tab to see a live dashboard with your URLs:
 ```bash
-ssh -p 443 -o StrictHostKeyChecking=accept-new -R0:localhost:8080 a.pinggy.io
+ssh -p 443 -o StrictHostKeyChecking=accept-new -R0:localhost:8081 a.pinggy.io
 ```
 
 **Background (Silent Tunnel)**
@@ -98,7 +103,7 @@ If you want to run it in the background, you must use the `script` utility to fa
 killall ssh
 
 # Start the tunnel in the background
-nohup script -q /tmp/pinggy.log ssh -p 443 -o StrictHostKeyChecking=accept-new -R0:localhost:8080 a.pinggy.io >/dev/null 2>&1 &
+nohup script -q /tmp/pinggy.log ssh -p 443 -o StrictHostKeyChecking=accept-new -R0:localhost:8081 a.pinggy.io >/dev/null 2>&1 &
 
 # Wait 3 seconds and print the generated URLs
 sleep 3

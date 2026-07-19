@@ -51,3 +51,28 @@ export const PlayerComponent = defineComponent({
 export const Renderable = defineComponent();
 export const PhysicsBodyTag = defineComponent();
 export const PlayerTag = defineComponent();
+
+// --- WEAPON SYSTEM COMPONENTS ---
+
+export const WeaponStateComponent = defineComponent({
+    activeWeaponIndex: Types.ui8,
+    currentAmmo: Types.ui16,
+    isReloading: Types.ui8,
+    reloadTimer: Types.f32,
+    currentSpread: Types.f32,
+    lastFireTime: Types.f32,
+    adsProgress: Types.f32,
+});
+
+export const RecoilComponent = defineComponent({
+    offsetX: Types.f32,
+    offsetY: Types.f32,
+    kickbackZ: Types.f32,
+    kickbackRotX: Types.f32,
+});
+
+export const SwayComponent = defineComponent({
+    swayX: Types.f32,
+    swayY: Types.f32,
+    walkBobTimer: Types.f32,
+});

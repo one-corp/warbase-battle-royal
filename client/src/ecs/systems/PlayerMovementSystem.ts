@@ -105,6 +105,9 @@ export function playerMovementSystem(dt: number, scene: any) {
         if (InputComponent.fire[eid] === 1 && isGrounded && PlayerComponent.isCrouching[eid] === 0) {
             targetSpeed *= 0.6; 
         }
+        if (InputComponent.backward[eid]) {
+            targetSpeed *= 0.6; // Reduce backward walking speed
+        }
 
         let dirX = 0, dirZ = 0;
         if (InputComponent.forward[eid]) dirZ += 1;

@@ -27,7 +27,7 @@ import { PhysicsSystem } from './ecs/systems/PhysicsSystem';
 import { InputComponent, PlayerComponent, Position } from './ecs/Components';
 import { entityCameras, entityMeshes, entityPhysicsBodies } from './ecs/ViewMaps';
 import { world } from './ecs/World';
-import { WeaponSystem } from './physics/WeaponSystem';
+import { initWeapons, createWeaponSystem } from './physics/WeaponSystem';
 import { NetworkManager } from "./network/NetworkManager";
 import { MultiplayerEntities } from "./network/MultiplayerEntities";
 
@@ -150,8 +150,8 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
         const networkManager = new NetworkManager(username, mapChoice, () => {
         });
 
-        const weaponSystem = new WeaponSystem(scene, playerEid, networkManager);
-        await weaponSystem.init();
+        await initWeapons(playerEid, scene, networkManager);
+        const updateWeaponSystem = createWeaponSystem(scene, networkManager);
 
         let isLocalDead = false;
         let respawnTimerActive = false;
@@ -255,6 +255,7 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
 
             // Run ECS Systems
             playerMovementSystem(dt / 1000, scene);
+            updateWeaponSystem(world, dt / 1000);
             PhysicsSystem(world);
 
             networkTickTimer += dt;
@@ -272,7 +273,9 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
                     let anim = "idle";
                     if (PlayerComponent.isGrounded[eid] === 0) {
                         anim = "jump";
-                    } else if (InputComponent.forward[eid] || InputComponent.backward[eid]) {
+                    } else if (InputComponent.backward[eid]) {
+                        anim = "walking backwards";
+                    } else if (InputComponent.forward[eid]) {
                         anim = "run";
                     } else if (InputComponent.left[eid]) {
                         anim = "right";

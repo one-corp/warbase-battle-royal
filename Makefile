@@ -5,5 +5,5 @@ build:
 	@cd client && npm run build
 
 run: build
-	@echo "Starting Unified Game Server (Port 8080)..."
+	@echo "Starting Unified Game Server (Port 8081)..."
 	@cd server && go run ./cmd/game/
