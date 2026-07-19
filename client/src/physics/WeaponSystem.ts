@@ -9,6 +9,7 @@ import type { NetworkManager } from "../network/NetworkManager";
 import { initDecalSystem, spawnDecal } from "../ecs/systems/DecalSystem";
 import { initTracerSystem, spawnTracer } from "../ecs/systems/TracerSystem";
 import { initImpactSystem, spawnImpact } from "../ecs/systems/ImpactSystem";
+import { throwNetworkGrenade } from "./GrenadeSystem";
 import { 
     entityCameras, entityPhysicsBodies, entitySwayRoots, entityWeaponSocketOffsets,
     entityAKRoots, entityPistolRoots, entityAimPoints, entityFlashParticles, entityShellParticles 
@@ -44,7 +45,7 @@ export const WEAPON_CONFIGS: WeaponConfig[] = [
 
 export const createWeaponSystem = (scene: Scene, networkManager?: NetworkManager) => {
     const weaponQuery = defineQuery([WeaponStateComponent, RecoilComponent, SwayComponent, InputComponent, PlayerComponent]);
-    
+    let lastGrenadeThrow = 0;
     const _tempReloadOffset = new Vector3();
     const _tempBasePos = new Vector3();
     const _tempForward = new Vector3();
@@ -241,8 +242,8 @@ export const createWeaponSystem = (scene: Scene, networkManager?: NetworkManager
             RecoilComponent.offsetX[eid] = Scalar.Lerp(RecoilComponent.offsetX[eid], 0, config.recoilRecovery * dt);
             RecoilComponent.offsetY[eid] = Scalar.Lerp(RecoilComponent.offsetY[eid], 0, config.recoilRecovery * dt);
             
-            camera.rotation.x += RecoilComponent.offsetY[eid];
-            camera.rotation.y += RecoilComponent.offsetX[eid];
+            PlayerComponent.pitch[eid] += RecoilComponent.offsetY[eid];
+            PlayerComponent.yaw[eid] += RecoilComponent.offsetX[eid];
 
             Vector3.LerpToRef(Vector3.ZeroReadOnly, config.adsPosition, WeaponStateComponent.adsProgress[eid], _tempBasePos);
             
@@ -252,6 +253,19 @@ export const createWeaponSystem = (scene: Scene, networkManager?: NetworkManager
 
             _tempCurrentAimWorldPos.copyFrom(aimPoint.getAbsolutePosition());
             _tempDesiredWorldPos.subtractToRef(_tempCurrentAimWorldPos, _tempDeltaWorldPos);
+
+            if (InputComponent.grenade[eid] === 1 && performance.now() - lastGrenadeThrow > 1000) {
+                lastGrenadeThrow = performance.now();
+                const forward = camera.getDirection(Vector3.Forward());
+                const pos = camera.globalPosition.add(forward.scale(1.5));
+                const throwDir = forward.add(new Vector3(0, 0.2, 0)).normalize();
+                const vel = throwDir.scale(25);
+                
+                throwNetworkGrenade(scene, pos, vel);
+                if (networkManager) {
+                    networkManager.sendGrenade(pos, vel);
+                }
+            }
 
             _tempInvertedCameraMatrix.copyFrom(camera.getWorldMatrix());
             _tempInvertedCameraMatrix.invert();

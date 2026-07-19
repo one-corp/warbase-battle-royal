@@ -103,3 +103,14 @@ scene.onPointerObservable.add((pointerInfo) => {
 });
 ```
 This ensures that if a physical click occurs while the game is focused, the WebGL context registers it before the browser has a chance to suppress it.
+
+## 7. Networked Physics (Grenades)
+
+### 7.1 The Synchronization Strategy
+When a local player throws a grenade (pressing 'G'), the client computes a precise mathematical throw vector based on the camera's forward direction. Instead of just simulating this locally, the client serializes the starting XYZ coordinates and the XYZ velocity vector into a `ThrowGrenadeEvent` Protocol Buffer.
+
+### 7.2 Deterministic Physics 
+The Go server receives this packet and instantly broadcasts it to all other players in the room as a `ServerThrowGrenadeEvent`.
+When remote clients receive this event, they spawn a physical sphere exactly at the provided XYZ coordinates and apply the exact XYZ velocity vector via Havok's `applyImpulse`.
+
+Because the Havok physics engine is highly deterministic across clients, instantiating the object with identical starting conditions guarantees that the grenade will fly through the air, bounce off walls, and land in the exact same spot for every single player, completely eliminating the need to sync the grenade's position 60 times a second.

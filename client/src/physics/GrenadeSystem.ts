@@ -9,7 +9,7 @@ import {
     ParticleSystem,
     Color4,
     Mesh,
-    UniversalCamera
+    Texture
 } from "@babylonjs/core";
 
 const GRENADE_RADIUS = 0.1;
@@ -17,13 +17,12 @@ const GRENADE_FUSE = 3000; // ms
 const EXPLOSION_RADIUS = 8;
 const EXPLOSION_FORCE = 30;
 
-export function throwGrenade(scene: Scene, camera: UniversalCamera) {
+export function throwNetworkGrenade(scene: Scene, position: Vector3, velocity: Vector3) {
     // 1. Create Grenade Mesh
     const grenade = MeshBuilder.CreateSphere("grenade", { diameter: GRENADE_RADIUS * 2 }, scene);
     
-    // Spawn it slightly in front of camera
-    const forward = camera.getDirection(Vector3.Forward());
-    grenade.position = camera.globalPosition.add(forward.scale(1.5));
+    // Spawn it at network provided position
+    grenade.position.copyFrom(position);
     
     const mat = new StandardMaterial("grenadeMat", scene);
     mat.diffuseColor = new Color3(0.2, 0.4, 0.2); // Olive green
@@ -32,9 +31,8 @@ export function throwGrenade(scene: Scene, camera: UniversalCamera) {
     // 2. Physics
     const aggregate = new PhysicsAggregate(grenade, PhysicsShapeType.SPHERE, { mass: 1, restitution: 0.4, friction: 0.5 }, scene);
     
-    // Throw impulse
-    const throwDir = camera.getDirection(Vector3.Forward()).add(new Vector3(0, 0.2, 0)).normalize();
-    aggregate.body.applyImpulse(throwDir.scale(25), grenade.position);
+    // Apply exact network velocity impulse
+    aggregate.body.applyImpulse(velocity, grenade.position);
 
     // 3. Fuse Timer
     setTimeout(() => {
@@ -81,7 +79,7 @@ function detonateGrenade(grenade: Mesh, scene: Scene) {
 function createExplosionParticles(scene: Scene, position: Vector3) {
     // Fire/Smoke explosion
     const ps = new ParticleSystem("explosion", 200, scene);
-    ps.particleTexture = null as any; // White boxes
+    ps.particleTexture = new Texture("https://playground.babylonjs.com/textures/flare.png", scene);
     
     ps.emitter = position;
     ps.minEmitBox = new Vector3(-0.5, -0.5, -0.5);

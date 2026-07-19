@@ -299,7 +299,7 @@ export class MultiplayerEntities {
             if (player.nameplateTexture) player.nameplateTexture.dispose();
             if (player.nameplate) player.nameplate.dispose();
             if (player.flashSystem) player.flashSystem.dispose();
-            if (player.mesh) player.mesh.dispose(false, true); // Dispose mesh and its materials to free GPU memory
+            if (player.mesh) player.mesh.dispose(false, false); // DO NOT dispose materials as they are shared via AssetContainer!
             delete this.remotePlayers[id];
         }
 

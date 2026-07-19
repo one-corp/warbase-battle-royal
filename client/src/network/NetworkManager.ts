@@ -27,6 +27,7 @@ export class NetworkManager {
     public onKillConfirmed: () => void = () => {};
     public onRespawn: (x: number, y: number, z: number) => void = () => {};
     public onFireReceived: (shooterId: string) => void = () => {};
+    public onGrenadeReceived: (shooterId: string, px: number, py: number, pz: number, vx: number, vy: number, vz: number) => void = () => {};
 
     private onConnectCb: () => void;
     private reconnectAttempts = 0;
@@ -99,6 +100,16 @@ export class NetworkManager {
                         this.onHitConfirmed();
                     } else if (evt.event === "killConfirmed") {
                         this.onKillConfirmed();
+                    } else if (evt.event === "throwGrenade" && evt.throwGrenade) {
+                        this.onGrenadeReceived(
+                            evt.throwGrenade.shooterId ?? "",
+                            evt.throwGrenade.px ?? 0,
+                            evt.throwGrenade.py ?? 0,
+                            evt.throwGrenade.pz ?? 0,
+                            evt.throwGrenade.vx ?? 0,
+                            evt.throwGrenade.vy ?? 0,
+                            evt.throwGrenade.vz ?? 0
+                        );
                     }
                 }
             } catch (e) {
@@ -112,6 +123,19 @@ export class NetworkManager {
         const clientEvent = warbase.ClientEvent.create({
             event: "fire",
             fire: {}
+        });
+        const buffer = warbase.ClientEvent.encode(clientEvent).finish();
+        this.ws.send(buffer as BufferSource);
+    }
+
+    public sendGrenade(pos: Vector3, vel: Vector3) {
+        if (this.ws.readyState !== WebSocket.OPEN) return;
+        const clientEvent = warbase.ClientEvent.create({
+            event: "throwGrenade",
+            throwGrenade: {
+                px: pos.x, py: pos.y, pz: pos.z,
+                vx: vel.x, vy: vel.y, vz: vel.z
+            }
         });
         const buffer = warbase.ClientEvent.encode(clientEvent).finish();
         this.ws.send(buffer as BufferSource);

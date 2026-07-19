@@ -312,6 +312,36 @@ func (m *Match) Run() {
 							}
 						}
 					}
+					
+				case *ClientEvent_ThrowGrenade:
+					// Broadcast to everyone else IN THIS ROOM
+					grenadeMsg := &ServerMessage{
+						Message: &ServerMessage_ServerEvent{
+							ServerEvent: &ServerEvent{
+								Event: &ServerEvent_ThrowGrenade{
+									ThrowGrenade: &ServerThrowGrenadeEvent{
+										ShooterId: message.SenderID,
+										Px:        event.ThrowGrenade.Px,
+										Py:        event.ThrowGrenade.Py,
+										Pz:        event.ThrowGrenade.Pz,
+										Vx:        event.ThrowGrenade.Vx,
+										Vy:        event.ThrowGrenade.Vy,
+										Vz:        event.ThrowGrenade.Vz,
+									},
+								},
+							},
+						},
+					}
+					if outData, err := proto.Marshal(grenadeMsg); err == nil {
+						for session := range m.sessions {
+							if session.RoomID == message.RoomID && session.PlayerID != message.SenderID {
+								select {
+								case session.outputQueue <- outData:
+								default:
+								}
+							}
+						}
+					}
 				}
 
 			}

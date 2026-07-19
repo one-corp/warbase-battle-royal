@@ -28,7 +28,8 @@ export const warbase = $root.warbase = (() => {
          * @property {warbase.ReloadEvent.$Properties|null} [reload] ClientEvent reload
          * @property {warbase.SwitchWeaponEvent.$Properties|null} [switchWeapon] ClientEvent switchWeapon
          * @property {warbase.RespawnRequestEvent.$Properties|null} [respawnRequest] ClientEvent respawnRequest
-         * @property {"stateUpdate"|"hit"|"fire"|"reload"|"switchWeapon"|"respawnRequest"} [event] ClientEvent event
+         * @property {warbase.ThrowGrenadeEvent.$Properties|null} [throwGrenade] ClientEvent throwGrenade
+         * @property {"stateUpdate"|"hit"|"fire"|"reload"|"switchWeapon"|"respawnRequest"|"throwGrenade"} [event] ClientEvent event
          * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
          */
 
@@ -49,9 +50,10 @@ export const warbase = $root.warbase = (() => {
          *   reload?: warbase.ReloadEvent.$Shape|null;
          *   switchWeapon?: warbase.SwitchWeaponEvent.$Shape|null;
          *   respawnRequest?: warbase.RespawnRequestEvent.$Shape|null;
+         *   throwGrenade?: warbase.ThrowGrenadeEvent.$Shape|null;
          *   $unknowns?: Array.<Uint8Array>;
          * } & (
-         *   ({ event?: undefined; stateUpdate?: null; hit?: null; fire?: null; reload?: null; switchWeapon?: null; respawnRequest?: null }|{ event?: "stateUpdate"; stateUpdate: warbase.PlayerStateUpdate.$Shape; hit?: null; fire?: null; reload?: null; switchWeapon?: null; respawnRequest?: null }|{ event?: "hit"; stateUpdate?: null; hit: warbase.HitEvent.$Shape; fire?: null; reload?: null; switchWeapon?: null; respawnRequest?: null }|{ event?: "fire"; stateUpdate?: null; hit?: null; fire: warbase.FireEvent.$Shape; reload?: null; switchWeapon?: null; respawnRequest?: null }|{ event?: "reload"; stateUpdate?: null; hit?: null; fire?: null; reload: warbase.ReloadEvent.$Shape; switchWeapon?: null; respawnRequest?: null }|{ event?: "switchWeapon"; stateUpdate?: null; hit?: null; fire?: null; reload?: null; switchWeapon: warbase.SwitchWeaponEvent.$Shape; respawnRequest?: null }|{ event?: "respawnRequest"; stateUpdate?: null; hit?: null; fire?: null; reload?: null; switchWeapon?: null; respawnRequest: warbase.RespawnRequestEvent.$Shape })
+         *   ({ event?: undefined; stateUpdate?: null; hit?: null; fire?: null; reload?: null; switchWeapon?: null; respawnRequest?: null; throwGrenade?: null }|{ event?: "stateUpdate"; stateUpdate: warbase.PlayerStateUpdate.$Shape; hit?: null; fire?: null; reload?: null; switchWeapon?: null; respawnRequest?: null; throwGrenade?: null }|{ event?: "hit"; stateUpdate?: null; hit: warbase.HitEvent.$Shape; fire?: null; reload?: null; switchWeapon?: null; respawnRequest?: null; throwGrenade?: null }|{ event?: "fire"; stateUpdate?: null; hit?: null; fire: warbase.FireEvent.$Shape; reload?: null; switchWeapon?: null; respawnRequest?: null; throwGrenade?: null }|{ event?: "reload"; stateUpdate?: null; hit?: null; fire?: null; reload: warbase.ReloadEvent.$Shape; switchWeapon?: null; respawnRequest?: null; throwGrenade?: null }|{ event?: "switchWeapon"; stateUpdate?: null; hit?: null; fire?: null; reload?: null; switchWeapon: warbase.SwitchWeaponEvent.$Shape; respawnRequest?: null; throwGrenade?: null }|{ event?: "respawnRequest"; stateUpdate?: null; hit?: null; fire?: null; reload?: null; switchWeapon?: null; respawnRequest: warbase.RespawnRequestEvent.$Shape; throwGrenade?: null }|{ event?: "throwGrenade"; stateUpdate?: null; hit?: null; fire?: null; reload?: null; switchWeapon?: null; respawnRequest?: null; throwGrenade: warbase.ThrowGrenadeEvent.$Shape })
          * )} warbase.ClientEvent.$Shape
          */
 
@@ -118,17 +120,25 @@ export const warbase = $root.warbase = (() => {
          */
         ClientEvent.prototype.respawnRequest = null;
 
+        /**
+         * ClientEvent throwGrenade.
+         * @member {warbase.ThrowGrenadeEvent.$Properties|null|undefined} throwGrenade
+         * @memberof warbase.ClientEvent
+         * @instance
+         */
+        ClientEvent.prototype.throwGrenade = null;
+
         // OneOf field names bound to virtual getters and setters
         let $oneOfFields;
 
         /**
          * ClientEvent event.
-         * @member {"stateUpdate"|"hit"|"fire"|"reload"|"switchWeapon"|"respawnRequest"|undefined} event
+         * @member {"stateUpdate"|"hit"|"fire"|"reload"|"switchWeapon"|"respawnRequest"|"throwGrenade"|undefined} event
          * @memberof warbase.ClientEvent
          * @instance
          */
         $Object.defineProperty(ClientEvent.prototype, "event", {
-            get: $util.oneOfGetter($oneOfFields = ["stateUpdate", "hit", "fire", "reload", "switchWeapon", "respawnRequest"]),
+            get: $util.oneOfGetter($oneOfFields = ["stateUpdate", "hit", "fire", "reload", "switchWeapon", "respawnRequest", "throwGrenade"]),
             set: $util.oneOfSetter($oneOfFields)
         });
 
@@ -176,6 +186,8 @@ export const warbase = $root.warbase = (() => {
                 $root.warbase.SwitchWeaponEvent.encode(message.switchWeapon, writer.uint32(/* id 5, wireType 2 =*/42).fork(), _depth + 1).ldelim();
             if (message.respawnRequest != null && $Object.hasOwnProperty.call(message, "respawnRequest"))
                 $root.warbase.RespawnRequestEvent.encode(message.respawnRequest, writer.uint32(/* id 6, wireType 2 =*/50).fork(), _depth + 1).ldelim();
+            if (message.throwGrenade != null && $Object.hasOwnProperty.call(message, "throwGrenade"))
+                $root.warbase.ThrowGrenadeEvent.encode(message.throwGrenade, writer.uint32(/* id 7, wireType 2 =*/58).fork(), _depth + 1).ldelim();
             if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                 for (let i = 0; i < message.$unknowns.length; ++i)
                     writer.raw(message.$unknowns[i]);
@@ -263,6 +275,13 @@ export const warbase = $root.warbase = (() => {
                             break;
                         message.respawnRequest = $root.warbase.RespawnRequestEvent.decode(reader, reader.uint32(), $undefined, _depth + 1, message.respawnRequest);
                         message.event = "respawnRequest";
+                        continue;
+                    }
+                case 7: {
+                        if (wireType !== 2)
+                            break;
+                        message.throwGrenade = $root.warbase.ThrowGrenadeEvent.decode(reader, reader.uint32(), $undefined, _depth + 1, message.throwGrenade);
+                        message.event = "throwGrenade";
                         continue;
                     }
                 }
@@ -367,6 +386,16 @@ export const warbase = $root.warbase = (() => {
                         return "respawnRequest." + error;
                 }
             }
+            if (message.throwGrenade != null && $Object.hasOwnProperty.call(message, "throwGrenade")) {
+                if (properties.event === 1)
+                    return "event: multiple values";
+                properties.event = 1;
+                {
+                    let error = $root.warbase.ThrowGrenadeEvent.verify(message.throwGrenade, _depth + 1);
+                    if (error)
+                        return "throwGrenade." + error;
+                }
+            }
             return null;
         };
 
@@ -418,6 +447,11 @@ export const warbase = $root.warbase = (() => {
                     throw $TypeError(".warbase.ClientEvent.respawnRequest: object expected");
                 message.respawnRequest = $root.warbase.RespawnRequestEvent.fromObject(object.respawnRequest, _depth + 1);
             }
+            if (object.throwGrenade != null) {
+                if (!$util.isObject(object.throwGrenade))
+                    throw $TypeError(".warbase.ClientEvent.throwGrenade: object expected");
+                message.throwGrenade = $root.warbase.ThrowGrenadeEvent.fromObject(object.throwGrenade, _depth + 1);
+            }
             return message;
         };
 
@@ -467,6 +501,11 @@ export const warbase = $root.warbase = (() => {
                 object.respawnRequest = $root.warbase.RespawnRequestEvent.toObject(message.respawnRequest, options, _depth + 1);
                 if (options.oneofs)
                     object.event = "respawnRequest";
+            }
+            if (message.throwGrenade != null && $Object.hasOwnProperty.call(message, "throwGrenade")) {
+                object.throwGrenade = $root.warbase.ThrowGrenadeEvent.toObject(message.throwGrenade, options, _depth + 1);
+                if (options.oneofs)
+                    object.event = "throwGrenade";
             }
             return object;
         };
@@ -2199,6 +2238,412 @@ export const warbase = $root.warbase = (() => {
         return RespawnRequestEvent;
     })();
 
+    warbase.ThrowGrenadeEvent = (function() {
+
+        /**
+         * Properties of a ThrowGrenadeEvent.
+         * @typedef {Object} warbase.ThrowGrenadeEvent.$Properties
+         * @property {number|null} [px] ThrowGrenadeEvent px
+         * @property {number|null} [py] ThrowGrenadeEvent py
+         * @property {number|null} [pz] ThrowGrenadeEvent pz
+         * @property {number|null} [vx] ThrowGrenadeEvent vx
+         * @property {number|null} [vy] ThrowGrenadeEvent vy
+         * @property {number|null} [vz] ThrowGrenadeEvent vz
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+
+        /**
+         * Properties of a ThrowGrenadeEvent.
+         * @memberof warbase
+         * @interface IThrowGrenadeEvent
+         * @augments warbase.ThrowGrenadeEvent.$Properties
+         * @deprecated Use warbase.ThrowGrenadeEvent.$Properties instead.
+         */
+
+        /**
+         * Shape of a ThrowGrenadeEvent.
+         * @typedef {warbase.ThrowGrenadeEvent.$Properties} warbase.ThrowGrenadeEvent.$Shape
+         */
+
+        /**
+         * Constructs a new ThrowGrenadeEvent.
+         * @memberof warbase
+         * @classdesc Represents a ThrowGrenadeEvent.
+         * @constructor
+         * @param {warbase.ThrowGrenadeEvent.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+        const ThrowGrenadeEvent = function (properties) {
+            if (properties)
+                for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                        this[keys[i]] = properties[keys[i]];
+        };
+
+        /**
+         * ThrowGrenadeEvent px.
+         * @member {number} px
+         * @memberof warbase.ThrowGrenadeEvent
+         * @instance
+         */
+        ThrowGrenadeEvent.prototype.px = 0;
+
+        /**
+         * ThrowGrenadeEvent py.
+         * @member {number} py
+         * @memberof warbase.ThrowGrenadeEvent
+         * @instance
+         */
+        ThrowGrenadeEvent.prototype.py = 0;
+
+        /**
+         * ThrowGrenadeEvent pz.
+         * @member {number} pz
+         * @memberof warbase.ThrowGrenadeEvent
+         * @instance
+         */
+        ThrowGrenadeEvent.prototype.pz = 0;
+
+        /**
+         * ThrowGrenadeEvent vx.
+         * @member {number} vx
+         * @memberof warbase.ThrowGrenadeEvent
+         * @instance
+         */
+        ThrowGrenadeEvent.prototype.vx = 0;
+
+        /**
+         * ThrowGrenadeEvent vy.
+         * @member {number} vy
+         * @memberof warbase.ThrowGrenadeEvent
+         * @instance
+         */
+        ThrowGrenadeEvent.prototype.vy = 0;
+
+        /**
+         * ThrowGrenadeEvent vz.
+         * @member {number} vz
+         * @memberof warbase.ThrowGrenadeEvent
+         * @instance
+         */
+        ThrowGrenadeEvent.prototype.vz = 0;
+
+        /**
+         * Creates a new ThrowGrenadeEvent instance using the specified properties.
+         * @function create
+         * @memberof warbase.ThrowGrenadeEvent
+         * @static
+         * @param {warbase.ThrowGrenadeEvent.$Properties=} [properties] Properties to set
+         * @returns {warbase.ThrowGrenadeEvent} ThrowGrenadeEvent instance
+         * @type {{
+         *   (properties: warbase.ThrowGrenadeEvent.$Shape): warbase.ThrowGrenadeEvent & warbase.ThrowGrenadeEvent.$Shape;
+         *   (properties?: warbase.ThrowGrenadeEvent.$Properties): warbase.ThrowGrenadeEvent;
+         * }}
+         */
+        ThrowGrenadeEvent.create = function(properties) {
+            return new ThrowGrenadeEvent(properties);
+        };
+
+        /**
+         * Encodes the specified ThrowGrenadeEvent message. Does not implicitly {@link warbase.ThrowGrenadeEvent.verify|verify} messages.
+         * @function encode
+         * @memberof warbase.ThrowGrenadeEvent
+         * @static
+         * @param {warbase.ThrowGrenadeEvent.$Properties} message ThrowGrenadeEvent message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        ThrowGrenadeEvent.encode = function (message, writer, _depth) {
+            if (!writer)
+                writer = $Writer.create();
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            if (message.px != null && $Object.hasOwnProperty.call(message, "px") && !$Object.is(message.px, 0))
+                writer.uint32(/* id 1, wireType 5 =*/13).float(message.px);
+            if (message.py != null && $Object.hasOwnProperty.call(message, "py") && !$Object.is(message.py, 0))
+                writer.uint32(/* id 2, wireType 5 =*/21).float(message.py);
+            if (message.pz != null && $Object.hasOwnProperty.call(message, "pz") && !$Object.is(message.pz, 0))
+                writer.uint32(/* id 3, wireType 5 =*/29).float(message.pz);
+            if (message.vx != null && $Object.hasOwnProperty.call(message, "vx") && !$Object.is(message.vx, 0))
+                writer.uint32(/* id 4, wireType 5 =*/37).float(message.vx);
+            if (message.vy != null && $Object.hasOwnProperty.call(message, "vy") && !$Object.is(message.vy, 0))
+                writer.uint32(/* id 5, wireType 5 =*/45).float(message.vy);
+            if (message.vz != null && $Object.hasOwnProperty.call(message, "vz") && !$Object.is(message.vz, 0))
+                writer.uint32(/* id 6, wireType 5 =*/53).float(message.vz);
+            if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                for (let i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
+            return writer;
+        };
+
+        /**
+         * Encodes the specified ThrowGrenadeEvent message, length delimited. Does not implicitly {@link warbase.ThrowGrenadeEvent.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof warbase.ThrowGrenadeEvent
+         * @static
+         * @param {warbase.ThrowGrenadeEvent.$Properties} message ThrowGrenadeEvent message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        ThrowGrenadeEvent.encodeDelimited = function(message, writer) {
+            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+        };
+
+        /**
+         * Decodes a ThrowGrenadeEvent message from the specified reader or buffer.
+         * @function decode
+         * @memberof warbase.ThrowGrenadeEvent
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {warbase.ThrowGrenadeEvent & warbase.ThrowGrenadeEvent.$Shape} ThrowGrenadeEvent
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        ThrowGrenadeEvent.decode = function (reader, length, _end, _depth, _target) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw $Error("max depth exceeded");
+            let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.warbase.ThrowGrenadeEvent(), value;
+            while (reader.pos < end) {
+                let start = reader.pos;
+                let tag = reader.tag();
+                if (tag === _end) {
+                    _end = $undefined;
+                    break;
+                }
+                let wireType = tag & 7;
+                switch (tag >>>= 3) {
+                case 1: {
+                        if (wireType !== 5)
+                            break;
+                        if (!$Object.is(value = reader.float(), 0))
+                            message.px = value;
+                        else
+                            delete message.px;
+                        continue;
+                    }
+                case 2: {
+                        if (wireType !== 5)
+                            break;
+                        if (!$Object.is(value = reader.float(), 0))
+                            message.py = value;
+                        else
+                            delete message.py;
+                        continue;
+                    }
+                case 3: {
+                        if (wireType !== 5)
+                            break;
+                        if (!$Object.is(value = reader.float(), 0))
+                            message.pz = value;
+                        else
+                            delete message.pz;
+                        continue;
+                    }
+                case 4: {
+                        if (wireType !== 5)
+                            break;
+                        if (!$Object.is(value = reader.float(), 0))
+                            message.vx = value;
+                        else
+                            delete message.vx;
+                        continue;
+                    }
+                case 5: {
+                        if (wireType !== 5)
+                            break;
+                        if (!$Object.is(value = reader.float(), 0))
+                            message.vy = value;
+                        else
+                            delete message.vy;
+                        continue;
+                    }
+                case 6: {
+                        if (wireType !== 5)
+                            break;
+                        if (!$Object.is(value = reader.float(), 0))
+                            message.vz = value;
+                        else
+                            delete message.vz;
+                        continue;
+                    }
+                }
+                reader.skipType(wireType, _depth, tag);
+                if (!reader.discardUnknown) {
+                    $util.makeProp(message, "$unknowns", false);
+                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                }
+            }
+            if (_end !== $undefined)
+                throw $Error("missing end group");
+            return message;
+        };
+
+        /**
+         * Decodes a ThrowGrenadeEvent message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof warbase.ThrowGrenadeEvent
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {warbase.ThrowGrenadeEvent & warbase.ThrowGrenadeEvent.$Shape} ThrowGrenadeEvent
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        ThrowGrenadeEvent.decodeDelimited = function(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a ThrowGrenadeEvent message.
+         * @function verify
+         * @memberof warbase.ThrowGrenadeEvent
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        ThrowGrenadeEvent.verify = function (message, _depth) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
+            if (message.px != null && $Object.hasOwnProperty.call(message, "px"))
+                if (typeof message.px !== "number")
+                    return "px: number expected";
+            if (message.py != null && $Object.hasOwnProperty.call(message, "py"))
+                if (typeof message.py !== "number")
+                    return "py: number expected";
+            if (message.pz != null && $Object.hasOwnProperty.call(message, "pz"))
+                if (typeof message.pz !== "number")
+                    return "pz: number expected";
+            if (message.vx != null && $Object.hasOwnProperty.call(message, "vx"))
+                if (typeof message.vx !== "number")
+                    return "vx: number expected";
+            if (message.vy != null && $Object.hasOwnProperty.call(message, "vy"))
+                if (typeof message.vy !== "number")
+                    return "vy: number expected";
+            if (message.vz != null && $Object.hasOwnProperty.call(message, "vz"))
+                if (typeof message.vz !== "number")
+                    return "vz: number expected";
+            return null;
+        };
+
+        /**
+         * Creates a ThrowGrenadeEvent message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof warbase.ThrowGrenadeEvent
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {warbase.ThrowGrenadeEvent} ThrowGrenadeEvent
+         */
+        ThrowGrenadeEvent.fromObject = function (object, _depth) {
+            if (object instanceof $root.warbase.ThrowGrenadeEvent)
+                return object;
+            if (!$util.isObject(object))
+                throw $TypeError(".warbase.ThrowGrenadeEvent: object expected");
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let message = new $root.warbase.ThrowGrenadeEvent();
+            if (object.px != null)
+                if (!$Object.is($Number(object.px), 0))
+                    message.px = $Number(object.px);
+            if (object.py != null)
+                if (!$Object.is($Number(object.py), 0))
+                    message.py = $Number(object.py);
+            if (object.pz != null)
+                if (!$Object.is($Number(object.pz), 0))
+                    message.pz = $Number(object.pz);
+            if (object.vx != null)
+                if (!$Object.is($Number(object.vx), 0))
+                    message.vx = $Number(object.vx);
+            if (object.vy != null)
+                if (!$Object.is($Number(object.vy), 0))
+                    message.vy = $Number(object.vy);
+            if (object.vz != null)
+                if (!$Object.is($Number(object.vz), 0))
+                    message.vz = $Number(object.vz);
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a ThrowGrenadeEvent message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof warbase.ThrowGrenadeEvent
+         * @static
+         * @param {warbase.ThrowGrenadeEvent} message ThrowGrenadeEvent
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        ThrowGrenadeEvent.toObject = function (message, options, _depth) {
+            if (!options)
+                options = {};
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let object = {};
+            if (options.defaults) {
+                object.px = 0;
+                object.py = 0;
+                object.pz = 0;
+                object.vx = 0;
+                object.vy = 0;
+                object.vz = 0;
+            }
+            if (message.px != null && $Object.hasOwnProperty.call(message, "px"))
+                object.px = options.json && !$isFinite(message.px) ? $String(message.px) : message.px;
+            if (message.py != null && $Object.hasOwnProperty.call(message, "py"))
+                object.py = options.json && !$isFinite(message.py) ? $String(message.py) : message.py;
+            if (message.pz != null && $Object.hasOwnProperty.call(message, "pz"))
+                object.pz = options.json && !$isFinite(message.pz) ? $String(message.pz) : message.pz;
+            if (message.vx != null && $Object.hasOwnProperty.call(message, "vx"))
+                object.vx = options.json && !$isFinite(message.vx) ? $String(message.vx) : message.vx;
+            if (message.vy != null && $Object.hasOwnProperty.call(message, "vy"))
+                object.vy = options.json && !$isFinite(message.vy) ? $String(message.vy) : message.vy;
+            if (message.vz != null && $Object.hasOwnProperty.call(message, "vz"))
+                object.vz = options.json && !$isFinite(message.vz) ? $String(message.vz) : message.vz;
+            return object;
+        };
+
+        /**
+         * Converts this ThrowGrenadeEvent to JSON.
+         * @function toJSON
+         * @memberof warbase.ThrowGrenadeEvent
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        ThrowGrenadeEvent.prototype.toJSON = function() {
+            return ThrowGrenadeEvent.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        /**
+         * Gets the type url for ThrowGrenadeEvent
+         * @function getTypeUrl
+         * @memberof warbase.ThrowGrenadeEvent
+         * @static
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
+         */
+        ThrowGrenadeEvent.getTypeUrl = function(prefix) {
+            if (prefix === $undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/warbase.ThrowGrenadeEvent";
+        };
+
+        return ThrowGrenadeEvent;
+    })();
+
     warbase.ServerMessage = (function() {
 
         /**
@@ -3451,7 +3896,8 @@ export const warbase = $root.warbase = (() => {
          * @property {warbase.ServerFireEvent.$Properties|null} [fire] ServerEvent fire
          * @property {warbase.HitConfirmedEvent.$Properties|null} [hitConfirmed] ServerEvent hitConfirmed
          * @property {warbase.KillConfirmedEvent.$Properties|null} [killConfirmed] ServerEvent killConfirmed
-         * @property {"respawn"|"fire"|"hitConfirmed"|"killConfirmed"} [event] ServerEvent event
+         * @property {warbase.ServerThrowGrenadeEvent.$Properties|null} [throwGrenade] ServerEvent throwGrenade
+         * @property {"respawn"|"fire"|"hitConfirmed"|"killConfirmed"|"throwGrenade"} [event] ServerEvent event
          * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
          */
 
@@ -3470,9 +3916,10 @@ export const warbase = $root.warbase = (() => {
          *   fire?: warbase.ServerFireEvent.$Shape|null;
          *   hitConfirmed?: warbase.HitConfirmedEvent.$Shape|null;
          *   killConfirmed?: warbase.KillConfirmedEvent.$Shape|null;
+         *   throwGrenade?: warbase.ServerThrowGrenadeEvent.$Shape|null;
          *   $unknowns?: Array.<Uint8Array>;
          * } & (
-         *   ({ event?: undefined; respawn?: null; fire?: null; hitConfirmed?: null; killConfirmed?: null }|{ event?: "respawn"; respawn: warbase.RespawnEvent.$Shape; fire?: null; hitConfirmed?: null; killConfirmed?: null }|{ event?: "fire"; respawn?: null; fire: warbase.ServerFireEvent.$Shape; hitConfirmed?: null; killConfirmed?: null }|{ event?: "hitConfirmed"; respawn?: null; fire?: null; hitConfirmed: warbase.HitConfirmedEvent.$Shape; killConfirmed?: null }|{ event?: "killConfirmed"; respawn?: null; fire?: null; hitConfirmed?: null; killConfirmed: warbase.KillConfirmedEvent.$Shape })
+         *   ({ event?: undefined; respawn?: null; fire?: null; hitConfirmed?: null; killConfirmed?: null; throwGrenade?: null }|{ event?: "respawn"; respawn: warbase.RespawnEvent.$Shape; fire?: null; hitConfirmed?: null; killConfirmed?: null; throwGrenade?: null }|{ event?: "fire"; respawn?: null; fire: warbase.ServerFireEvent.$Shape; hitConfirmed?: null; killConfirmed?: null; throwGrenade?: null }|{ event?: "hitConfirmed"; respawn?: null; fire?: null; hitConfirmed: warbase.HitConfirmedEvent.$Shape; killConfirmed?: null; throwGrenade?: null }|{ event?: "killConfirmed"; respawn?: null; fire?: null; hitConfirmed?: null; killConfirmed: warbase.KillConfirmedEvent.$Shape; throwGrenade?: null }|{ event?: "throwGrenade"; respawn?: null; fire?: null; hitConfirmed?: null; killConfirmed?: null; throwGrenade: warbase.ServerThrowGrenadeEvent.$Shape })
          * )} warbase.ServerEvent.$Shape
          */
 
@@ -3523,17 +3970,25 @@ export const warbase = $root.warbase = (() => {
          */
         ServerEvent.prototype.killConfirmed = null;
 
+        /**
+         * ServerEvent throwGrenade.
+         * @member {warbase.ServerThrowGrenadeEvent.$Properties|null|undefined} throwGrenade
+         * @memberof warbase.ServerEvent
+         * @instance
+         */
+        ServerEvent.prototype.throwGrenade = null;
+
         // OneOf field names bound to virtual getters and setters
         let $oneOfFields;
 
         /**
          * ServerEvent event.
-         * @member {"respawn"|"fire"|"hitConfirmed"|"killConfirmed"|undefined} event
+         * @member {"respawn"|"fire"|"hitConfirmed"|"killConfirmed"|"throwGrenade"|undefined} event
          * @memberof warbase.ServerEvent
          * @instance
          */
         $Object.defineProperty(ServerEvent.prototype, "event", {
-            get: $util.oneOfGetter($oneOfFields = ["respawn", "fire", "hitConfirmed", "killConfirmed"]),
+            get: $util.oneOfGetter($oneOfFields = ["respawn", "fire", "hitConfirmed", "killConfirmed", "throwGrenade"]),
             set: $util.oneOfSetter($oneOfFields)
         });
 
@@ -3577,6 +4032,8 @@ export const warbase = $root.warbase = (() => {
                 $root.warbase.HitConfirmedEvent.encode(message.hitConfirmed, writer.uint32(/* id 3, wireType 2 =*/26).fork(), _depth + 1).ldelim();
             if (message.killConfirmed != null && $Object.hasOwnProperty.call(message, "killConfirmed"))
                 $root.warbase.KillConfirmedEvent.encode(message.killConfirmed, writer.uint32(/* id 4, wireType 2 =*/34).fork(), _depth + 1).ldelim();
+            if (message.throwGrenade != null && $Object.hasOwnProperty.call(message, "throwGrenade"))
+                $root.warbase.ServerThrowGrenadeEvent.encode(message.throwGrenade, writer.uint32(/* id 5, wireType 2 =*/42).fork(), _depth + 1).ldelim();
             if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                 for (let i = 0; i < message.$unknowns.length; ++i)
                     writer.raw(message.$unknowns[i]);
@@ -3650,6 +4107,13 @@ export const warbase = $root.warbase = (() => {
                             break;
                         message.killConfirmed = $root.warbase.KillConfirmedEvent.decode(reader, reader.uint32(), $undefined, _depth + 1, message.killConfirmed);
                         message.event = "killConfirmed";
+                        continue;
+                    }
+                case 5: {
+                        if (wireType !== 2)
+                            break;
+                        message.throwGrenade = $root.warbase.ServerThrowGrenadeEvent.decode(reader, reader.uint32(), $undefined, _depth + 1, message.throwGrenade);
+                        message.event = "throwGrenade";
                         continue;
                     }
                 }
@@ -3734,6 +4198,16 @@ export const warbase = $root.warbase = (() => {
                         return "killConfirmed." + error;
                 }
             }
+            if (message.throwGrenade != null && $Object.hasOwnProperty.call(message, "throwGrenade")) {
+                if (properties.event === 1)
+                    return "event: multiple values";
+                properties.event = 1;
+                {
+                    let error = $root.warbase.ServerThrowGrenadeEvent.verify(message.throwGrenade, _depth + 1);
+                    if (error)
+                        return "throwGrenade." + error;
+                }
+            }
             return null;
         };
 
@@ -3775,6 +4249,11 @@ export const warbase = $root.warbase = (() => {
                     throw $TypeError(".warbase.ServerEvent.killConfirmed: object expected");
                 message.killConfirmed = $root.warbase.KillConfirmedEvent.fromObject(object.killConfirmed, _depth + 1);
             }
+            if (object.throwGrenade != null) {
+                if (!$util.isObject(object.throwGrenade))
+                    throw $TypeError(".warbase.ServerEvent.throwGrenade: object expected");
+                message.throwGrenade = $root.warbase.ServerThrowGrenadeEvent.fromObject(object.throwGrenade, _depth + 1);
+            }
             return message;
         };
 
@@ -3814,6 +4293,11 @@ export const warbase = $root.warbase = (() => {
                 object.killConfirmed = $root.warbase.KillConfirmedEvent.toObject(message.killConfirmed, options, _depth + 1);
                 if (options.oneofs)
                     object.event = "killConfirmed";
+            }
+            if (message.throwGrenade != null && $Object.hasOwnProperty.call(message, "throwGrenade")) {
+                object.throwGrenade = $root.warbase.ServerThrowGrenadeEvent.toObject(message.throwGrenade, options, _depth + 1);
+                if (options.oneofs)
+                    object.event = "throwGrenade";
             }
             return object;
         };
@@ -4861,6 +5345,441 @@ export const warbase = $root.warbase = (() => {
         };
 
         return KillConfirmedEvent;
+    })();
+
+    warbase.ServerThrowGrenadeEvent = (function() {
+
+        /**
+         * Properties of a ServerThrowGrenadeEvent.
+         * @typedef {Object} warbase.ServerThrowGrenadeEvent.$Properties
+         * @property {string|null} [shooterId] ServerThrowGrenadeEvent shooterId
+         * @property {number|null} [px] ServerThrowGrenadeEvent px
+         * @property {number|null} [py] ServerThrowGrenadeEvent py
+         * @property {number|null} [pz] ServerThrowGrenadeEvent pz
+         * @property {number|null} [vx] ServerThrowGrenadeEvent vx
+         * @property {number|null} [vy] ServerThrowGrenadeEvent vy
+         * @property {number|null} [vz] ServerThrowGrenadeEvent vz
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+
+        /**
+         * Properties of a ServerThrowGrenadeEvent.
+         * @memberof warbase
+         * @interface IServerThrowGrenadeEvent
+         * @augments warbase.ServerThrowGrenadeEvent.$Properties
+         * @deprecated Use warbase.ServerThrowGrenadeEvent.$Properties instead.
+         */
+
+        /**
+         * Shape of a ServerThrowGrenadeEvent.
+         * @typedef {warbase.ServerThrowGrenadeEvent.$Properties} warbase.ServerThrowGrenadeEvent.$Shape
+         */
+
+        /**
+         * Constructs a new ServerThrowGrenadeEvent.
+         * @memberof warbase
+         * @classdesc Represents a ServerThrowGrenadeEvent.
+         * @constructor
+         * @param {warbase.ServerThrowGrenadeEvent.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+        const ServerThrowGrenadeEvent = function (properties) {
+            if (properties)
+                for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                        this[keys[i]] = properties[keys[i]];
+        };
+
+        /**
+         * ServerThrowGrenadeEvent shooterId.
+         * @member {string} shooterId
+         * @memberof warbase.ServerThrowGrenadeEvent
+         * @instance
+         */
+        ServerThrowGrenadeEvent.prototype.shooterId = "";
+
+        /**
+         * ServerThrowGrenadeEvent px.
+         * @member {number} px
+         * @memberof warbase.ServerThrowGrenadeEvent
+         * @instance
+         */
+        ServerThrowGrenadeEvent.prototype.px = 0;
+
+        /**
+         * ServerThrowGrenadeEvent py.
+         * @member {number} py
+         * @memberof warbase.ServerThrowGrenadeEvent
+         * @instance
+         */
+        ServerThrowGrenadeEvent.prototype.py = 0;
+
+        /**
+         * ServerThrowGrenadeEvent pz.
+         * @member {number} pz
+         * @memberof warbase.ServerThrowGrenadeEvent
+         * @instance
+         */
+        ServerThrowGrenadeEvent.prototype.pz = 0;
+
+        /**
+         * ServerThrowGrenadeEvent vx.
+         * @member {number} vx
+         * @memberof warbase.ServerThrowGrenadeEvent
+         * @instance
+         */
+        ServerThrowGrenadeEvent.prototype.vx = 0;
+
+        /**
+         * ServerThrowGrenadeEvent vy.
+         * @member {number} vy
+         * @memberof warbase.ServerThrowGrenadeEvent
+         * @instance
+         */
+        ServerThrowGrenadeEvent.prototype.vy = 0;
+
+        /**
+         * ServerThrowGrenadeEvent vz.
+         * @member {number} vz
+         * @memberof warbase.ServerThrowGrenadeEvent
+         * @instance
+         */
+        ServerThrowGrenadeEvent.prototype.vz = 0;
+
+        /**
+         * Creates a new ServerThrowGrenadeEvent instance using the specified properties.
+         * @function create
+         * @memberof warbase.ServerThrowGrenadeEvent
+         * @static
+         * @param {warbase.ServerThrowGrenadeEvent.$Properties=} [properties] Properties to set
+         * @returns {warbase.ServerThrowGrenadeEvent} ServerThrowGrenadeEvent instance
+         * @type {{
+         *   (properties: warbase.ServerThrowGrenadeEvent.$Shape): warbase.ServerThrowGrenadeEvent & warbase.ServerThrowGrenadeEvent.$Shape;
+         *   (properties?: warbase.ServerThrowGrenadeEvent.$Properties): warbase.ServerThrowGrenadeEvent;
+         * }}
+         */
+        ServerThrowGrenadeEvent.create = function(properties) {
+            return new ServerThrowGrenadeEvent(properties);
+        };
+
+        /**
+         * Encodes the specified ServerThrowGrenadeEvent message. Does not implicitly {@link warbase.ServerThrowGrenadeEvent.verify|verify} messages.
+         * @function encode
+         * @memberof warbase.ServerThrowGrenadeEvent
+         * @static
+         * @param {warbase.ServerThrowGrenadeEvent.$Properties} message ServerThrowGrenadeEvent message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        ServerThrowGrenadeEvent.encode = function (message, writer, _depth) {
+            if (!writer)
+                writer = $Writer.create();
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            if (message.shooterId != null && $Object.hasOwnProperty.call(message, "shooterId") && message.shooterId !== "")
+                writer.uint32(/* id 1, wireType 2 =*/10).string(message.shooterId);
+            if (message.px != null && $Object.hasOwnProperty.call(message, "px") && !$Object.is(message.px, 0))
+                writer.uint32(/* id 2, wireType 5 =*/21).float(message.px);
+            if (message.py != null && $Object.hasOwnProperty.call(message, "py") && !$Object.is(message.py, 0))
+                writer.uint32(/* id 3, wireType 5 =*/29).float(message.py);
+            if (message.pz != null && $Object.hasOwnProperty.call(message, "pz") && !$Object.is(message.pz, 0))
+                writer.uint32(/* id 4, wireType 5 =*/37).float(message.pz);
+            if (message.vx != null && $Object.hasOwnProperty.call(message, "vx") && !$Object.is(message.vx, 0))
+                writer.uint32(/* id 5, wireType 5 =*/45).float(message.vx);
+            if (message.vy != null && $Object.hasOwnProperty.call(message, "vy") && !$Object.is(message.vy, 0))
+                writer.uint32(/* id 6, wireType 5 =*/53).float(message.vy);
+            if (message.vz != null && $Object.hasOwnProperty.call(message, "vz") && !$Object.is(message.vz, 0))
+                writer.uint32(/* id 7, wireType 5 =*/61).float(message.vz);
+            if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                for (let i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
+            return writer;
+        };
+
+        /**
+         * Encodes the specified ServerThrowGrenadeEvent message, length delimited. Does not implicitly {@link warbase.ServerThrowGrenadeEvent.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof warbase.ServerThrowGrenadeEvent
+         * @static
+         * @param {warbase.ServerThrowGrenadeEvent.$Properties} message ServerThrowGrenadeEvent message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        ServerThrowGrenadeEvent.encodeDelimited = function(message, writer) {
+            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+        };
+
+        /**
+         * Decodes a ServerThrowGrenadeEvent message from the specified reader or buffer.
+         * @function decode
+         * @memberof warbase.ServerThrowGrenadeEvent
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {warbase.ServerThrowGrenadeEvent & warbase.ServerThrowGrenadeEvent.$Shape} ServerThrowGrenadeEvent
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        ServerThrowGrenadeEvent.decode = function (reader, length, _end, _depth, _target) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw $Error("max depth exceeded");
+            let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.warbase.ServerThrowGrenadeEvent(), value;
+            while (reader.pos < end) {
+                let start = reader.pos;
+                let tag = reader.tag();
+                if (tag === _end) {
+                    _end = $undefined;
+                    break;
+                }
+                let wireType = tag & 7;
+                switch (tag >>>= 3) {
+                case 1: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.stringVerify()).length)
+                            message.shooterId = value;
+                        else
+                            delete message.shooterId;
+                        continue;
+                    }
+                case 2: {
+                        if (wireType !== 5)
+                            break;
+                        if (!$Object.is(value = reader.float(), 0))
+                            message.px = value;
+                        else
+                            delete message.px;
+                        continue;
+                    }
+                case 3: {
+                        if (wireType !== 5)
+                            break;
+                        if (!$Object.is(value = reader.float(), 0))
+                            message.py = value;
+                        else
+                            delete message.py;
+                        continue;
+                    }
+                case 4: {
+                        if (wireType !== 5)
+                            break;
+                        if (!$Object.is(value = reader.float(), 0))
+                            message.pz = value;
+                        else
+                            delete message.pz;
+                        continue;
+                    }
+                case 5: {
+                        if (wireType !== 5)
+                            break;
+                        if (!$Object.is(value = reader.float(), 0))
+                            message.vx = value;
+                        else
+                            delete message.vx;
+                        continue;
+                    }
+                case 6: {
+                        if (wireType !== 5)
+                            break;
+                        if (!$Object.is(value = reader.float(), 0))
+                            message.vy = value;
+                        else
+                            delete message.vy;
+                        continue;
+                    }
+                case 7: {
+                        if (wireType !== 5)
+                            break;
+                        if (!$Object.is(value = reader.float(), 0))
+                            message.vz = value;
+                        else
+                            delete message.vz;
+                        continue;
+                    }
+                }
+                reader.skipType(wireType, _depth, tag);
+                if (!reader.discardUnknown) {
+                    $util.makeProp(message, "$unknowns", false);
+                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                }
+            }
+            if (_end !== $undefined)
+                throw $Error("missing end group");
+            return message;
+        };
+
+        /**
+         * Decodes a ServerThrowGrenadeEvent message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof warbase.ServerThrowGrenadeEvent
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {warbase.ServerThrowGrenadeEvent & warbase.ServerThrowGrenadeEvent.$Shape} ServerThrowGrenadeEvent
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        ServerThrowGrenadeEvent.decodeDelimited = function(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a ServerThrowGrenadeEvent message.
+         * @function verify
+         * @memberof warbase.ServerThrowGrenadeEvent
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        ServerThrowGrenadeEvent.verify = function (message, _depth) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
+            if (message.shooterId != null && $Object.hasOwnProperty.call(message, "shooterId"))
+                if (!$util.isString(message.shooterId))
+                    return "shooterId: string expected";
+            if (message.px != null && $Object.hasOwnProperty.call(message, "px"))
+                if (typeof message.px !== "number")
+                    return "px: number expected";
+            if (message.py != null && $Object.hasOwnProperty.call(message, "py"))
+                if (typeof message.py !== "number")
+                    return "py: number expected";
+            if (message.pz != null && $Object.hasOwnProperty.call(message, "pz"))
+                if (typeof message.pz !== "number")
+                    return "pz: number expected";
+            if (message.vx != null && $Object.hasOwnProperty.call(message, "vx"))
+                if (typeof message.vx !== "number")
+                    return "vx: number expected";
+            if (message.vy != null && $Object.hasOwnProperty.call(message, "vy"))
+                if (typeof message.vy !== "number")
+                    return "vy: number expected";
+            if (message.vz != null && $Object.hasOwnProperty.call(message, "vz"))
+                if (typeof message.vz !== "number")
+                    return "vz: number expected";
+            return null;
+        };
+
+        /**
+         * Creates a ServerThrowGrenadeEvent message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof warbase.ServerThrowGrenadeEvent
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {warbase.ServerThrowGrenadeEvent} ServerThrowGrenadeEvent
+         */
+        ServerThrowGrenadeEvent.fromObject = function (object, _depth) {
+            if (object instanceof $root.warbase.ServerThrowGrenadeEvent)
+                return object;
+            if (!$util.isObject(object))
+                throw $TypeError(".warbase.ServerThrowGrenadeEvent: object expected");
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let message = new $root.warbase.ServerThrowGrenadeEvent();
+            if (object.shooterId != null)
+                if (typeof object.shooterId !== "string" || object.shooterId.length)
+                    message.shooterId = $String(object.shooterId);
+            if (object.px != null)
+                if (!$Object.is($Number(object.px), 0))
+                    message.px = $Number(object.px);
+            if (object.py != null)
+                if (!$Object.is($Number(object.py), 0))
+                    message.py = $Number(object.py);
+            if (object.pz != null)
+                if (!$Object.is($Number(object.pz), 0))
+                    message.pz = $Number(object.pz);
+            if (object.vx != null)
+                if (!$Object.is($Number(object.vx), 0))
+                    message.vx = $Number(object.vx);
+            if (object.vy != null)
+                if (!$Object.is($Number(object.vy), 0))
+                    message.vy = $Number(object.vy);
+            if (object.vz != null)
+                if (!$Object.is($Number(object.vz), 0))
+                    message.vz = $Number(object.vz);
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a ServerThrowGrenadeEvent message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof warbase.ServerThrowGrenadeEvent
+         * @static
+         * @param {warbase.ServerThrowGrenadeEvent} message ServerThrowGrenadeEvent
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        ServerThrowGrenadeEvent.toObject = function (message, options, _depth) {
+            if (!options)
+                options = {};
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let object = {};
+            if (options.defaults) {
+                object.shooterId = "";
+                object.px = 0;
+                object.py = 0;
+                object.pz = 0;
+                object.vx = 0;
+                object.vy = 0;
+                object.vz = 0;
+            }
+            if (message.shooterId != null && $Object.hasOwnProperty.call(message, "shooterId"))
+                object.shooterId = message.shooterId;
+            if (message.px != null && $Object.hasOwnProperty.call(message, "px"))
+                object.px = options.json && !$isFinite(message.px) ? $String(message.px) : message.px;
+            if (message.py != null && $Object.hasOwnProperty.call(message, "py"))
+                object.py = options.json && !$isFinite(message.py) ? $String(message.py) : message.py;
+            if (message.pz != null && $Object.hasOwnProperty.call(message, "pz"))
+                object.pz = options.json && !$isFinite(message.pz) ? $String(message.pz) : message.pz;
+            if (message.vx != null && $Object.hasOwnProperty.call(message, "vx"))
+                object.vx = options.json && !$isFinite(message.vx) ? $String(message.vx) : message.vx;
+            if (message.vy != null && $Object.hasOwnProperty.call(message, "vy"))
+                object.vy = options.json && !$isFinite(message.vy) ? $String(message.vy) : message.vy;
+            if (message.vz != null && $Object.hasOwnProperty.call(message, "vz"))
+                object.vz = options.json && !$isFinite(message.vz) ? $String(message.vz) : message.vz;
+            return object;
+        };
+
+        /**
+         * Converts this ServerThrowGrenadeEvent to JSON.
+         * @function toJSON
+         * @memberof warbase.ServerThrowGrenadeEvent
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        ServerThrowGrenadeEvent.prototype.toJSON = function() {
+            return ServerThrowGrenadeEvent.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        /**
+         * Gets the type url for ServerThrowGrenadeEvent
+         * @function getTypeUrl
+         * @memberof warbase.ServerThrowGrenadeEvent
+         * @static
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
+         */
+        ServerThrowGrenadeEvent.getTypeUrl = function(prefix) {
+            if (prefix === $undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/warbase.ServerThrowGrenadeEvent";
+        };
+
+        return ServerThrowGrenadeEvent;
     })();
 
     return warbase;

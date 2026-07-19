@@ -1,6 +1,6 @@
 import { addEntity, addComponent } from "bitecs";
 import { world } from "../World";
-import { Position, Rotation, Velocity, InputComponent, PlayerComponent, PlayerTag, PhysicsBodyTag, Renderable } from "../Components";
+import { Position, Rotation, Velocity, InputComponent, PlayerComponent, PlayerTag, PhysicsBodyTag, Renderable, WeaponStateComponent, RecoilComponent, SwayComponent } from "../Components";
 import { entityMeshes, entityPhysicsBodies, entityCameras } from "../ViewMaps";
 import { Scene, MeshBuilder, PhysicsAggregate, PhysicsShapeType, Vector3, UniversalCamera, PointerEventTypes, KeyboardEventTypes } from "@babylonjs/core";
 
@@ -16,6 +16,9 @@ export function initPlayer(scene: Scene, canvas: HTMLCanvasElement): number {
     addComponent(world, PlayerTag, eid);
     addComponent(world, PhysicsBodyTag, eid);
     addComponent(world, Renderable, eid);
+    addComponent(world, WeaponStateComponent, eid);
+    addComponent(world, RecoilComponent, eid);
+    addComponent(world, SwayComponent, eid);
 
     // Initial State
     PlayerComponent.jumpCooldownTimer[eid] = 0;

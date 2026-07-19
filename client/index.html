@@ -72,6 +72,8 @@
         </div>
       </div>
 
+
+
       <!-- Pointer Lock Warning -->
       <div id="pointerWarning" style="display: none; position: absolute; top: 15px; right: 15px; background: rgba(220, 53, 69, 0.9); color: white; padding: 12px 20px; border-radius: 6px; z-index: 100; font-family: sans-serif; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
         ⚠️ Game Paused - Click to Resume
@@ -102,11 +104,7 @@
                 Toggle Performance Metrics
             </button>
           </div>
-          <strong style="margin-right: 15px;">Graphics:</strong>
-          <label style="cursor: pointer; margin-right: 15px;">
-            <input type="checkbox" id="toggleChromatic"> Chromatic Aberration
-          </label>
-          <div style="margin-top: 10px;">
+          <div style="margin-top: 10px; margin-bottom: 15px;">
             <strong style="margin-right: 15px;">Skybox:</strong>
             <select id="skyboxSelector" style="padding: 5px; background: #222; color: white; border: 1px solid #555; border-radius: 4px;">
                 <option value="environment.env">Normal Day (Clear)</option>
@@ -114,6 +112,17 @@
                 <option value="Runyon_Canyon_A_2k_cube_specular.env">Canyon</option>
                 <option value="night.env">Night</option>
             </select>
+          </div>
+          <div style="text-align: center; border-top: 1px solid #666; padding-top: 10px;">
+              <h3 style="color: #ff5555; margin-top: 0; margin-bottom: 10px;">PRO GRAPHICS (High-End GPUs Only)</h3>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; max-width: 450px; margin: 0 auto; color: white;">
+                  <label><input type="checkbox" id="optSSAO"> SSAO (Ambient Occlusion)</label>
+                  <label><input type="checkbox" id="optSSR"> SSR (Screen Space Reflections)</label>
+                  <label><input type="checkbox" id="optUltraShadows"> Ultra Shadows (4096 + PCSS)</label>
+                  <label><input type="checkbox" id="optMSAA"> 4x MSAA (Anti-Aliasing)</label>
+                  <label><input type="checkbox" id="optChromatic"> Chromatic Aberration</label>
+              </div>
+              <div style="font-size: 12px; color: #aaa; margin-top: 10px;">* Ultra Shadows requires page reload</div>
           </div>
         </div>
         <table style="width: 100%; border-collapse: collapse; text-align: left;">

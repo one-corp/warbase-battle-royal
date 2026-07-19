@@ -14,7 +14,8 @@ import {
     Ray,
     SceneInstrumentation,
     EngineInstrumentation,
-    KeyboardEventTypes
+    SSAO2RenderingPipeline,
+    ScreenSpaceReflectionPostProcess
 } from '@babylonjs/core';
 import '@babylonjs/core/Engines/WebGPU/Extensions/index.js';
 import HavokPhysics from '@babylonjs/havok';
@@ -23,11 +24,13 @@ import "@babylonjs/loaders/glTF";
 import { EnvironmentManager } from './engine/Environment';
 import { initPlayer } from './ecs/systems/PlayerSystem';
 import { playerMovementSystem } from './ecs/systems/PlayerMovementSystem';
+import { updateTracers } from './ecs/systems/TracerSystem';
 import { PhysicsSystem } from './ecs/systems/PhysicsSystem';
 import { InputComponent, PlayerComponent, Position } from './ecs/Components';
 import { entityCameras, entityMeshes, entityPhysicsBodies } from './ecs/ViewMaps';
 import { world } from './ecs/World';
 import { initWeapons, createWeaponSystem } from './physics/WeaponSystem';
+import { throwNetworkGrenade } from './physics/GrenadeSystem';
 import { NetworkManager } from "./network/NetworkManager";
 import { MultiplayerEntities } from "./network/MultiplayerEntities";
 
@@ -81,11 +84,16 @@ async function createScene(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElem
     sun.position = new Vector3(20, 40, 20);
     sun.intensity = 2.0;
 
-    const shadowGenerator = new ShadowGenerator(2048, sun);
-    // shadowGenerator.stabilizeCascades = true;
-    // shadowGenerator.forceBackFacesOnly = true;
-    // shadowGenerator.shadowMaxZ = 200;
-    shadowGenerator.usePercentageCloserFiltering = true;
+    const useUltraShadows = localStorage.getItem("optUltraShadows") === "true";
+    const shadowMapSize = useUltraShadows ? 4096 : 2048;
+    const shadowGenerator = new ShadowGenerator(shadowMapSize, sun);
+    shadowGenerator.useBlurExponentialShadowMap = true;
+    shadowGenerator.blurKernel = 32;
+    if (useUltraShadows) {
+        shadowGenerator.usePercentageCloserFiltering = true;
+    }
+    shadowGenerator.enableSoftTransparentShadow = true;
+    shadowGenerator.setDarkness(0.5);
     
     const envManager = new EnvironmentManager(scene, shadowGenerator, mapChoice);
     await envManager.init();
@@ -119,6 +127,56 @@ async function createScene(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElem
                 pipeline.chromaticAberration.radialIntensity = 1.0;
             }
         });
+        
+        let ssaoPipeline: any = null;
+        let ssrPipeline: any = null;
+
+        const syncProGraphics = () => {
+            const useMSAA = localStorage.getItem("optMSAA") === "true";
+            const useSSAO = localStorage.getItem("optSSAO") === "true";
+            const useSSR = localStorage.getItem("optSSR") === "true";
+            
+            pipeline.samples = useMSAA ? 4 : 1;
+
+            if (useSSAO && !ssaoPipeline) {
+                ssaoPipeline = new SSAO2RenderingPipeline("ssao", scene, {
+                    ssaoRatio: 0.5,
+                    blurRatio: 1.0
+                });
+                ssaoPipeline.radius = 1.2;
+                ssaoPipeline.totalStrength = 1.0;
+                if (camera) scene.postProcessRenderPipelineManager.attachCamerasToRenderPipeline("ssao", camera);
+            } else if (!useSSAO && ssaoPipeline) {
+                ssaoPipeline.dispose();
+                ssaoPipeline = null;
+            }
+
+            if (useSSR && !ssrPipeline) {
+                ssrPipeline = new ScreenSpaceReflectionPostProcess("ssr", scene, 1.0, camera!);
+                ssrPipeline.step = 2.0;
+            } else if (!useSSR && ssrPipeline) {
+                ssrPipeline.dispose();
+                ssrPipeline = null;
+            }
+        };
+
+        ['optSSAO', 'optSSR', 'optMSAA', 'optUltraShadows', 'optChromatic'].forEach(id => {
+            const el = document.getElementById(id) as HTMLInputElement;
+            if (el) {
+                el.checked = localStorage.getItem(id) === "true";
+                el.addEventListener('change', () => {
+                    localStorage.setItem(id, el.checked ? "true" : "false");
+                    if (id === 'optChromatic') {
+                        pipeline.chromaticAberrationEnabled = el.checked;
+                    } else if (id !== 'optUltraShadows') {
+                        syncProGraphics();
+                    }
+                });
+            }
+        });
+        
+        syncProGraphics();
+        pipeline.chromaticAberrationEnabled = localStorage.getItem("optChromatic") === "true";
     }
 
 
@@ -243,6 +301,11 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
             multiplayerEntities.triggerFire(shooterId);
         };
 
+        networkManager.onGrenadeReceived = (_shooterId, px, py, pz, vx, vy, vz) => {
+            // We ignore who threw it for now, and just spawn it at the location
+            throwNetworkGrenade(scene, new Vector3(px, py, pz), new Vector3(vx, vy, vz));
+        };
+
         // Network Tick Loop (60Hz for smoother interpolation)
         let networkTickTimer = 0;
         const _tempPos = new Vector3();
@@ -256,6 +319,7 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
             // Run ECS Systems
             playerMovementSystem(dt / 1000, scene);
             updateWeaponSystem(world, dt / 1000);
+            updateTracers(dt / 1000);
             PhysicsSystem(world);
 
             networkTickTimer += dt;
@@ -338,22 +402,25 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
         const scoreboardBody = document.getElementById("scoreboardBody");
         const engineIndicator = document.getElementById("engineTypeIndicator");
         
-        scene.onKeyboardObservable.add((kbInfo) => {
-            if (kbInfo.event.code === "Tab") {
-                kbInfo.event.preventDefault();
-                if (kbInfo.type === KeyboardEventTypes.KEYDOWN) {
-                    if (kbInfo.event.repeat) return;
-                    if (scoreboard && scoreboardBody) {
-                        scoreboard.style.display = "block";
-                        if (engineIndicator) {
-                            engineIndicator.innerText = currentEngineType;
-                            engineIndicator.style.color = currentEngineType === "WebGPU" ? "#00FF00" : "#FFA500";
-                        }
+        window.addEventListener("keydown", (e) => {
+            if (e.code === "Tab") {
+                e.preventDefault();
+                if (e.repeat) return;
+                if (scoreboard && scoreboardBody) {
+                    scoreboard.style.display = "block";
+                    document.exitPointerLock();
+                    if (engineIndicator) {
+                        engineIndicator.innerText = currentEngineType;
+                        engineIndicator.style.color = currentEngineType === "WebGPU" ? "#00FF00" : "#FFA500";
                     }
-                } else if (kbInfo.type === KeyboardEventTypes.KEYUP) {
-                    if (scoreboard) {
-                        scoreboard.style.display = "none";
-                    }
+                }
+            }
+        });
+
+        window.addEventListener("keyup", (e) => {
+            if (e.code === "Tab") {
+                if (scoreboard) {
+                    scoreboard.style.display = "none";
                 }
             }
         });

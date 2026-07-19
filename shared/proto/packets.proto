@@ -16,6 +16,7 @@ message ClientEvent {
         ReloadEvent reload = 4;
         SwitchWeaponEvent switch_weapon = 5;
         RespawnRequestEvent respawn_request = 6;
+        ThrowGrenadeEvent throw_grenade = 7;
     }
 }
 
@@ -42,6 +43,14 @@ message SwitchWeaponEvent {
     string weapon_id = 1;
 }
 message RespawnRequestEvent {}
+message ThrowGrenadeEvent {
+    float px = 1;
+    float py = 2;
+    float pz = 3;
+    float vx = 4;
+    float vy = 5;
+    float vz = 6;
+}
 
 // --------------------------
 // SERVER -> CLIENT MESSAGES
@@ -80,6 +89,7 @@ message ServerEvent {
         ServerFireEvent fire = 2;
         HitConfirmedEvent hit_confirmed = 3;
         KillConfirmedEvent kill_confirmed = 4;
+        ServerThrowGrenadeEvent throw_grenade = 5;
     }
 }
 
@@ -95,3 +105,13 @@ message ServerFireEvent {
 
 message HitConfirmedEvent {}
 message KillConfirmedEvent {}
+
+message ServerThrowGrenadeEvent {
+    string shooter_id = 1;
+    float px = 2;
+    float py = 3;
+    float pz = 4;
+    float vx = 5;
+    float vy = 6;
+    float vz = 7;
+}

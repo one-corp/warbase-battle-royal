@@ -4,6 +4,39 @@
 
 ---
 
+## Current Implementation Tuning
+
+These are the active values currently implemented in `WEAPON_CONFIGS` inside [WeaponSystem.ts](file:///Users/vaidik/Developer/WarBase%20/client/src/physics/WeaponSystem.ts). 
+
+| Property | AK-47 | Pistol |
+|----------|-------|--------|
+| **Damage** | 34 (3 shots to body) | 25 (4 shots to body) |
+| **Headshot Multiplier** | 2.5x (85 DMG) | 3.0x (75 DMG) |
+| **Fire Rate (RPM)** | 600 | 400 |
+| **Magazine Size** | 30 | 12 |
+| **Reload Time** | 2.5s | 1.5s |
+
+### Handling & Recoil Tuning
+| Property | AK-47 | Pistol |
+|----------|-------|--------|
+| **Base Spread (Hipfire)** | 1.5° | 1.0° |
+| **Bloom Per Shot** | 0.4° | 0.8° |
+| **Max Spread** | 5.0° | 6.0° |
+| **Bloom Recovery Rate** | 8.0/s | 12.0/s |
+| **Recoil (Vertical)** | 0.02 *(Tuned down for playability)* | 0.08 |
+| **Recoil (Horizontal)** | 0.01 *(Tuned down for playability)* | 0.01 |
+| **Recoil Recovery** | 6.0/s | 10.0/s |
+
+### ADS (Aiming Down Sights) Tuning
+| Property | AK-47 | Pistol |
+|----------|-------|--------|
+| **ADS FOV** | 55 | 65 |
+| **ADS Time** | 0.20s | 0.12s |
+| **ADS Spread Multiplier** | 0.4x | 0.2x |
+| **ADS Recoil Multiplier** | 0.7x | 0.5x |
+
+---
+
 ## 1. Weapon Categories & Stats
 
 All values are tuned to match Bullet Force's feel. Stats drive gameplay balance; visuals are secondary.

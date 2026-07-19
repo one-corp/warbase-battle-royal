@@ -7,15 +7,14 @@ import sys
 bpy.ops.wm.read_factory_settings(use_empty=True)
 
 # Define paths relative to this script
-base_dir = os.path.dirname(os.path.abspath(__file__))
-mixamo_dir = os.path.join(base_dir, "mixamo")
-out_path = os.path.join(base_dir, "fps-game", "public", "models", "AnimatedSoldier.glb")
+base_dir = "/Users/vaidik/Developer/WarBase "
+mixamo_dir = os.path.join(base_dir, "mixamo", "Character")
+out_path = os.path.join(base_dir, "client", "public", "models", "AnimatedSoldier.glb")
 
 character_file = os.path.join(mixamo_dir, "Character.fbx")
 
 if not os.path.exists(character_file):
-    print("\n[ERROR] Character.fbx not found in the 'mixamo' folder!")
-    print(f"Expected to find it here: {character_file}")
+    print(f"\n[ERROR] Character.fbx not found in the 'mixamo' folder!\nExpected to find it here: {character_file}")
     sys.exit(1)
 
 print("\n--- IMPORTING CHARACTER ---")
@@ -85,6 +84,14 @@ for fbx in fbx_files:
         if obj != main_armature and obj.parent != main_armature:
             obj.select_set(True)
     bpy.ops.object.delete()
+
+print("\n--- REMOVING DEFAULT GUN ---")
+bpy.ops.object.select_all(action='DESELECT')
+for obj in bpy.context.scene.objects:
+    if "Mesh" in obj.name or "rifle" in obj.name.lower():
+        obj.select_set(True)
+        print(f"Deleting leftover mesh: {obj.name}")
+bpy.ops.object.delete()
 
 print("\n--- EXPORTING GLB ---")
 # Create output directory if it doesn't exist

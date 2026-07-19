@@ -41,8 +41,11 @@ export namespace warbase {
         /** ClientEvent respawnRequest. */
         respawnRequest?: (warbase.RespawnRequestEvent.$Properties|null);
 
+        /** ClientEvent throwGrenade. */
+        throwGrenade?: (warbase.ThrowGrenadeEvent.$Properties|null);
+
         /** ClientEvent event. */
-        event?: ("stateUpdate"|"hit"|"fire"|"reload"|"switchWeapon"|"respawnRequest");
+        event?: ("stateUpdate"|"hit"|"fire"|"reload"|"switchWeapon"|"respawnRequest"|"throwGrenade");
 
         /**
          * Creates a new ClientEvent instance using the specified properties.
@@ -146,8 +149,11 @@ export namespace warbase {
             /** ClientEvent respawnRequest */
             respawnRequest?: (warbase.RespawnRequestEvent.$Properties|null);
 
+            /** ClientEvent throwGrenade */
+            throwGrenade?: (warbase.ThrowGrenadeEvent.$Properties|null);
+
             /** ClientEvent event */
-            event?: ("stateUpdate"|"hit"|"fire"|"reload"|"switchWeapon"|"respawnRequest");
+            event?: ("stateUpdate"|"hit"|"fire"|"reload"|"switchWeapon"|"respawnRequest"|"throwGrenade");
 
             /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
@@ -161,9 +167,10 @@ export namespace warbase {
           reload?: warbase.ReloadEvent.$Shape|null;
           switchWeapon?: warbase.SwitchWeaponEvent.$Shape|null;
           respawnRequest?: warbase.RespawnRequestEvent.$Shape|null;
+          throwGrenade?: warbase.ThrowGrenadeEvent.$Shape|null;
           $unknowns?: Uint8Array[];
         } & (
-          ({ event?: undefined; stateUpdate?: null; hit?: null; fire?: null; reload?: null; switchWeapon?: null; respawnRequest?: null }|{ event?: "stateUpdate"; stateUpdate: warbase.PlayerStateUpdate.$Shape; hit?: null; fire?: null; reload?: null; switchWeapon?: null; respawnRequest?: null }|{ event?: "hit"; stateUpdate?: null; hit: warbase.HitEvent.$Shape; fire?: null; reload?: null; switchWeapon?: null; respawnRequest?: null }|{ event?: "fire"; stateUpdate?: null; hit?: null; fire: warbase.FireEvent.$Shape; reload?: null; switchWeapon?: null; respawnRequest?: null }|{ event?: "reload"; stateUpdate?: null; hit?: null; fire?: null; reload: warbase.ReloadEvent.$Shape; switchWeapon?: null; respawnRequest?: null }|{ event?: "switchWeapon"; stateUpdate?: null; hit?: null; fire?: null; reload?: null; switchWeapon: warbase.SwitchWeaponEvent.$Shape; respawnRequest?: null }|{ event?: "respawnRequest"; stateUpdate?: null; hit?: null; fire?: null; reload?: null; switchWeapon?: null; respawnRequest: warbase.RespawnRequestEvent.$Shape })
+          ({ event?: undefined; stateUpdate?: null; hit?: null; fire?: null; reload?: null; switchWeapon?: null; respawnRequest?: null; throwGrenade?: null }|{ event?: "stateUpdate"; stateUpdate: warbase.PlayerStateUpdate.$Shape; hit?: null; fire?: null; reload?: null; switchWeapon?: null; respawnRequest?: null; throwGrenade?: null }|{ event?: "hit"; stateUpdate?: null; hit: warbase.HitEvent.$Shape; fire?: null; reload?: null; switchWeapon?: null; respawnRequest?: null; throwGrenade?: null }|{ event?: "fire"; stateUpdate?: null; hit?: null; fire: warbase.FireEvent.$Shape; reload?: null; switchWeapon?: null; respawnRequest?: null; throwGrenade?: null }|{ event?: "reload"; stateUpdate?: null; hit?: null; fire?: null; reload: warbase.ReloadEvent.$Shape; switchWeapon?: null; respawnRequest?: null; throwGrenade?: null }|{ event?: "switchWeapon"; stateUpdate?: null; hit?: null; fire?: null; reload?: null; switchWeapon: warbase.SwitchWeaponEvent.$Shape; respawnRequest?: null; throwGrenade?: null }|{ event?: "respawnRequest"; stateUpdate?: null; hit?: null; fire?: null; reload?: null; switchWeapon?: null; respawnRequest: warbase.RespawnRequestEvent.$Shape; throwGrenade?: null }|{ event?: "throwGrenade"; stateUpdate?: null; hit?: null; fire?: null; reload?: null; switchWeapon?: null; respawnRequest?: null; throwGrenade: warbase.ThrowGrenadeEvent.$Shape })
         );
     }
 
@@ -906,6 +913,153 @@ export namespace warbase {
     }
 
     /**
+     * Properties of a ThrowGrenadeEvent.
+     * @deprecated Use warbase.ThrowGrenadeEvent.$Properties instead.
+     */
+    interface IThrowGrenadeEvent extends warbase.ThrowGrenadeEvent.$Properties {
+    }
+
+    /** Represents a ThrowGrenadeEvent. */
+    class ThrowGrenadeEvent {
+
+        /**
+         * Constructs a new ThrowGrenadeEvent.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: warbase.ThrowGrenadeEvent.$Properties);
+
+        /** Unknown fields preserved while decoding when enabled */
+        $unknowns?: Uint8Array[];
+
+        /** ThrowGrenadeEvent px. */
+        px: number;
+
+        /** ThrowGrenadeEvent py. */
+        py: number;
+
+        /** ThrowGrenadeEvent pz. */
+        pz: number;
+
+        /** ThrowGrenadeEvent vx. */
+        vx: number;
+
+        /** ThrowGrenadeEvent vy. */
+        vy: number;
+
+        /** ThrowGrenadeEvent vz. */
+        vz: number;
+
+        /**
+         * Creates a new ThrowGrenadeEvent instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns ThrowGrenadeEvent instance
+         */
+        static create(properties: warbase.ThrowGrenadeEvent.$Shape): warbase.ThrowGrenadeEvent & warbase.ThrowGrenadeEvent.$Shape;
+        static create(properties?: warbase.ThrowGrenadeEvent.$Properties): warbase.ThrowGrenadeEvent;
+
+        /**
+         * Encodes the specified ThrowGrenadeEvent message. Does not implicitly {@link warbase.ThrowGrenadeEvent.verify|verify} messages.
+         * @param message ThrowGrenadeEvent message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encode(message: warbase.ThrowGrenadeEvent.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Encodes the specified ThrowGrenadeEvent message, length delimited. Does not implicitly {@link warbase.ThrowGrenadeEvent.verify|verify} messages.
+         * @param message ThrowGrenadeEvent message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encodeDelimited(message: warbase.ThrowGrenadeEvent.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Decodes a ThrowGrenadeEvent message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns {warbase.ThrowGrenadeEvent & warbase.ThrowGrenadeEvent.$Shape} ThrowGrenadeEvent
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): warbase.ThrowGrenadeEvent & warbase.ThrowGrenadeEvent.$Shape;
+
+        /**
+         * Decodes a ThrowGrenadeEvent message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns {warbase.ThrowGrenadeEvent & warbase.ThrowGrenadeEvent.$Shape} ThrowGrenadeEvent
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): warbase.ThrowGrenadeEvent & warbase.ThrowGrenadeEvent.$Shape;
+
+        /**
+         * Verifies a ThrowGrenadeEvent message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        static verify(message: { [k: string]: any }): (string|null);
+
+        /**
+         * Creates a ThrowGrenadeEvent message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns ThrowGrenadeEvent
+         */
+        static fromObject(object: { [k: string]: any }): warbase.ThrowGrenadeEvent;
+
+        /**
+         * Creates a plain object from a ThrowGrenadeEvent message. Also converts values to other types if specified.
+         * @param message ThrowGrenadeEvent
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        static toObject(message: warbase.ThrowGrenadeEvent, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+        /**
+         * Converts this ThrowGrenadeEvent to JSON.
+         * @returns JSON object
+         */
+        toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the type url for ThrowGrenadeEvent
+         * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns The type url
+         */
+        static getTypeUrl(prefix?: string): string;
+    }
+
+    namespace ThrowGrenadeEvent {
+
+        /** Properties of a ThrowGrenadeEvent. */
+        interface $Properties {
+
+            /** ThrowGrenadeEvent px */
+            px?: (number|null);
+
+            /** ThrowGrenadeEvent py */
+            py?: (number|null);
+
+            /** ThrowGrenadeEvent pz */
+            pz?: (number|null);
+
+            /** ThrowGrenadeEvent vx */
+            vx?: (number|null);
+
+            /** ThrowGrenadeEvent vy */
+            vy?: (number|null);
+
+            /** ThrowGrenadeEvent vz */
+            vz?: (number|null);
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+        }
+
+        /** Shape of a ThrowGrenadeEvent. */
+        type $Shape = warbase.ThrowGrenadeEvent.$Properties;
+    }
+
+    /**
      * Properties of a ServerMessage.
      * @deprecated Use warbase.ServerMessage.$Properties instead.
      */
@@ -1377,8 +1531,11 @@ export namespace warbase {
         /** ServerEvent killConfirmed. */
         killConfirmed?: (warbase.KillConfirmedEvent.$Properties|null);
 
+        /** ServerEvent throwGrenade. */
+        throwGrenade?: (warbase.ServerThrowGrenadeEvent.$Properties|null);
+
         /** ServerEvent event. */
-        event?: ("respawn"|"fire"|"hitConfirmed"|"killConfirmed");
+        event?: ("respawn"|"fire"|"hitConfirmed"|"killConfirmed"|"throwGrenade");
 
         /**
          * Creates a new ServerEvent instance using the specified properties.
@@ -1476,8 +1633,11 @@ export namespace warbase {
             /** ServerEvent killConfirmed */
             killConfirmed?: (warbase.KillConfirmedEvent.$Properties|null);
 
+            /** ServerEvent throwGrenade */
+            throwGrenade?: (warbase.ServerThrowGrenadeEvent.$Properties|null);
+
             /** ServerEvent event */
-            event?: ("respawn"|"fire"|"hitConfirmed"|"killConfirmed");
+            event?: ("respawn"|"fire"|"hitConfirmed"|"killConfirmed"|"throwGrenade");
 
             /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
@@ -1489,9 +1649,10 @@ export namespace warbase {
           fire?: warbase.ServerFireEvent.$Shape|null;
           hitConfirmed?: warbase.HitConfirmedEvent.$Shape|null;
           killConfirmed?: warbase.KillConfirmedEvent.$Shape|null;
+          throwGrenade?: warbase.ServerThrowGrenadeEvent.$Shape|null;
           $unknowns?: Uint8Array[];
         } & (
-          ({ event?: undefined; respawn?: null; fire?: null; hitConfirmed?: null; killConfirmed?: null }|{ event?: "respawn"; respawn: warbase.RespawnEvent.$Shape; fire?: null; hitConfirmed?: null; killConfirmed?: null }|{ event?: "fire"; respawn?: null; fire: warbase.ServerFireEvent.$Shape; hitConfirmed?: null; killConfirmed?: null }|{ event?: "hitConfirmed"; respawn?: null; fire?: null; hitConfirmed: warbase.HitConfirmedEvent.$Shape; killConfirmed?: null }|{ event?: "killConfirmed"; respawn?: null; fire?: null; hitConfirmed?: null; killConfirmed: warbase.KillConfirmedEvent.$Shape })
+          ({ event?: undefined; respawn?: null; fire?: null; hitConfirmed?: null; killConfirmed?: null; throwGrenade?: null }|{ event?: "respawn"; respawn: warbase.RespawnEvent.$Shape; fire?: null; hitConfirmed?: null; killConfirmed?: null; throwGrenade?: null }|{ event?: "fire"; respawn?: null; fire: warbase.ServerFireEvent.$Shape; hitConfirmed?: null; killConfirmed?: null; throwGrenade?: null }|{ event?: "hitConfirmed"; respawn?: null; fire?: null; hitConfirmed: warbase.HitConfirmedEvent.$Shape; killConfirmed?: null; throwGrenade?: null }|{ event?: "killConfirmed"; respawn?: null; fire?: null; hitConfirmed?: null; killConfirmed: warbase.KillConfirmedEvent.$Shape; throwGrenade?: null }|{ event?: "throwGrenade"; respawn?: null; fire?: null; hitConfirmed?: null; killConfirmed?: null; throwGrenade: warbase.ServerThrowGrenadeEvent.$Shape })
         );
     }
 
@@ -1961,5 +2122,158 @@ export namespace warbase {
 
         /** Shape of a KillConfirmedEvent. */
         type $Shape = warbase.KillConfirmedEvent.$Properties;
+    }
+
+    /**
+     * Properties of a ServerThrowGrenadeEvent.
+     * @deprecated Use warbase.ServerThrowGrenadeEvent.$Properties instead.
+     */
+    interface IServerThrowGrenadeEvent extends warbase.ServerThrowGrenadeEvent.$Properties {
+    }
+
+    /** Represents a ServerThrowGrenadeEvent. */
+    class ServerThrowGrenadeEvent {
+
+        /**
+         * Constructs a new ServerThrowGrenadeEvent.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: warbase.ServerThrowGrenadeEvent.$Properties);
+
+        /** Unknown fields preserved while decoding when enabled */
+        $unknowns?: Uint8Array[];
+
+        /** ServerThrowGrenadeEvent shooterId. */
+        shooterId: string;
+
+        /** ServerThrowGrenadeEvent px. */
+        px: number;
+
+        /** ServerThrowGrenadeEvent py. */
+        py: number;
+
+        /** ServerThrowGrenadeEvent pz. */
+        pz: number;
+
+        /** ServerThrowGrenadeEvent vx. */
+        vx: number;
+
+        /** ServerThrowGrenadeEvent vy. */
+        vy: number;
+
+        /** ServerThrowGrenadeEvent vz. */
+        vz: number;
+
+        /**
+         * Creates a new ServerThrowGrenadeEvent instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns ServerThrowGrenadeEvent instance
+         */
+        static create(properties: warbase.ServerThrowGrenadeEvent.$Shape): warbase.ServerThrowGrenadeEvent & warbase.ServerThrowGrenadeEvent.$Shape;
+        static create(properties?: warbase.ServerThrowGrenadeEvent.$Properties): warbase.ServerThrowGrenadeEvent;
+
+        /**
+         * Encodes the specified ServerThrowGrenadeEvent message. Does not implicitly {@link warbase.ServerThrowGrenadeEvent.verify|verify} messages.
+         * @param message ServerThrowGrenadeEvent message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encode(message: warbase.ServerThrowGrenadeEvent.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Encodes the specified ServerThrowGrenadeEvent message, length delimited. Does not implicitly {@link warbase.ServerThrowGrenadeEvent.verify|verify} messages.
+         * @param message ServerThrowGrenadeEvent message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encodeDelimited(message: warbase.ServerThrowGrenadeEvent.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Decodes a ServerThrowGrenadeEvent message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns {warbase.ServerThrowGrenadeEvent & warbase.ServerThrowGrenadeEvent.$Shape} ServerThrowGrenadeEvent
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): warbase.ServerThrowGrenadeEvent & warbase.ServerThrowGrenadeEvent.$Shape;
+
+        /**
+         * Decodes a ServerThrowGrenadeEvent message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns {warbase.ServerThrowGrenadeEvent & warbase.ServerThrowGrenadeEvent.$Shape} ServerThrowGrenadeEvent
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): warbase.ServerThrowGrenadeEvent & warbase.ServerThrowGrenadeEvent.$Shape;
+
+        /**
+         * Verifies a ServerThrowGrenadeEvent message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        static verify(message: { [k: string]: any }): (string|null);
+
+        /**
+         * Creates a ServerThrowGrenadeEvent message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns ServerThrowGrenadeEvent
+         */
+        static fromObject(object: { [k: string]: any }): warbase.ServerThrowGrenadeEvent;
+
+        /**
+         * Creates a plain object from a ServerThrowGrenadeEvent message. Also converts values to other types if specified.
+         * @param message ServerThrowGrenadeEvent
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        static toObject(message: warbase.ServerThrowGrenadeEvent, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+        /**
+         * Converts this ServerThrowGrenadeEvent to JSON.
+         * @returns JSON object
+         */
+        toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the type url for ServerThrowGrenadeEvent
+         * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns The type url
+         */
+        static getTypeUrl(prefix?: string): string;
+    }
+
+    namespace ServerThrowGrenadeEvent {
+
+        /** Properties of a ServerThrowGrenadeEvent. */
+        interface $Properties {
+
+            /** ServerThrowGrenadeEvent shooterId */
+            shooterId?: (string|null);
+
+            /** ServerThrowGrenadeEvent px */
+            px?: (number|null);
+
+            /** ServerThrowGrenadeEvent py */
+            py?: (number|null);
+
+            /** ServerThrowGrenadeEvent pz */
+            pz?: (number|null);
+
+            /** ServerThrowGrenadeEvent vx */
+            vx?: (number|null);
+
+            /** ServerThrowGrenadeEvent vy */
+            vy?: (number|null);
+
+            /** ServerThrowGrenadeEvent vz */
+            vz?: (number|null);
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+        }
+
+        /** Shape of a ServerThrowGrenadeEvent. */
+        type $Shape = warbase.ServerThrowGrenadeEvent.$Properties;
     }
 }
