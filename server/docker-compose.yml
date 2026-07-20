@@ -3,8 +3,8 @@ version: '3.8'
 services:
   warbase-server:
     build: 
-      context: .
-      dockerfile: Dockerfile
+      context: ../
+      dockerfile: server/Dockerfile
     container_name: warbase-server
     restart: unless-stopped
     ports:

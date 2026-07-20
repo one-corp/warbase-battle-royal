@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"net/http/pprof"
+	"os"
 )
 
 func (app *application) routes() http.Handler {
@@ -21,6 +22,14 @@ func (app *application) routes() http.Handler {
 		}
 	})
 
+	// Serve the compiled frontend game
+	distPath := "../client/dist"
+	if os.Getenv("ENV") == "production" {
+		distPath = "/app/dist"
+	}
+	fileServer := http.FileServer(http.Dir(distPath))
+	mux.Handle("/", fileServer)
+
 	// Profiling endpoints
 	mux.HandleFunc("/debug/pprof/", pprof.Index)
 	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
@@ -28,9 +37,6 @@ func (app *application) routes() http.Handler {
 	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 
-	// Serve the compiled Vite frontend from ../client/dist
-	fileServer := http.FileServer(http.Dir("../client/dist"))
-	mux.Handle("/", fileServer)
 
 	return mux
 }

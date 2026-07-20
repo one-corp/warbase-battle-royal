@@ -1,25 +1,32 @@
-# Build Stage
-FROM golang:1.22-alpine AS builder
+# Stage 1: Build Frontend (Node.js)
+FROM node:20-alpine AS frontend-builder
+WORKDIR /app/client
+# Copy package files first to cache dependencies
+COPY client/package*.json ./
+RUN npm install
+# Copy the rest of the frontend code and build
+COPY client/ .
+RUN npm run build
 
-WORKDIR /app
-
-# Copy go mod files first for caching
-COPY go.mod go.sum* ./
+# Stage 2: Build Backend (Go)
+FROM golang:1.22-alpine AS backend-builder
+WORKDIR /app/server
+# Copy go mod files to cache dependencies
+COPY server/go.mod server/go.sum* ./
 RUN go mod download
-
-# Copy source code
-COPY . .
-
-# Build the Go server
+# Copy the rest of the backend code and build
+COPY server/ .
 RUN CGO_ENABLED=0 GOOS=linux go build -o /server_bin ./cmd/game
 
-# Run Stage
+# Stage 3: Final Image
 FROM alpine:latest
-
 WORKDIR /app
 
-# Copy the binary from the builder stage
-COPY --from=builder /server_bin /app/server_bin
+# Copy the compiled Go binary
+COPY --from=backend-builder /server_bin /app/server_bin
+
+# Copy the compiled frontend game to /app/dist
+COPY --from=frontend-builder /app/client/dist /app/dist
 
 # Expose the WebSocket port
 EXPOSE 8081
