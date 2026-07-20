@@ -19,7 +19,7 @@ import {
 } from '@babylonjs/core';
 import '@babylonjs/core/Engines/WebGPU/Extensions/index.js';
 import HavokPhysics from '@babylonjs/havok';
-import './ui/style.css';
+
 import "@babylonjs/loaders/glTF"; 
 import { EnvironmentManager } from './engine/Environment';
 import { initPlayer } from './ecs/systems/PlayerSystem';
@@ -201,6 +201,7 @@ async function createScene(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElem
 async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElement, username: string, mapChoice: string = "original", roomId: string) {
     try {
         const { scene, playerEid } = await createScene(engine, canvas, mapChoice);
+
         activeScene = scene;
 
         // Network Setup
@@ -524,6 +525,7 @@ const canvas = document.getElementById("renderCanvas") as HTMLCanvasElement;
 if (canvas) {
     initEngine(canvas).then((engine) => {
         const mainMenu = new MainMenuScene(engine);
+        (window as any).mainMenu = mainMenu; // Store on window for proper disposal
         activeScene = mainMenu.scene;
 
         // Frame limiter variables
@@ -549,12 +551,16 @@ if (canvas) {
         const joinBtn = document.getElementById("joinButton") as HTMLButtonElement;
         const loginUI = document.getElementById("loginUI");
         const usernameInput = document.getElementById("usernameInput") as HTMLInputElement;
+        const btnDeployText = document.getElementById("btn-deploy-text");
 
         if (joinBtn && loginUI && usernameInput) {
+            // Enable the deploy button once engine is ready
             joinBtn.disabled = false;
-            joinBtn.innerHTML = `<span class="btn-text">DEPLOY TO COMBAT</span><div class="btn-glow"></div>`;
+            joinBtn.style.opacity = "1";
+            if (btnDeployText) btnDeployText.innerText = "DEPLOY TO COMBAT";
 
             joinBtn.addEventListener("click", () => {
+                console.log("=== JOIN BUTTON CLICKED IN MAIN.TS ===");
                 let username = usernameInput.value.trim();
                 if (!username || username.toLowerCase() === "guest") {
                     username = "Guest_" + Math.floor(Math.random() * 10000);
@@ -567,26 +573,35 @@ if (canvas) {
                 let roomId = roomIdInput ? roomIdInput.value : "";
                 let mapChoice = mapInput ? mapInput.value : "original";
                 
+                console.log("Join inputs - username:", username, "roomId:", roomId, "mapChoice:", mapChoice);
+                
                 if (!roomId) {
+                    console.error("Join blocked: roomId is empty!");
                     alert("Please select a server or create a match first.");
                     return;
                 }
                 
-                joinBtn.disabled = true; // Prevent double click
-                joinBtn.innerHTML = `<span class="btn-text">LOADING ENVIRONMENT...</span><div class="btn-glow"></div>`;
+                joinBtn.disabled = true;
+                if (btnDeployText) btnDeployText.innerText = "LOADING ENVIRONMENT...";
                 
-                // Do not dispose the main menu yet! We want to keep rendering it while the new scene loads asynchronously in the background.
+                // Dispose the 3D menu scene EARLY to free GPU memory and avoid buffer conflicts
+                // when the game scene loads the same GLB models
+                if ((window as any).mainMenu) {
+                    (window as any).mainMenu.dispose();
+                    (window as any).mainMenu = null;
+                    activeScene = null;
+                }
+                
+                console.log("Starting game with roomId:", roomId);
                 startGame(engine, canvas, username, mapChoice, roomId).then(() => {
-                    // Once fully loaded, hide the UI and dispose the menu
+                    console.log("Game successfully started, hiding login UI");
+                    // Hide the menu overlay — canvas is now fully interactive
                     loginUI.style.display = "none";
                     const uiLayer = document.getElementById("uiLayer");
                     if (uiLayer) uiLayer.style.display = "flex";
-                    if ((window as any).mainMenu) {
-                        (window as any).mainMenu.dispose();
-                    }
                 }).catch(err => {
                     joinBtn.disabled = false;
-                    joinBtn.innerHTML = `<span class="btn-text">JOIN MATCH</span><div class="btn-glow"></div>`;
+                    if (btnDeployText) btnDeployText.innerText = "DEPLOY TO COMBAT";
                     const errorLog = document.getElementById("errorLog");
                     if (errorLog) errorLog.innerText = "Error loading map: " + (err.message || err);
                 });

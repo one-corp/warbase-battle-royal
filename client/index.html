@@ -3,137 +3,212 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WebGPU FPS (V2)</title>
+    <title>WARBASE — Tactical FPS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   </head>
   <body>
-    <!-- Multiplayer Login UI (Modern Main Menu) -->
-    <div id="loginUI" class="main-menu-container">
-      
-      <!-- Top Brand -->
-      <div class="menu-top-nav" style="background: transparent; border-bottom: none; pointer-events: none; width: auto;">
-        <div class="nav-brand">
-          <span class="brand-icon">///</span>
-          <span class="brand-text">WARBASE</span>
+    <!-- ═══════════════════════════════════════════════════════════════
+         MAIN MENU — Full-screen opaque overlay. 
+         pointer-events: auto on EVERYTHING. No canvas click-through.
+         The 3D character renders on the canvas BEHIND this overlay,
+         but we use a translucent dark background so the character 
+         is subtly visible as ambiance.
+    ═══════════════════════════════════════════════════════════════ -->
+    <div id="loginUI" style="
+      position: fixed; 
+      inset: 0; 
+      z-index: 1000; 
+      display: flex;
+      background: linear-gradient(135deg, rgba(8,10,14,0.92) 0%, rgba(15,18,25,0.95) 50%, rgba(8,10,14,0.92) 100%);
+      font-family: 'Rajdhani', 'Segoe UI', sans-serif;
+      color: #e0e0e0;
+      overflow: hidden;
+    ">
+      <!-- ── LEFT SIDEBAR NAV ── -->
+      <div id="menu-sidebar" style="
+        width: 320px; min-width: 320px;
+        background: linear-gradient(180deg, rgba(12,14,18,0.98) 0%, rgba(18,20,26,0.98) 100%);
+        border-right: 1px solid rgba(207,165,95,0.15);
+        display: flex; flex-direction: column;
+        padding: 0;
+        position: relative;
+      ">
+        <!-- Brand -->
+        <div style="padding: 40px 35px 30px; border-bottom: 1px solid rgba(255,255,255,0.06);">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-family: 'Share Tech Mono', monospace; font-size: 28px; color: #cfa55f; letter-spacing: 4px;">///</span>
+            <span style="font-size: 32px; font-weight: 700; letter-spacing: 8px; color: #fff;">WARBASE</span>
+          </div>
+          <div style="font-family: 'Share Tech Mono', monospace; font-size: 11px; color: rgba(207,165,95,0.6); margin-top: 8px; letter-spacing: 3px;">TACTICAL OPERATIONS v1.0</div>
+        </div>
+
+        <!-- Nav Items -->
+        <div style="flex: 1; padding: 30px 0;">
+          <div class="sidebar-nav-item active" data-tab="join" id="nav-join">
+            <span class="nav-indicator"></span>
+            <span class="nav-label">JOIN ROOM</span>
+          </div>
+          <div class="sidebar-nav-item" data-tab="create" id="nav-create">
+            <span class="nav-indicator"></span>
+            <span class="nav-label">CREATE ROOM</span>
+          </div>
+          <div class="sidebar-nav-item" data-tab="loadouts" id="nav-loadouts">
+            <span class="nav-indicator"></span>
+            <span class="nav-label">LOADOUTS</span>
+          </div>
+          <div class="sidebar-nav-item" data-tab="settings" id="nav-settings">
+            <span class="nav-indicator"></span>
+            <span class="nav-label">SETTINGS</span>
+          </div>
+        </div>
+
+        <!-- Server Status (Bottom of sidebar) -->
+        <div style="padding: 20px 35px; border-top: 1px solid rgba(255,255,255,0.06); font-family: 'Share Tech Mono', monospace; font-size: 11px;">
+          <div style="color: rgba(207,165,95,0.8); margin-bottom: 4px;">SERVER: US-EAST</div>
+          <div style="color: rgba(100,255,100,0.7);">● ONLINE — 24ms</div>
         </div>
       </div>
 
-      <!-- Left Navigation Sidebar -->
-      <div class="main-left-nav">
-        <div class="main-nav-item active" id="nav-join">JOIN MATCH</div>
-        <div class="main-nav-item" id="nav-create">CREATE MATCH</div>
-        <div class="main-nav-item" id="nav-loadouts">LOADOUTS</div>
-        <div class="main-nav-item" id="nav-store">STORE</div>
-        <div class="main-nav-item" id="nav-settings">SETTINGS</div>
-      </div>
-
-      <!-- Server Location Indicator (Bottom Left) -->
-      <div class="server-location-indicator">
-        <div class="server-icon">
-          <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none">
-            <circle cx="12" cy="12" r="10"></circle>
-            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-            <path d="M2 12h20"></path>
-          </svg>
-        </div>
-        <div class="server-details">
-          <span class="server-region">SERVER: US EAST (N. VIRGINIA)</span>
-          <span class="server-ping">PING: <span style="color: #ffaa00;">24ms</span></span>
-        </div>
-      </div>
-
-      <!-- Center Dynamic Content -->
-      <div id="center-content-area" style="position: absolute; left: 400px; top: 100px; bottom: 50px; right: 450px; display: flex; align-items: flex-start; justify-content: flex-start; pointer-events: none;">
+      <!-- ── CENTER CONTENT ── -->
+      <div id="menu-center" style="flex: 1; display: flex; flex-direction: column; padding: 40px 50px; overflow-y: auto; position: relative;">
         
-        <!-- Server Browser View -->
-        <div class="menu-glass-panel" id="view-server-browser" style="display: flex; width: 100%; max-width: 800px; pointer-events: auto; max-height: 80%; overflow-y: auto;">
-          <div class="loadout-header">
-            <span class="loadout-title">SERVER BROWSER</span>
-            <span class="loadout-level" style="cursor: pointer;" id="refresh-servers-btn"><strong style="color:#c3834c; font-size: 16px;">REFRESH ↻</strong></span>
+        <!-- TAB: JOIN MATCH (Server Browser) -->
+        <div class="tab-content active" id="tab-join">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+            <h1 style="font-size: 28px; font-weight: 700; letter-spacing: 4px; color: #fff; margin: 0;">SERVER BROWSER</h1>
+            <button id="refresh-servers-btn" style="
+              background: none; border: 1px solid rgba(207,165,95,0.4); color: #cfa55f;
+              font-family: 'Rajdhani', sans-serif; font-size: 14px; font-weight: 600;
+              letter-spacing: 2px; padding: 8px 20px; cursor: pointer;
+              transition: all 0.2s;
+            ">REFRESH ↻</button>
           </div>
+          <div id="server-list-container" style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="color: rgba(255,255,255,0.4); font-family: 'Share Tech Mono', monospace; padding: 40px 0; text-align: center;">Fetching active zones...</div>
+          </div>
+        </div>
+
+        <!-- TAB: CREATE MATCH -->
+        <div class="tab-content" id="tab-create">
+          <h1 style="font-size: 28px; font-weight: 700; letter-spacing: 4px; color: #fff; margin: 0 0 30px 0;">CREATE ROOM</h1>
           
-          <div class="server-list" id="server-list-container">
-            <!-- Populated by JS -->
-            <div style="color: rgba(255,255,255,0.5); padding: 20px; font-family: monospace;">Fetching active zones...</div>
+          <div style="margin-bottom: 30px;">
+            <label style="display: block; font-size: 12px; font-weight: 600; letter-spacing: 3px; color: #cfa55f; margin-bottom: 10px;">OPERATION NAME</label>
+            <input type="text" id="roomNameInput" placeholder="Enter operation name..." autocomplete="off" style="
+              width: 100%; max-width: 500px; padding: 14px 18px;
+              background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+              color: #fff; font-family: 'Rajdhani', sans-serif; font-size: 16px;
+              outline: none; transition: border-color 0.2s;
+            " />
           </div>
+
+          <div style="margin-bottom: 30px;">
+            <label style="display: block; font-size: 12px; font-weight: 600; letter-spacing: 3px; color: #cfa55f; margin-bottom: 15px;">SELECT COMBAT ZONE</label>
+            <div id="create-map-cards" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; max-width: 800px;">
+              <div class="map-select-card active" data-map="industrial">
+                <div class="map-select-name">INDUSTRIAL ZONE</div>
+              </div>
+              <div class="map-select-card" data-map="village">
+                <div class="map-select-name">VILLAGE</div>
+              </div>
+              <div class="map-select-card" data-map="arena">
+                <div class="map-select-name">GAME ARENA</div>
+              </div>
+              <div class="map-select-card" data-map="ghost_city">
+                <div class="map-select-name">GHOST CITY</div>
+              </div>
+            </div>
+          </div>
+
+          <button id="initializeMatchBtn" style="
+            background: linear-gradient(135deg, #cfa55f 0%, #a07830 100%);
+            border: none; color: #0a0a0a; font-family: 'Rajdhani', sans-serif;
+            font-size: 18px; font-weight: 700; letter-spacing: 3px;
+            padding: 16px 50px; cursor: pointer; transition: all 0.2s;
+            clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+          ">INITIALIZE OPERATION</button>
         </div>
 
-        <!-- Create Match View -->
-        <div class="menu-glass-panel" id="view-create-match" style="display: none; width: 100%; max-width: 800px; pointer-events: auto; max-height: 80%; overflow-y: auto;">
-          <div class="loadout-header">
-            <span class="loadout-title">CREATE MATCH</span>
-          </div>
-          
-          <div class="menu-input-group" style="margin-bottom: 25px;">
-             <label style="color: #c3834c; font-weight: bold; letter-spacing: 2px; display: block; margin-bottom: 10px;">OPERATION NAME</label>
-             <input type="text" id="roomNameInput" placeholder="Enter Operation Name..." autocomplete="off" />
-          </div>
-
-          <label style="color: #c3834c; font-weight: bold; letter-spacing: 2px; display: block; margin-bottom: 10px;">SELECT COMBAT ZONE</label>
-          <div class="map-cards-container" id="create-map-cards">
-            <div class="map-card active" data-map="industrial">
-              <div class="map-card-bg"></div>
-              <div class="map-card-title">INDUSTRIAL ZONE</div>
-            </div>
-            <div class="map-card" data-map="village">
-              <div class="map-card-bg"></div>
-              <div class="map-card-title">VILLAGE</div>
-            </div>
-            <div class="map-card" data-map="arena">
-              <div class="map-card-bg"></div>
-              <div class="map-card-title">GAME ARENA</div>
-            </div>
-            <div class="map-card" data-map="ghost_city">
-              <div class="map-card-bg"></div>
-              <div class="map-card-title">GHOST CITY</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Loadouts View -->
-        <div class="menu-glass-panel" id="view-loadouts" style="display: none; width: 100%; max-width: 800px; pointer-events: auto; max-height: 80%; overflow-y: auto;">
-          <div class="loadout-header">
-            <span class="loadout-title">RECON</span>
-            <span class="loadout-level">Level <strong style="color:white; font-size: 24px;">24</strong></span>
-          </div>
-
-          <div class="weapon-card">
-            <div class="weapon-category-title">PRIMARY WEAPON</div>
-            <div class="weapon-card-content">
-              <div class="weapon-card-left">
-                <div class="weapon-card-name">AK-47 RIFLE</div>
-                <div class="weapon-card-desc">Tactical, matte black, reliable</div>
-                <div style="font-size: 40px; margin-top: 10px; filter: grayscale(100%) opacity(50%);">🔫</div>
-              </div>
-              <div class="weapon-card-stats">
-                <div class="stat-row"><span class="stat-label">DAMAGE</span><div class="stat-bar-bg"><div class="stat-bar-fill" style="width: 68%;"></div></div><span class="stat-val">68/100</span></div>
-                <div class="stat-row"><span class="stat-label">ACCURACY</span><div class="stat-bar-bg"><div class="stat-bar-fill" style="width: 55%;"></div></div><span class="stat-val">55/100</span></div>
-                <div class="stat-row"><span class="stat-label">RANGE</span><div class="stat-bar-bg"><div class="stat-bar-fill" style="width: 70%;"></div></div><span class="stat-val">70/100</span></div>
+        <!-- TAB: LOADOUTS -->
+        <div class="tab-content" id="tab-loadouts">
+          <h1 style="font-size: 28px; font-weight: 700; letter-spacing: 4px; color: #fff; margin: 0 0 30px 0;">LOADOUTS</h1>
+          <div style="display: flex; flex-direction: column; gap: 20px; max-width: 600px;">
+            <!-- Primary -->
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 25px;">
+              <div style="font-size: 11px; letter-spacing: 3px; color: #cfa55f; margin-bottom: 12px;">PRIMARY WEAPON</div>
+              <div style="font-size: 22px; font-weight: 700; color: #fff;">AK-47 RIFLE</div>
+              <div style="font-size: 13px; color: rgba(255,255,255,0.4); margin-top: 4px;">Tactical, matte black, reliable</div>
+              <div style="margin-top: 15px; display: flex; flex-direction: column; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <span style="font-size: 11px; letter-spacing: 2px; color: rgba(255,255,255,0.5); width: 80px;">DAMAGE</span>
+                  <div style="flex: 1; height: 4px; background: rgba(255,255,255,0.1); position: relative;"><div style="width: 68%; height: 100%; background: #cfa55f;"></div></div>
+                  <span style="font-size: 11px; color: rgba(255,255,255,0.5); width: 40px; text-align: right;">68</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <span style="font-size: 11px; letter-spacing: 2px; color: rgba(255,255,255,0.5); width: 80px;">ACCURACY</span>
+                  <div style="flex: 1; height: 4px; background: rgba(255,255,255,0.1); position: relative;"><div style="width: 55%; height: 100%; background: #cfa55f;"></div></div>
+                  <span style="font-size: 11px; color: rgba(255,255,255,0.5); width: 40px; text-align: right;">55</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <span style="font-size: 11px; letter-spacing: 2px; color: rgba(255,255,255,0.5); width: 80px;">RANGE</span>
+                  <div style="flex: 1; height: 4px; background: rgba(255,255,255,0.1); position: relative;"><div style="width: 70%; height: 100%; background: #cfa55f;"></div></div>
+                  <span style="font-size: 11px; color: rgba(255,255,255,0.5); width: 40px; text-align: right;">70</span>
+                </div>
               </div>
             </div>
-          </div>
-
-          <div class="weapon-card">
-            <div class="weapon-category-title">SECONDARY WEAPON</div>
-            <div class="weapon-card-content">
-              <div class="weapon-card-left">
-                <div class="weapon-card-name">M1911 PISTOL</div>
-                <div class="weapon-card-desc">Semi-auto, high headshot multiplier</div>
-                <div style="font-size: 30px; margin-top: 10px; filter: grayscale(100%) opacity(50%);">🔫</div>
-              </div>
-              <div class="weapon-card-stats">
-                <div class="stat-row"><span class="stat-label">DAMAGE</span><div class="stat-bar-bg"><div class="stat-bar-fill" style="width: 40%;"></div></div><span class="stat-val">40/100</span></div>
-                <div class="stat-row"><span class="stat-label">ACCURACY</span><div class="stat-bar-bg"><div class="stat-bar-fill" style="width: 75%;"></div></div><span class="stat-val">75/100</span></div>
-              </div>
+            <!-- Secondary -->
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 25px;">
+              <div style="font-size: 11px; letter-spacing: 3px; color: #cfa55f; margin-bottom: 12px;">SECONDARY WEAPON</div>
+              <div style="font-size: 22px; font-weight: 700; color: #fff;">M1911 PISTOL</div>
+              <div style="font-size: 13px; color: rgba(255,255,255,0.4); margin-top: 4px;">Semi-auto, high headshot multiplier</div>
             </div>
           </div>
         </div>
 
+        <!-- TAB: SETTINGS -->
+        <div class="tab-content" id="tab-settings">
+          <h1 style="font-size: 28px; font-weight: 700; letter-spacing: 4px; color: #fff; margin: 0 0 30px 0;">SETTINGS</h1>
+          <div style="max-width: 500px; display: flex; flex-direction: column; gap: 15px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
+              <label style="color: rgba(255,255,255,0.7);">SSAO (Ambient Occlusion)</label>
+              <input type="checkbox" id="optSSAO" />
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
+              <label style="color: rgba(255,255,255,0.7);">SSR (Screen Space Reflections)</label>
+              <input type="checkbox" id="optSSR" />
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
+              <label style="color: rgba(255,255,255,0.7);">Ultra Shadows (4096 + PCSS)</label>
+              <input type="checkbox" id="optUltraShadows" />
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
+              <label style="color: rgba(255,255,255,0.7);">4x MSAA Anti-Aliasing</label>
+              <input type="checkbox" id="optMSAA" />
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
+              <label style="color: rgba(255,255,255,0.7);">Chromatic Aberration</label>
+              <input type="checkbox" id="optChromatic" />
+            </div>
+          </div>
+        </div>
       </div>
 
-      <!-- Always-Visible Bottom Right Deployment Hub -->
-      <div class="deployment-hub">
-        <div class="deployment-hub-title" id="deploy-hub-title">NO ZONE SELECTED</div>
+      <!-- ── RIGHT PANEL: Deploy Hub ── -->
+      <div id="menu-deploy" style="
+        width: 340px; min-width: 340px;
+        background: linear-gradient(180deg, rgba(12,14,18,0.98) 0%, rgba(18,20,26,0.98) 100%);
+        border-left: 1px solid rgba(207,165,95,0.15);
+        display: flex; flex-direction: column;
+        justify-content: flex-end;
+        padding: 40px 30px;
+      ">
+        <!-- Deploy Info -->
+        <div style="margin-bottom: 25px;">
+          <div style="font-size: 11px; letter-spacing: 3px; color: rgba(207,165,95,0.6); margin-bottom: 8px;">DEPLOYMENT STATUS</div>
+          <div id="deploy-hub-title" style="font-size: 18px; font-weight: 700; letter-spacing: 2px; color: #fff;">NO ZONE SELECTED</div>
+        </div>
 
+        <!-- Hidden inputs for state -->
         <input type="hidden" id="selectedRoomId" value="" />
         <input type="hidden" id="selectedMap" value="" />
         <select id="mapSelector" style="display: none;">
@@ -143,272 +218,60 @@
           <option value="ghost_city">Ghost City</option>
         </select>
 
-        <div class="menu-input-group" style="margin-bottom: 20px;">
-          <input type="text" id="usernameInput" placeholder="Enter Callsign..." autocomplete="off" />
+        <!-- Username -->
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-size: 11px; letter-spacing: 3px; color: rgba(207,165,95,0.6); margin-bottom: 8px;">CALLSIGN</label>
+          <input type="text" id="usernameInput" placeholder="Enter callsign..." autocomplete="off" style="
+            width: 100%; padding: 12px 16px;
+            background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+            color: #fff; font-family: 'Rajdhani', sans-serif; font-size: 15px;
+            outline: none; transition: border-color 0.2s;
+          " />
         </div>
 
-        <button id="joinButton" disabled class="btn-deploy floating-deploy">
-          <span class="btn-text" id="btn-deploy-text">INITIALIZING ENGINE...</span>
-          <div class="btn-glow"></div>
+        <!-- Deploy Button -->
+        <button id="joinButton" disabled style="
+          width: 100%; padding: 18px; border: none; cursor: pointer;
+          background: linear-gradient(135deg, #cfa55f 0%, #a07830 100%);
+          color: #0a0a0a; font-family: 'Rajdhani', sans-serif;
+          font-size: 18px; font-weight: 700; letter-spacing: 4px;
+          transition: all 0.3s; opacity: 0.4;
+          clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+        ">
+          <span id="btn-deploy-text">INITIALIZING ENGINE...</span>
         </button>
         
-        <div id="errorLog" class="error-log"></div>
+        <div id="errorLog" style="margin-top: 12px; font-size: 12px; color: #ff4444; font-family: 'Share Tech Mono', monospace;"></div>
       </div>
-
-      <script>
-        // Simple script to handle UI tabs and map selection
-        // Simple script to handle UI tabs and map selection
-        document.addEventListener('DOMContentLoaded', () => {
-          const navItems = document.querySelectorAll('.main-nav-item');
-          const viewLoadouts = document.getElementById('view-loadouts');
-          const viewServerBrowser = document.getElementById('view-server-browser');
-          const viewCreateMatch = document.getElementById('view-create-match');
-          const btnDeployText = document.getElementById('btn-deploy-text');
-          const deployHubTitle = document.getElementById('deploy-hub-title');
-          const selectedRoomIdInput = document.getElementById('selectedRoomId');
-          const joinButton = document.getElementById('joinButton');
-          const mapSelector = document.getElementById('mapSelector');
-
-          function refreshServers() {
-            const container = document.getElementById('server-list-container');
-            container.innerHTML = '<div style="color: rgba(255,255,255,0.5); padding: 20px; font-family: monospace;">Fetching active zones...</div>';
-            
-            fetch('/api/rooms')
-              .then(res => res.json())
-              .then(data => {
-                container.innerHTML = '';
-                if (!data.rooms || data.rooms.length === 0) {
-                  container.innerHTML = '<div style="color: rgba(255,255,255,0.5); padding: 20px; font-family: monospace;">No active combat zones found. Create one.</div>';
-                  return;
-                }
-                
-                data.rooms.forEach(room => {
-                  const div = document.createElement('div');
-                  div.className = 'server-list-item';
-                  div.innerHTML = `
-                    <div style="display:flex; justify-content: space-between; align-items: center;">
-                      <div>
-                        <div style="color: #fff; font-weight: bold; font-size: 18px; margin-bottom: 5px; text-transform: uppercase;">${room.name}</div>
-                        <div style="color: #c3834c; font-size: 12px; font-family: monospace;">MAP: ${room.map.toUpperCase()} &nbsp;&nbsp;|&nbsp;&nbsp; PLAYERS: ${room.playerCount}</div>
-                      </div>
-                      <button class="server-join-btn">SELECT</button>
-                    </div>
-                  `;
-                  div.querySelector('.server-join-btn').addEventListener('click', () => {
-                    // Deselect all
-                    document.querySelectorAll('.server-list-item').forEach(el => el.style.border = '1px solid rgba(195, 131, 76, 0.2)');
-                    div.style.border = '1px solid #c3834c';
-                    
-                    selectedRoomIdInput.value = room.id;
-                    document.getElementById('selectedMap').value = room.map;
-                    
-                    deployHubTitle.innerText = `SELECTED: ${room.name.toUpperCase()}`;
-                    btnDeployText.innerText = 'JOIN MATCH';
-                    joinButton.disabled = false;
-                  });
-                  container.appendChild(div);
-                });
-              })
-              .catch(err => {
-                container.innerHTML = '<div style="color: red; padding: 20px; font-family: monospace;">Failed to fetch servers.</div>';
-              });
-          }
-
-          document.getElementById('refresh-servers-btn').addEventListener('click', refreshServers);
-
-          navItems.forEach(item => {
-            item.addEventListener('click', () => {
-              // Remove active from all
-              navItems.forEach(n => n.classList.remove('active'));
-              item.classList.add('active');
-              
-              viewLoadouts.style.display = 'none';
-              viewServerBrowser.style.display = 'none';
-              viewCreateMatch.style.display = 'none';
-              
-              if (item.id === 'nav-loadouts') {
-                viewLoadouts.style.display = 'flex';
-              } else if (item.id === 'nav-join') {
-                viewServerBrowser.style.display = 'flex';
-                refreshServers();
-              } else if (item.id === 'nav-create') {
-                viewCreateMatch.style.display = 'flex';
-              }
-            });
-          });
-
-          // Create Match Map Selection Logic
-          const mapCards = document.querySelectorAll('#create-map-cards .map-card');
-          mapCards.forEach(card => {
-            card.addEventListener('click', () => {
-              mapCards.forEach(c => c.classList.remove('active'));
-              card.classList.add('active');
-              mapSelector.value = card.getAttribute('data-map');
-            });
-          });
-
-          // Create Room Logic: Add a button inside view-create-match
-          const createMatchContainer = document.getElementById('view-create-match');
-          const createBtn = document.createElement('button');
-          createBtn.className = 'btn-deploy floating-deploy';
-          createBtn.style.marginTop = '20px';
-          createBtn.style.width = '100%';
-          createBtn.style.position = 'relative';
-          createBtn.innerHTML = `<span class="btn-text">INITIALIZE NEW OPERATION</span><div class="btn-glow"></div>`;
-          createMatchContainer.appendChild(createBtn);
-
-          createBtn.addEventListener('click', () => {
-            const roomName = document.getElementById('roomNameInput').value.trim() || 'Classified Operation';
-            const mapName = mapSelector.value;
-            
-            createBtn.disabled = true;
-            createBtn.querySelector('.btn-text').innerText = 'INITIALIZING...';
-
-            fetch('/api/rooms', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ name: roomName, map: mapName })
-            })
-            .then(res => res.json())
-            .then(data => {
-              if(data.room_id) {
-                selectedRoomIdInput.value = data.room_id;
-                document.getElementById('selectedMap').value = mapName;
-                // Click the actual join button that main.ts listens to
-                joinButton.disabled = false;
-                joinButton.click();
-              } else {
-                throw new Error("Failed to get room ID");
-              }
-            })
-            .catch(err => {
-              console.error(err);
-              createBtn.disabled = false;
-              createBtn.querySelector('.btn-text').innerText = 'INITIALIZE NEW OPERATION';
-            });
-          });
-
-          // Initial fetch
-          refreshServers();
-        });
-      </script>
     </div>
-    
-    <script>
-      window.onerror = function(msg, url, lineNo, columnNo, error) {
-          const log = document.getElementById("errorLog");
-          if (log) log.innerHTML += msg + "<br/>";
-          return false;
-      };
-    </script>
-    
+
+    <!-- Canvas sits BEHIND the menu overlay -->
     <canvas id="renderCanvas"></canvas>
-    
-    <!-- UI Overlay -->
-    <div id="uiLayer">
-      <div id="crosshair"></div>
-      
-      <!-- Performance Metrics (Top Left) -->
-      <div id="metricsPanel" style="display: none; position: absolute; top: 15px; left: 15px; background: rgba(0, 0, 0, 0.7); border: 1px solid #444; border-radius: 6px; padding: 10px; color: #e8b070; font-family: monospace; font-size: 14px; pointer-events: none; z-index: 50;">
-        <div style="font-weight: bold; margin-bottom: 5px; color: white;">PERFORMANCE</div>
-        <div>FPS: <span id="metricFps">0</span></div>
-        <div>CPU Time: <span id="metricCpu">0.0</span> ms</div>
-        <div>GPU Time: <span id="metricGpu">0.0</span> ms</div>
-        <div>RAM: <span id="metricRam">0</span> MB</div>
-        <div style="margin-top: 5px;">Draw Calls: <span id="metricDrawCalls">0</span></div>
-        <div>Active Meshes: <span id="metricMeshes">0</span></div>
-        <div style="font-size: 11px; color: #aaa; margin-top: 5px;">Engine: <span id="metricEngine">Unknown</span></div>
-      </div>
 
-      <div class="hud-bottom">
-        <div class="health-bar-container">
-            <div id="healthBar"></div>
-            <span id="healthText">100 HP</span>
-        </div>
-        
-        <div class="weapon-selector-hud">
-          <div class="weapon-slot active" id="slot-primary">
-            <div class="slot-number">1</div>
-            <div class="weapon-info">
-              <div class="weapon-name">AK-47</div>
-              <div class="weapon-ammo" id="ammoText">30 / 120</div>
-            </div>
-            <div class="weapon-icon">🔫</div>
-          </div>
-          
-          <div class="weapon-slot" id="slot-secondary">
-            <div class="slot-number">2</div>
-            <div class="weapon-info">
-              <div class="weapon-name">PISTOL</div>
-              <div class="weapon-ammo" id="ammoTextSecondary" style="display: none;">12 / 48</div>
-            </div>
-            <div class="weapon-icon">🔫</div>
-          </div>
-          
-          <div class="weapon-slot" id="slot-grenade">
-            <div class="slot-number">G</div>
-            <div class="weapon-info">
-              <div class="weapon-name">GRENADE</div>
-              <div class="weapon-ammo" id="grenadeCount">(&infin;)</div>
-            </div>
-            <div class="weapon-icon">💣</div>
-          </div>
+    <!-- In-game HUD (hidden until game starts) -->
+    <div id="uiLayer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none; flex-direction: column; justify-content: space-between;">
+      <div id="crosshair" style="position: absolute; top: 50%; left: 50%; width: 20px; height: 20px; transform: translate(-50%, -50%); pointer-events: none;"></div>
+      <div style="position: absolute; bottom: 30px; left: 30px; right: 30px; display: flex; justify-content: space-between; align-items: flex-end;">
+        <div style="width: 250px; background: rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 4px; position: relative;">
+          <div id="healthBar" style="width: 100%; height: 20px; background: linear-gradient(90deg, #ff416c 0%, #ff4b2b 100%); border-radius: 2px; transition: width 0.2s ease;"></div>
+          <div id="healthText" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-weight: bold; font-size: 14px; text-shadow: 1px 1px 2px black;">100 HP</div>
         </div>
       </div>
+    </div>
 
+    <!-- Death Screen -->
+    <div id="deathScreen" style="display: none; position: fixed; inset: 0; background: rgba(139,0,0,0.4); z-index: 2000; justify-content: center; align-items: center; flex-direction: column;">
+      <h1 style="color: white; font-size: 48px; text-shadow: 2px 2px 10px rgba(0,0,0,0.8);">YOU DIED</h1>
+      <p style="color: rgba(255,255,255,0.7); font-size: 18px;">Respawning in <span id="respawnTimer">3</span>s...</p>
+    </div>
 
+    <!-- Pointer Lock Warning -->
+    <div id="pointerWarning" style="display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 10px 20px; border-radius: 5px; z-index: 1500; font-family: 'Rajdhani', sans-serif;">Click to capture mouse</div>
 
-      <!-- Pointer Lock Warning -->
-      <div id="pointerWarning" style="display: none; position: absolute; top: 15px; right: 15px; background: rgba(220, 53, 69, 0.9); color: white; padding: 12px 20px; border-radius: 6px; z-index: 100; font-family: sans-serif; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
-        ⚠️ Game Paused - Click to Resume
-      </div>
-
-      <!-- Death Screen -->
-      <div id="deathScreen" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(150, 0, 0, 0.6); z-index: 1000; flex-direction: column; justify-content: center; align-items: center; color: white; font-family: sans-serif;">
-        <h1 style="font-size: 5rem; margin: 0; text-shadow: 2px 2px 5px black;">YOU DIED</h1>
-        <p style="font-size: 1.5rem; margin-top: 10px;">Respawning in <span id="respawnTimer">3</span>...</p>
-      </div>
-
-      <!-- Scoreboard Overlay -->
-      <div id="scoreboardUI" style="display: none; pointer-events: auto; position: absolute; top: 10%; left: 20%; width: 60%; background: rgba(0,0,0,0.8); border: 2px solid #555; border-radius: 8px; color: white; font-family: monospace; padding: 20px; z-index: 1000; overflow: visible;">
-        <h2 style="text-align: center; margin-top: 0;">SCOREBOARD</h2>
-        <div style="text-align: center; margin-bottom: 20px; font-size: 14px; color: #aaa;">
-          Active Engine: <span id="engineTypeIndicator" style="color: #4CAF50; font-weight: bold;">Loading...</span>
-        </div>
-        
-        <!-- Graphics Settings (Moved to Tab Screen) -->
-        <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 4px; margin-bottom: 20px; text-align: center; font-family: sans-serif;">
-          <div style="margin-bottom: 10px;">
-            <strong style="margin-right: 15px;">Engine:</strong>
-            <select id="engineSelector" style="padding: 5px; background: #222; color: white; border: 1px solid #555; border-radius: 4px;">
-                <option value="auto">Auto (WebGPU prefer)</option>
-                <option value="webgl">Force WebGL 2.0</option>
-            </select>
-            <button id="toggleInspectorBtn" style="margin-left: 15px; padding: 5px 10px; background: #4a4a4a; color: white; border: 1px solid #666; border-radius: 4px; cursor: pointer;">
-                Toggle Performance Metrics
-            </button>
-          </div>
-          <div style="margin-top: 10px; margin-bottom: 15px;">
-            <strong style="margin-right: 15px;">Skybox:</strong>
-            <select id="skyboxSelector" style="padding: 5px; background: #222; color: white; border: 1px solid #555; border-radius: 4px;">
-                <option value="environment.env">Normal Day (Clear)</option>
-                <option value="country.env">Country</option>
-                <option value="Runyon_Canyon_A_2k_cube_specular.env">Canyon</option>
-                <option value="night.env">Night</option>
-            </select>
-          </div>
-          <div style="text-align: center; border-top: 1px solid #666; padding-top: 10px;">
-              <h3 style="color: #ff5555; margin-top: 0; margin-bottom: 10px;">PRO GRAPHICS (High-End GPUs Only)</h3>
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; max-width: 450px; margin: 0 auto; color: white;">
-                  <label><input type="checkbox" id="optSSAO"> SSAO (Ambient Occlusion)</label>
-                  <label><input type="checkbox" id="optSSR"> SSR (Screen Space Reflections)</label>
-                  <label><input type="checkbox" id="optUltraShadows"> Ultra Shadows (4096 + PCSS)</label>
-                  <label><input type="checkbox" id="optMSAA"> 4x MSAA (Anti-Aliasing)</label>
-                  <label><input type="checkbox" id="optChromatic"> Chromatic Aberration</label>
-              </div>
-              <div style="font-size: 12px; color: #aaa; margin-top: 10px;">* Ultra Shadows requires page reload</div>
-          </div>
-        </div>
+    <!-- Scoreboard -->
+    <div id="scoreboard" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1800; justify-content: center; align-items: center;">
+      <div style="background: rgba(30,30,30,0.95); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 30px; width: 600px; max-height: 80vh; overflow-y: auto; font-family: 'Rajdhani', sans-serif; color: white;">
+        <h2 style="text-align: center; margin-bottom: 20px; letter-spacing: 4px; color: #cfa55f;">SCOREBOARD</h2>
         <table style="width: 100%; border-collapse: collapse; text-align: left;">
           <thead>
             <tr style="border-bottom: 2px solid #555;">
@@ -418,12 +281,159 @@
               <th style="padding: 10px;">Ping</th>
             </tr>
           </thead>
-          <tbody id="scoreboardBody">
-            <!-- Rows injected here -->
-          </tbody>
+          <tbody id="scoreboardBody"></tbody>
         </table>
       </div>
     </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         MENU LOGIC — All tab switching, server browser, and create match.
+         This runs BEFORE the bundled main.ts Vite script.
+    ═══════════════════════════════════════════════════════════════ -->
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        // ── Tab Navigation ──
+        const navItems = document.querySelectorAll('.sidebar-nav-item');
+        const tabs = document.querySelectorAll('.tab-content');
+        
+        navItems.forEach(item => {
+          item.addEventListener('click', () => {
+            const tabId = 'tab-' + item.getAttribute('data-tab');
+            
+            navItems.forEach(n => n.classList.remove('active'));
+            item.classList.add('active');
+            
+            tabs.forEach(t => t.classList.remove('active'));
+            const target = document.getElementById(tabId);
+            if (target) target.classList.add('active');
+          });
+        });
+
+        // ── Server Browser ──
+        const joinButton = document.getElementById('joinButton');
+        const selectedRoomIdInput = document.getElementById('selectedRoomId');
+        const deployHubTitle = document.getElementById('deploy-hub-title');
+        const btnDeployText = document.getElementById('btn-deploy-text');
+        const mapSelector = document.getElementById('mapSelector');
+
+        function refreshServers() {
+          const container = document.getElementById('server-list-container');
+          container.innerHTML = '<div style="color: rgba(255,255,255,0.4); font-family: \'Share Tech Mono\', monospace; padding: 40px 0; text-align: center;">Fetching active zones...</div>';
+          
+          fetch('/api/rooms')
+            .then(res => res.json())
+            .then(data => {
+              container.innerHTML = '';
+              if (!data.rooms || data.rooms.length === 0) {
+                container.innerHTML = '<div style="color: rgba(255,255,255,0.4); font-family: \'Share Tech Mono\', monospace; padding: 40px 0; text-align: center;">No active combat zones. Create one.</div>';
+                return;
+              }
+              
+              data.rooms.forEach(room => {
+                const div = document.createElement('div');
+                div.className = 'server-row';
+                div.innerHTML = `
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                      <div style="color: #fff; font-weight: 700; font-size: 16px; letter-spacing: 1px; text-transform: uppercase;">${room.name}</div>
+                      <div style="color: rgba(207,165,95,0.7); font-size: 12px; font-family: 'Share Tech Mono', monospace; margin-top: 4px;">MAP: ${room.map.toUpperCase()} &nbsp;|&nbsp; PLAYERS: ${room.playerCount}</div>
+                    </div>
+                    <button class="server-select-btn">SELECT</button>
+                  </div>
+                `;
+                div.querySelector('.server-select-btn').addEventListener('click', (e) => {
+                  e.stopPropagation();
+                  document.querySelectorAll('.server-row').forEach(el => el.classList.remove('selected'));
+                  div.classList.add('selected');
+                  
+                  selectedRoomIdInput.value = room.id;
+                  document.getElementById('selectedMap').value = room.map;
+                  deployHubTitle.innerText = room.name.toUpperCase();
+                  btnDeployText.innerText = 'DEPLOY TO COMBAT';
+                  joinButton.disabled = false;
+                  joinButton.style.opacity = '1';
+                });
+                container.appendChild(div);
+              });
+            })
+            .catch(err => {
+              container.innerHTML = '<div style="color: #ff4444; font-family: \'Share Tech Mono\', monospace; padding: 40px 0; text-align: center;">Failed to fetch servers.</div>';
+            });
+        }
+
+        document.getElementById('refresh-servers-btn').addEventListener('click', refreshServers);
+
+        // ── Create Match: Map Selection ──
+        const mapCards = document.querySelectorAll('#create-map-cards .map-select-card');
+        mapCards.forEach(card => {
+          card.addEventListener('click', () => {
+            mapCards.forEach(c => c.classList.remove('active'));
+            card.classList.add('active');
+            mapSelector.value = card.getAttribute('data-map');
+          });
+        });
+
+        // ── Create Match: Initialize Button ──
+        const createBtn = document.getElementById('initializeMatchBtn');
+        createBtn.addEventListener('click', () => {
+          console.log('=== INITIALIZE BUTTON CLICKED ===');
+          const roomName = document.getElementById('roomNameInput').value.trim() || 'Classified Operation';
+          const mapName = mapSelector.value;
+          
+          createBtn.disabled = true;
+          createBtn.innerText = 'INITIALIZING...';
+
+          fetch('/api/rooms', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: roomName, map: mapName })
+          })
+          .then(res => res.json())
+          .then(data => {
+            console.log('Room created:', JSON.stringify(data));
+            if (data.room_id) {
+              selectedRoomIdInput.value = data.room_id;
+              document.getElementById('selectedMap').value = mapName;
+              deployHubTitle.innerText = roomName.toUpperCase();
+              btnDeployText.innerText = 'DEPLOY TO COMBAT';
+              joinButton.disabled = false;
+              joinButton.style.opacity = '1';
+              
+              createBtn.innerText = 'SERVER ONLINE';
+              createBtn.style.background = '#2e7d32'; // green success
+              
+              setTimeout(() => {
+                createBtn.innerText = 'INITIALIZE OPERATION';
+                createBtn.style.background = 'rgba(255,255,255,0.05)'; // reset
+                createBtn.disabled = false;
+              }, 2000);
+            } else {
+              throw new Error('No room_id received');
+            }
+          })
+          .catch(err => {
+            console.error('Create room error:', err);
+            createBtn.disabled = false;
+            createBtn.innerText = 'INITIALIZE OPERATION';
+          });
+        });
+
+        // ── Nav tab auto-triggers ──
+        // When clicking JOIN tab, auto-refresh server list
+        document.getElementById('nav-join').addEventListener('click', refreshServers);
+
+        // Initial fetch
+        refreshServers();
+      });
+    </script>
+
+    <script>
+      window.onerror = function(msg, url, lineNo, columnNo, error) {
+        const log = document.getElementById("errorLog");
+        if (log) log.innerHTML += msg + "<br/>";
+        return false;
+      };
+    </script>
 
     <script type="module" src="/src/main.ts"></script>
   </body>
