@@ -206,8 +206,64 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
 
         // Network Setup
         const multiplayerEntities = new MultiplayerEntities(scene);
-        const networkManager = new NetworkManager(username, roomId, () => {
-        });
+        const networkManager = new NetworkManager(username, roomId, () => {});
+
+        // ESC to return to main menu (now with confirmation popup)
+        const exitPopup = document.getElementById("exitPopup");
+        const btnExitConfirm = document.getElementById("btnExitConfirm");
+        const btnExitCancel = document.getElementById("btnExitCancel");
+
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === "Escape") {
+                document.exitPointerLock();
+                if (exitPopup) {
+                    if (exitPopup.style.display === "flex") {
+                        exitPopup.style.display = "none";
+                        // Optionally auto-lock again, but browser might require a click
+                    } else {
+                        exitPopup.style.display = "flex";
+                    }
+                }
+            }
+        };
+        window.addEventListener("keydown", handleEscape);
+        
+        if (btnExitConfirm) {
+            btnExitConfirm.onclick = () => {
+                if (exitPopup) exitPopup.style.display = "none";
+                networkManager.disconnect();
+                
+                const uiLayer = document.getElementById("uiLayer");
+                if (uiLayer) uiLayer.style.display = "none";
+                
+                const loginUI = document.getElementById("loginUI");
+                if (loginUI) loginUI.style.display = "flex";
+                
+                const btnDeployText = document.getElementById("btn-deploy-text");
+                if (btnDeployText) btnDeployText.innerText = "DEPLOY TO COMBAT";
+                
+                const joinBtn = document.getElementById("joinButton") as HTMLButtonElement;
+                if (joinBtn) joinBtn.disabled = false;
+                
+                window.removeEventListener("keydown", handleEscape);
+                if (scene && (scene as any).cleanupEventListeners) {
+                    (scene as any).cleanupEventListeners();
+                }
+                scene.dispose();
+                activeScene = null;
+                
+                const mainMenu = new MainMenuScene(engine as Engine);
+                (window as any).mainMenu = mainMenu;
+                activeScene = mainMenu.scene;
+            };
+        }
+        
+        if (btnExitCancel) {
+            btnExitCancel.onclick = () => {
+                if (exitPopup) exitPopup.style.display = "none";
+                canvas.requestPointerLock();
+            };
+        }
 
         await initWeapons(playerEid, scene, networkManager);
         const updateWeaponSystem = createWeaponSystem(scene, networkManager);
@@ -261,10 +317,23 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
             if (scoreboardBody) {
                 let html = "";
                 const sortedPlayers = Object.entries(globalState).sort((a, b) => (b[1].kills || 0) - (a[1].kills || 0) || a[0].localeCompare(b[0]));
+                
+                // Helper to prevent XSS
+                const escapeHTML = (str: string) => {
+                    return str.replace(/[&<>'"]/g, tag => ({
+                        '&': '&amp;',
+                        '<': '&lt;',
+                        '>': '&gt;',
+                        "'": '&#39;',
+                        '"': '&quot;'
+                    }[tag] || tag));
+                };
+
                 for (const [id, p] of sortedPlayers) {
+                    const safeId = escapeHTML(id);
                     html += `
                         <tr style="border-bottom: 1px solid #444; color: ${p.isDead ? '#ff4444' : 'white'}">
-                            <td style="padding: 8px;">${id === username ? id + ' (You)' : id} ${p.isDead ? '(DEAD)' : ''}</td>
+                            <td style="padding: 8px;">${id === username ? safeId + ' (You)' : safeId} ${p.isDead ? '(DEAD)' : ''}</td>
                             <td style="padding: 8px;">${p.kills || 0}</td>
                             <td style="padding: 8px;">${p.deaths || 0}</td>
                             <td style="padding: 8px; color: #4ade80;">12ms</td>
@@ -380,15 +449,14 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
         let isLocked = false;
         const pointerWarning = document.getElementById("pointerWarning");
         
-        canvas.addEventListener("click", () => {
+        const handleCanvasClick = () => {
             if (!isLocked && !isLocalDead) {
                 engine.enterPointerlock();
             }
-        });
+        };
+        canvas.addEventListener("click", handleCanvasClick);
 
-
-
-        document.addEventListener("pointerlockchange", () => {
+        const handlePointerLockChange = () => {
             if (document.pointerLockElement === canvas) {
                 isLocked = true;
                 if (pointerWarning) pointerWarning.style.display = "none";
@@ -396,35 +464,46 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
                 isLocked = false;
                 if (pointerWarning) pointerWarning.style.display = "block";
             }
-        });
+        };
+        document.addEventListener("pointerlockchange", handlePointerLockChange);
 
         // Scoreboard (TAB)
-        const scoreboard = document.getElementById("scoreboardUI");
+        const scoreboard = document.getElementById("scoreboardUI") || document.getElementById("scoreboard");
         const scoreboardBody = document.getElementById("scoreboardBody");
         const engineIndicator = document.getElementById("engineTypeIndicator");
         
-        window.addEventListener("keydown", (e) => {
+        const handleTabDown = (e: KeyboardEvent) => {
             if (e.code === "Tab") {
                 e.preventDefault();
                 if (e.repeat) return;
                 if (scoreboard && scoreboardBody) {
-                    scoreboard.style.display = "block";
+                    scoreboard.style.display = "flex"; // Match deathscreen/scoreboard flex layout
                     document.exitPointerLock();
                     if (engineIndicator) {
-                        engineIndicator.innerText = currentEngineType;
-                        engineIndicator.style.color = currentEngineType === "WebGPU" ? "#00FF00" : "#FFA500";
+                        engineIndicator.innerText = (window as any).currentEngineType || "WebGPU";
+                        engineIndicator.style.color = (window as any).currentEngineType === "WebGPU" ? "#00FF00" : "#FFA500";
                     }
                 }
             }
-        });
+        };
+        window.addEventListener("keydown", handleTabDown);
 
-        window.addEventListener("keyup", (e) => {
+        const handleTabUp = (e: KeyboardEvent) => {
             if (e.code === "Tab") {
                 if (scoreboard) {
                     scoreboard.style.display = "none";
                 }
             }
-        });
+        };
+        window.addEventListener("keyup", handleTabUp);
+
+        // Store cleanup handles on the scene so they can be triggered from btnExitConfirm
+        (scene as any).cleanupEventListeners = () => {
+            canvas.removeEventListener("click", handleCanvasClick);
+            document.removeEventListener("pointerlockchange", handlePointerLockChange);
+            window.removeEventListener("keydown", handleTabDown);
+            window.removeEventListener("keyup", handleTabUp);
+        };
 
         // Engine Select Logic
         const engineSelector = document.getElementById("engineSelector") as HTMLSelectElement;

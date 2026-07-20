@@ -36,6 +36,7 @@ const _targetVel = new Vector3();
 const _currentVel = new Vector3();
 const _platformVel = new Vector3();
 const _newVel = new Vector3();
+const _localDir = new Vector3();
 
 export function playerMovementSystem(dt: number, scene: any) {
     const entities = playerQuery(world);
@@ -115,8 +116,8 @@ export function playerMovementSystem(dt: number, scene: any) {
         if (InputComponent.left[eid]) dirX -= 1;
         if (InputComponent.right[eid]) dirX += 1;
 
-        const localDir = new Vector3(dirX, 0, dirZ);
-        if (localDir.length() > 0) localDir.normalize();
+        _localDir.set(dirX, 0, dirZ);
+        if (_localDir.length() > 0) _localDir.normalize();
 
         camera.getDirectionToRef(Vector3.Forward(), _tempForward);
         _tempForward.y = 0;
@@ -133,11 +134,11 @@ export function playerMovementSystem(dt: number, scene: any) {
 
         const STRAFE_MULTIPLIER = 0.5; 
         
-        _targetVel.copyFrom(_tempForward).scaleInPlace(localDir.z);
-        _targetVel.addInPlace(_tempRight.scaleInPlace(localDir.x * STRAFE_MULTIPLIER));
+        _targetVel.copyFrom(_tempForward).scaleInPlace(_localDir.z);
+        _targetVel.addInPlace(_tempRight.scaleInPlace(_localDir.x * STRAFE_MULTIPLIER));
         _targetVel.scaleInPlace(targetSpeed);
 
-        const accel = isGrounded ? (localDir.length() > 0 ? GROUND_ACCEL : GROUND_DECEL) : (localDir.length() > 0 ? AIR_ACCEL : AIR_DECEL);
+        const accel = isGrounded ? (_localDir.length() > 0 ? GROUND_ACCEL : GROUND_DECEL) : (_localDir.length() > 0 ? AIR_ACCEL : AIR_DECEL);
 
         body.getLinearVelocityToRef(_currentVel);
         
@@ -173,7 +174,7 @@ export function playerMovementSystem(dt: number, scene: any) {
         const targetCamY = PlayerComponent.isCrouching[eid] ? CROUCH_CAM_Y : STAND_CAM_Y;
         camera.position.y = Scalar.Lerp(camera.position.y, targetCamY, CROUCH_LERP_SPEED * dt);
 
-        if (isGrounded && localDir.length() > 0) {
+        if (isGrounded && _localDir.length() > 0) {
             const freq = isSprinting ? 2.8 : 2.0;
             const ampY = isSprinting ? 0.008 : 0.006; // Reduced sprint bob
             const ampX = isSprinting ? 0.007 : 0.005; // Reduced sprint bob

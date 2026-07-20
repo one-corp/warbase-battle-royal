@@ -2,6 +2,7 @@ package engine
 
 import (
 	"log"
+	"math"
 	"math/rand"
 	"sync"
 	"time"
@@ -9,6 +10,10 @@ import (
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/proto"
 )
+
+func isValidFloat32(f float32) bool {
+	return !math.IsNaN(float64(f)) && !math.IsInf(float64(f), 0)
+}
 
 // Internal server wrapper to identify who sent a raw network packet
 type Message struct {
@@ -121,6 +126,11 @@ func (m *Match) Broadcast(msg Message) {
 }
 
 func (m *Match) triggerServerRespawn(playerID string, roomID string) {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Printf("Panic in triggerServerRespawn: %v", err)
+		}
+	}()
 	// Wait 5 seconds
 	time.Sleep(5 * time.Second)
 	m.respawnChan <- RespawnRequest{PlayerID: playerID, RoomID: roomID}
@@ -142,6 +152,11 @@ func (m *Match) sendDirectEventLocked(playerID string, event *ServerMessage) {
 }
 
 func (m *Match) Run() {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Printf("CRITICAL PANIC in Match.Run(): %v", err)
+		}
+	}()
 	// Your friend upgraded the tick rate to 60Hz!
 	ticker := time.NewTicker(time.Second / 60)
 	defer ticker.Stop()
@@ -259,13 +274,17 @@ func (m *Match) Run() {
 						player.State.Animation = "death"
 					} else {
 						// Update client-authoritative values (positions, rotations, anim)
-						player.State.X = event.StateUpdate.X
-						player.State.Y = event.StateUpdate.Y
-						player.State.Z = event.StateUpdate.Z
-						player.State.Rx = event.StateUpdate.Rx
-						player.State.Ry = event.StateUpdate.Ry
-						player.State.Rz = event.StateUpdate.Rz
-						player.State.Rw = event.StateUpdate.Rw
+						if isValidFloat32(event.StateUpdate.X) && isValidFloat32(event.StateUpdate.Y) && isValidFloat32(event.StateUpdate.Z) {
+							player.State.X = event.StateUpdate.X
+							player.State.Y = event.StateUpdate.Y
+							player.State.Z = event.StateUpdate.Z
+						}
+						if isValidFloat32(event.StateUpdate.Rx) && isValidFloat32(event.StateUpdate.Ry) && isValidFloat32(event.StateUpdate.Rz) && isValidFloat32(event.StateUpdate.Rw) {
+							player.State.Rx = event.StateUpdate.Rx
+							player.State.Ry = event.StateUpdate.Ry
+							player.State.Rz = event.StateUpdate.Rz
+							player.State.Rw = event.StateUpdate.Rw
+						}
 						player.State.Animation = event.StateUpdate.Animation
 						player.State.PlatformId = event.StateUpdate.PlatformId
 					}

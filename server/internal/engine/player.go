@@ -97,11 +97,14 @@ func (p *Player) ValidateAndApplyHit(target *Player, clientDamage int) (bool, er
 	if p.IsReloading {
 		return false, errors.New("shooter was reloading")
 	}
+	if p.ID == target.ID {
+		return false, errors.New("cannot shoot yourself")
+	}
 
 	// Basic cheat check: e.g. 3x headshot mult
 	maxDamage := int(float64(p.ActiveWeapon.Damage) * 3.0)
-	if clientDamage > maxDamage {
-		return false, errors.New("impossible damage")
+	if clientDamage <= 0 || clientDamage > maxDamage {
+		return false, errors.New("invalid or impossible damage")
 	}
 
 	target.State.Health -= int32(clientDamage)

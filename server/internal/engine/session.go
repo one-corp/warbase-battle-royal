@@ -37,6 +37,9 @@ func NewGameSession(match *Match, conn *websocket.Conn, playerID string, roomID 
 // ListenForPlayerInputs runs continuously in the background, catching packets from the browser.
 func (s *GameSession) ListenForPlayerInputs() {
 	defer func() {
+		if err := recover(); err != nil {
+			log.Printf("Panic in ListenForPlayerInputs for %s: %v", s.PlayerID, err)
+		}
 		s.match.Unregister(s) // Using exported method to maintain clean boundaries
 		s.networkConn.Close()
 	}()
@@ -66,6 +69,9 @@ func (s *GameSession) ListenForPlayerInputs() {
 func (s *GameSession) StreamUpdatesToPlayer() {
 	ticker := time.NewTicker(networkPingPeriod)
 	defer func() {
+		if err := recover(); err != nil {
+			log.Printf("Panic in StreamUpdatesToPlayer for %s: %v", s.PlayerID, err)
+		}
 		ticker.Stop()
 		s.networkConn.Close()
 	}()

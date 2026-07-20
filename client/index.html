@@ -286,6 +286,26 @@
       </div>
     </div>
 
+    <!-- Exit Confirmation Popup -->
+    <div id="exitPopup" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 3000; justify-content: center; align-items: center;">
+      <div style="background: rgba(30,30,30,0.95); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 40px; text-align: center; font-family: 'Rajdhani', sans-serif; color: white;">
+        <h2 style="font-size: 32px; letter-spacing: 4px; color: #ff4444; margin-bottom: 20px;">EXIT MATCH?</h2>
+        <p style="font-size: 18px; color: rgba(255,255,255,0.7); margin-bottom: 30px;">Are you sure you want to return to the main menu?</p>
+        <div style="display: flex; gap: 20px; justify-content: center;">
+          <button id="btnExitConfirm" style="background: #ff4444; border: none; color: white; padding: 12px 30px; font-size: 18px; font-weight: bold; cursor: pointer; border-radius: 4px;">YES, EXIT</button>
+          <button id="btnExitCancel" style="background: #333; border: 1px solid #555; color: white; padding: 12px 30px; font-size: 18px; font-weight: bold; cursor: pointer; border-radius: 4px;">CANCEL</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reconnecting Overlay -->
+    <div id="reconnectOverlay" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 4000; justify-content: center; align-items: center;">
+      <div style="text-align: center; font-family: 'Rajdhani', sans-serif; color: white;">
+        <h2 style="font-size: 40px; letter-spacing: 4px; color: #ff9900; margin-bottom: 10px;">CONNECTION LOST</h2>
+        <p id="reconnectText" style="font-size: 20px; color: rgba(255,255,255,0.7);">Attempting to reconnect...</p>
+      </div>
+    </div>
+
     <!-- ═══════════════════════════════════════════════════════════════
          MENU LOGIC — All tab switching, server browser, and create match.
          This runs BEFORE the bundled main.ts Vite script.

@@ -48,6 +48,8 @@ export class NetworkManager {
         this.ws.onopen = () => {
             console.log("WebSocket Connected!");
             this.reconnectAttempts = 0;
+            const reconnectOverlay = document.getElementById("reconnectOverlay");
+            if (reconnectOverlay) reconnectOverlay.style.display = "none";
             this.onConnectCb();
         };
 
@@ -59,6 +61,12 @@ export class NetworkManager {
             console.warn("WebSocket Closed:", e);
             const backoff = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 10000);
             this.reconnectAttempts++;
+            
+            const reconnectOverlay = document.getElementById("reconnectOverlay");
+            const reconnectText = document.getElementById("reconnectText");
+            if (reconnectOverlay) reconnectOverlay.style.display = "flex";
+            if (reconnectText) reconnectText.innerText = `Attempting to reconnect in ${backoff / 1000}s... (Attempt ${this.reconnectAttempts})`;
+            
             console.log(`Reconnecting in ${backoff}ms... (Attempt ${this.reconnectAttempts})`);
             setTimeout(() => this.connect(), backoff);
         };
@@ -212,5 +220,12 @@ export class NetworkManager {
         });
         const buffer = warbase.ClientEvent.encode(clientEvent).finish();
         this.ws.send(buffer as BufferSource);
+    }
+
+    public disconnect() {
+        if (this.ws) {
+            this.ws.onclose = null; // Prevent reconnect attempts
+            this.ws.close();
+        }
     }
 }
