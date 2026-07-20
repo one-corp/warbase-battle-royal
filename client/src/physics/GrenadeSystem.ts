@@ -28,8 +28,8 @@ export function throwNetworkGrenade(scene: Scene, position: Vector3, velocity: V
     mat.diffuseColor = new Color3(0.2, 0.4, 0.2); // Olive green
     grenade.material = mat;
 
-    // 2. Physics
-    const aggregate = new PhysicsAggregate(grenade, PhysicsShapeType.SPHERE, { mass: 1, restitution: 0.4, friction: 0.5 }, scene);
+    // 2. Physics (Heavy Grenade)
+    const aggregate = new PhysicsAggregate(grenade, PhysicsShapeType.SPHERE, { mass: 3, restitution: 0.1, friction: 0.8 }, scene);
     
     // Apply exact network velocity impulse
     aggregate.body.applyImpulse(velocity, grenade.position);

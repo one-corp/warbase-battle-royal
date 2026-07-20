@@ -24,22 +24,25 @@ export interface WeaponConfig {
     reloadTime: number; baseSpread: number; bloomPerShot: number; maxSpread: number; bloomRecovery: number;
     recoilVertical: number; recoilHorizontal: number; recoilRecovery: number; adsFOV: number;
     adsTime: number; adsSpreadMult: number; adsRecoilMult: number; hipPosition: Vector3; adsPosition: Vector3;
+    isAuto: boolean;
 }
 
 export const WEAPON_CONFIGS: WeaponConfig[] = [
     { // 0: AK47
         id: 'ak47', damage: 34, headshotMultiplier: 2.5, fireRate: 600, magSize: 30, reloadTime: 2.5,
         baseSpread: 1.5, bloomPerShot: 0.4, maxSpread: 5.0, bloomRecovery: 8.0,
-        recoilVertical: 0.05, recoilHorizontal: 0.02, recoilRecovery: 6.0, adsFOV: 55,
+        recoilVertical: 0.02, recoilHorizontal: 0.008, recoilRecovery: 6.0, adsFOV: 55,
         adsTime: 0.2, adsSpreadMult: 0.4, adsRecoilMult: 0.7, 
         hipPosition: new Vector3(0.3, -0.3, 0.6), adsPosition: new Vector3(0.0, -0.15, 0.4),
+        isAuto: true,
     },
     { // 1: PISTOL
         id: 'pistol', damage: 25, headshotMultiplier: 3.0, fireRate: 400, magSize: 12, reloadTime: 1.5,
         baseSpread: 1.0, bloomPerShot: 0.8, maxSpread: 6.0, bloomRecovery: 12.0,
-        recoilVertical: 0.08, recoilHorizontal: 0.01, recoilRecovery: 10.0, adsFOV: 65,
+        recoilVertical: 0.04, recoilHorizontal: 0.005, recoilRecovery: 10.0, adsFOV: 65,
         adsTime: 0.12, adsSpreadMult: 0.2, adsRecoilMult: 0.5, 
         hipPosition: new Vector3(0.2, -0.2, 0.5), adsPosition: new Vector3(0.0, -0.1, 0.35),
+        isAuto: false,
     }
 ];
 
@@ -132,11 +135,16 @@ export const createWeaponSystem = (scene: Scene, networkManager?: NetworkManager
 
             // 3. Process Firing
             const canFire = WeaponStateComponent.currentAmmo[eid] > 0 && !WeaponStateComponent.isReloading[eid];
-            // @ts-ignore
-            const fireInterval = 1.0 / (config.fireRate / 60.0); // frames at 60hz
+            
+            if (!wantsToFire) {
+                WeaponStateComponent.hasFiredThisClick[eid] = 0;
+            }
 
-            if (wantsToFire && canFire && performance.now() - WeaponStateComponent.lastFireTime[eid] >= (60000 / config.fireRate)) {
+            const isSemiBlocked = !config.isAuto && WeaponStateComponent.hasFiredThisClick[eid] === 1;
+
+            if (wantsToFire && canFire && !isSemiBlocked && performance.now() - WeaponStateComponent.lastFireTime[eid] >= (60000 / config.fireRate)) {
                 WeaponStateComponent.lastFireTime[eid] = performance.now();
+                WeaponStateComponent.hasFiredThisClick[eid] = 1;
                 WeaponStateComponent.currentAmmo[eid]--;
                 
                 const event = new CustomEvent('ammo-update', { detail: { ammo: WeaponStateComponent.currentAmmo[eid], max: config.magSize } });
@@ -144,10 +152,10 @@ export const createWeaponSystem = (scene: Scene, networkManager?: NetworkManager
                 
                 if (networkManager) networkManager.sendFire();
 
-                // Apply Recoil
+                // Apply Spring Recoil (Velocity)
                 const mult = isADS ? config.adsRecoilMult : 1.0;
-                RecoilComponent.offsetY[eid] -= config.recoilVertical * mult;
-                RecoilComponent.offsetX[eid] += (Math.random() - 0.5) * 2 * config.recoilHorizontal * mult;
+                RecoilComponent.velocityY[eid] -= config.recoilVertical * mult * 20.0; // Scaled for velocity
+                RecoilComponent.velocityX[eid] += (Math.random() - 0.5) * 2 * config.recoilHorizontal * mult * 20.0;
                 
                 WeaponStateComponent.currentSpread[eid] = Math.min(WeaponStateComponent.currentSpread[eid] + config.bloomPerShot, config.maxSpread);
                 
@@ -237,13 +245,32 @@ export const createWeaponSystem = (scene: Scene, networkManager?: NetworkManager
             }
 
             // 5. Apply ECS state to Babylon Meshes
-            WeaponStateComponent.currentSpread[eid] = Math.max(config.baseSpread, WeaponStateComponent.currentSpread[eid] - config.bloomRecovery * dt);
-            
-            RecoilComponent.offsetX[eid] = Scalar.Lerp(RecoilComponent.offsetX[eid], 0, config.recoilRecovery * dt);
-            RecoilComponent.offsetY[eid] = Scalar.Lerp(RecoilComponent.offsetY[eid], 0, config.recoilRecovery * dt);
-            
-            PlayerComponent.pitch[eid] += RecoilComponent.offsetY[eid];
-            PlayerComponent.yaw[eid] += RecoilComponent.offsetX[eid];
+            // Exponential Bloom Decay
+            const baseSpread = config.baseSpread;
+            const currentSpread = WeaponStateComponent.currentSpread[eid];
+            if (currentSpread > baseSpread) {
+                WeaponStateComponent.currentSpread[eid] = baseSpread + (currentSpread - baseSpread) * Math.exp(-config.bloomRecovery * dt);
+            }
+
+            // Spring Physics Recoil Simulation
+            const springStiffness = 150.0;
+            const springDamping = 15.0;
+
+            const oldRotX = RecoilComponent.rotationX[eid];
+            const oldRotY = RecoilComponent.rotationY[eid];
+
+            const forceX = -springStiffness * oldRotX - springDamping * RecoilComponent.velocityX[eid];
+            const forceY = -springStiffness * oldRotY - springDamping * RecoilComponent.velocityY[eid];
+
+            RecoilComponent.velocityX[eid] += forceX * dt;
+            RecoilComponent.velocityY[eid] += forceY * dt;
+
+            RecoilComponent.rotationX[eid] += RecoilComponent.velocityX[eid] * dt;
+            RecoilComponent.rotationY[eid] += RecoilComponent.velocityY[eid] * dt;
+
+            // Apply the delta to the actual camera pitch/yaw
+            PlayerComponent.pitch[eid] += (RecoilComponent.rotationY[eid] - oldRotY);
+            PlayerComponent.yaw[eid] += (RecoilComponent.rotationX[eid] - oldRotX);
 
             Vector3.LerpToRef(Vector3.ZeroReadOnly, config.adsPosition, WeaponStateComponent.adsProgress[eid], _tempBasePos);
             
@@ -253,6 +280,32 @@ export const createWeaponSystem = (scene: Scene, networkManager?: NetworkManager
 
             _tempCurrentAimWorldPos.copyFrom(aimPoint.getAbsolutePosition());
             _tempDesiredWorldPos.subtractToRef(_tempCurrentAimWorldPos, _tempDeltaWorldPos);
+
+            // 4. Process Weapon Swap & Grenades
+            if ((InputComponent as any).weapon1[eid] === 1 && WeaponStateComponent.activeWeaponIndex[eid] !== 0) {
+                WeaponStateComponent.activeWeaponIndex[eid] = 0;
+                WeaponStateComponent.isReloading[eid] = 0;
+                WeaponStateComponent.adsProgress[eid] = 0;
+                
+                const akRoot = entityAKRoots.get(eid);
+                const pistolRoot = entityPistolRoots.get(eid);
+                if (akRoot) akRoot.setEnabled(true);
+                if (pistolRoot) pistolRoot.setEnabled(false);
+                
+                window.dispatchEvent(new CustomEvent('weapon-swap', { detail: { index: 0, ammo: WeaponStateComponent.currentAmmo[eid], max: WEAPON_CONFIGS[0].magSize } }));
+            }
+            if ((InputComponent as any).weapon2[eid] === 1 && WeaponStateComponent.activeWeaponIndex[eid] !== 1) {
+                WeaponStateComponent.activeWeaponIndex[eid] = 1;
+                WeaponStateComponent.isReloading[eid] = 0;
+                WeaponStateComponent.adsProgress[eid] = 0;
+                
+                const akRoot = entityAKRoots.get(eid);
+                const pistolRoot = entityPistolRoots.get(eid);
+                if (akRoot) akRoot.setEnabled(false);
+                if (pistolRoot) pistolRoot.setEnabled(true);
+                
+                window.dispatchEvent(new CustomEvent('weapon-swap', { detail: { index: 1, ammo: WeaponStateComponent.currentAmmo[eid], max: WEAPON_CONFIGS[1].magSize } }));
+            }
 
             if (InputComponent.grenade[eid] === 1 && performance.now() - lastGrenadeThrow > 1000) {
                 lastGrenadeThrow = performance.now();
@@ -541,13 +594,37 @@ export const initWeapons = async (playerEid: number, scene: Scene, networkManage
 
 
 
-        
-    const ammoText = document.getElementById("ammoText");
+    const ammoTextPrimary = document.getElementById("ammoText");
+    const ammoTextSecondary = document.getElementById("ammoTextSecondary");
+    const slotPrimary = document.getElementById("slot-primary");
+    const slotSecondary = document.getElementById("slot-secondary");
+
     window.addEventListener('ammo-update', (e) => {
-        if (ammoText) ammoText.innerText = `AMMO: ${(e as any).detail.ammo} / ${(e as any).detail.max}`;
+        const detail = (e as any).detail;
+        if (ammoTextPrimary && detail.weaponIndex === 0) ammoTextPrimary.innerText = `${detail.ammo} / ${detail.max}`;
+        if (ammoTextSecondary && detail.weaponIndex === 1) ammoTextSecondary.innerText = `${detail.ammo} / ${detail.max}`;
+        
+        // Fallback if no weapon index provided (assumes active weapon)
+        if (detail.weaponIndex === undefined) {
+            if (slotPrimary?.classList.contains('active') && ammoTextPrimary) ammoTextPrimary.innerText = `${detail.ammo} / ${detail.max}`;
+            if (slotSecondary?.classList.contains('active') && ammoTextSecondary) ammoTextSecondary.innerText = `${detail.ammo} / ${detail.max}`;
+        }
     });
 
-
+    window.addEventListener('weapon-swap', (e) => {
+        const detail = (e as any).detail;
+        if (detail.index === 0) {
+            slotPrimary?.classList.add('active');
+            slotSecondary?.classList.remove('active');
+            if (ammoTextPrimary) ammoTextPrimary.style.display = 'block';
+            if (ammoTextSecondary) ammoTextSecondary.style.display = 'none';
+        } else if (detail.index === 1) {
+            slotPrimary?.classList.remove('active');
+            slotSecondary?.classList.add('active');
+            if (ammoTextPrimary) ammoTextPrimary.style.display = 'none';
+            if (ammoTextSecondary) ammoTextSecondary.style.display = 'block';
+        }
+    });
         // @ts-ignore
         const DEG2RAD = Math.PI / 180;
 

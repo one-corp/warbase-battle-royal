@@ -3,8 +3,10 @@ package engine
 import (
 	"log"
 	"math/rand"
+	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -17,15 +19,19 @@ type Message struct {
 
 type Room struct {
 	ID              string
+	Name            string
+	MapName         string
 	PlayerEntities  []Player
 	PlayerIndices   map[string]int
 	CachedGameState *GameState
 	CachedServerMsg *ServerMessage
 }
 
-func NewRoom(id string) *Room {
+func NewRoom(id string, name string, mapName string) *Room {
 	return &Room{
 		ID:              id,
+		Name:            name,
+		MapName:         mapName,
 		PlayerEntities:  make([]Player, 0, 128),
 		PlayerIndices:   make(map[string]int),
 		CachedGameState: &GameState{Players: make(map[string]*PlayerState)},
@@ -42,6 +48,7 @@ type RespawnRequest struct {
 type Match struct {
 	sessions    map[*GameSession]bool // Plain English: Tracking active player sessions
 	rooms       map[string]*Room
+	roomsMutex  sync.RWMutex
 	broadcast   chan Message
 	register    chan *GameSession
 	unregister  chan *GameSession
@@ -59,13 +66,45 @@ func NewMatch() *Match {
 	}
 }
 
-func (m *Match) getOrCreateRoom(roomID string) *Room {
-	if room, ok := m.rooms[roomID]; ok {
-		return room
-	}
-	room := NewRoom(roomID)
-	m.rooms[roomID] = room
+type RoomInfo struct {
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	MapName    string `json:"map"`
+	PlayerCount int   `json:"playerCount"`
+}
+
+func (m *Match) CreateRoom(name string, mapName string) *Room {
+	id := uuid.New().String()
+	room := NewRoom(id, name, mapName)
+	
+	m.roomsMutex.Lock()
+	m.rooms[id] = room
+	m.roomsMutex.Unlock()
+	
 	return room
+}
+
+func (m *Match) ListActiveRooms() []RoomInfo {
+	m.roomsMutex.RLock()
+	defer m.roomsMutex.RUnlock()
+	
+	rooms := make([]RoomInfo, 0, len(m.rooms))
+	for _, room := range m.rooms {
+		rooms = append(rooms, RoomInfo{
+			ID:          room.ID,
+			Name:        room.Name,
+			MapName:     room.MapName,
+			PlayerCount: len(room.PlayerEntities),
+		})
+	}
+	return rooms
+}
+
+func (m *Match) getRoom(roomID string) (*Room, bool) {
+	m.roomsMutex.RLock()
+	defer m.roomsMutex.RUnlock()
+	room, ok := m.rooms[roomID]
+	return room, ok
 }
 
 // Exported methods to allow external HTTP handlers to interact with the Match
@@ -111,7 +150,10 @@ func (m *Match) Run() {
 		select {
 		case session := <-m.register:
 			m.sessions[session] = true
-			m.getOrCreateRoom(session.RoomID)
+			if _, ok := m.getRoom(session.RoomID); !ok {
+				// Room does not exist, they shouldn't connect normally, but let's just log it.
+				log.Printf("Player %s attempting to connect to non-existent room %s", session.PlayerID, session.RoomID)
+			}
 
 		case session := <-m.unregister:
 			if _, ok := m.sessions[session]; ok {
@@ -129,7 +171,11 @@ func (m *Match) Run() {
 				}
 			}
 			if !stillConnected {
-				if room, ok := m.rooms[session.RoomID]; ok {
+				m.roomsMutex.RLock()
+				room, ok := m.rooms[session.RoomID]
+				m.roomsMutex.RUnlock()
+				
+				if ok {
 					idx, pOk := room.PlayerIndices[session.PlayerID]
 					if pOk {
 						lastIdx := len(room.PlayerEntities) - 1
@@ -150,7 +196,10 @@ func (m *Match) Run() {
 			log.Printf("Player %s disconnected from room %s", session.PlayerID, session.RoomID)
 
 		case req := <-m.respawnChan:
-			if room, ok := m.rooms[req.RoomID]; ok {
+			m.roomsMutex.RLock()
+			room, ok := m.rooms[req.RoomID]
+			m.roomsMutex.RUnlock()
+			if ok {
 				idx, pOk := room.PlayerIndices[req.PlayerID]
 				if pOk {
 					player := &room.PlayerEntities[idx]
@@ -183,7 +232,9 @@ func (m *Match) Run() {
 			}
 
 		case message := <-m.broadcast:
+			m.roomsMutex.RLock()
 			room, ok := m.rooms[message.RoomID]
+			m.roomsMutex.RUnlock()
 			if !ok {
 				continue
 			}
@@ -348,6 +399,7 @@ func (m *Match) Run() {
 		case <-ticker.C:
 			// Process each room separately
 			now := time.Now()
+			m.roomsMutex.RLock()
 			for _, room := range m.rooms {
 				// Resolve naturally completed reloads
 				for i := range room.PlayerEntities {
@@ -394,6 +446,7 @@ func (m *Match) Run() {
 					}
 				}
 			}
+			m.roomsMutex.RUnlock()
 		}
 	}
 }

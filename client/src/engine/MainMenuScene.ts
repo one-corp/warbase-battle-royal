@@ -23,15 +23,15 @@ export class MainMenuScene {
         this.scene = new Scene(engine);
         
         // 1. Camera: Cinematic slow orbit around the character
-        this.camera = new ArcRotateCamera("menuCamera", Math.PI / 2, Math.PI / 2.5, 6, new Vector3(0, 1.2, 0), this.scene);
+        this.camera = new ArcRotateCamera("menuCamera", Math.PI / 2, Math.PI / 2.5, 4.5, new Vector3(0, 1.2, 0), this.scene);
         this.camera.attachControl(engine.getRenderingCanvas(), true);
-        this.camera.lowerRadiusLimit = 3;
-        this.camera.upperRadiusLimit = 10;
+        this.camera.lowerRadiusLimit = 2;
+        this.camera.upperRadiusLimit = 8;
         this.camera.wheelPrecision = 50;
 
         // Auto-orbit camera slowly
         this.scene.onBeforeRenderObservable.add(() => {
-            this.camera.alpha += 0.001 * this.scene.getAnimationRatio();
+            this.camera.alpha += 0.0003 * this.scene.getAnimationRatio();
         });
 
         // 2. Environment & Lighting
@@ -41,14 +41,14 @@ export class MainMenuScene {
         this.scene.environmentTexture = envTexture;
         this.scene.createDefaultSkybox(envTexture, true, 1000, 0.1); // Dim skybox
 
-        // Dramatic spotlights for a sleek armory look
+        // Dramatic spotlights for a sleek armory look (CYBERPUNK RED THEME)
         const mainLight = new SpotLight("mainLight", new Vector3(0, 5, 5), new Vector3(0, -1, -1), Math.PI / 3, 2, this.scene);
-        mainLight.intensity = 5;
-        mainLight.diffuse = new Color3(0.8, 0.9, 1.0); // Cool blue-ish rim
+        mainLight.intensity = 8;
+        mainLight.diffuse = new Color3(1.0, 0.0, 0.2); // Cyberpunk Red
         
         const rimLight = new SpotLight("rimLight", new Vector3(0, 5, -5), new Vector3(0, -1, 1), Math.PI / 3, 2, this.scene);
-        rimLight.intensity = 8;
-        rimLight.diffuse = new Color3(1.0, 0.6, 0.2); // Warm orange rim
+        rimLight.intensity = 15;
+        rimLight.diffuse = new Color3(0.0, 0.5, 1.0); // Synthwave Blue rim
 
         // 3. Platform / Floor
         const ground = MeshBuilder.CreateCylinder("menuGround", { diameter: 8, height: 0.2 }, this.scene);

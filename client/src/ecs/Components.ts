@@ -62,11 +62,14 @@ export const WeaponStateComponent = defineComponent({
     currentSpread: Types.f32,
     lastFireTime: Types.f32,
     adsProgress: Types.f32,
+    hasFiredThisClick: Types.ui8,
 });
 
 export const RecoilComponent = defineComponent({
-    offsetX: Types.f32,
-    offsetY: Types.f32,
+    rotationX: Types.f32,
+    rotationY: Types.f32,
+    velocityX: Types.f32,
+    velocityY: Types.f32,
     kickbackZ: Types.f32,
     kickbackRotX: Types.f32,
 });

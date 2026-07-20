@@ -10,6 +10,7 @@ These are the active values currently implemented in `WEAPON_CONFIGS` inside [We
 
 | Property | AK-47 | Pistol |
 |----------|-------|--------|
+| **Fire Mode** | Auto | Semi |
 | **Damage** | 34 (3 shots to body) | 25 (4 shots to body) |
 | **Headshot Multiplier** | 2.5x (85 DMG) | 3.0x (75 DMG) |
 | **Fire Rate (RPM)** | 600 | 400 |
@@ -49,38 +50,11 @@ All values are tuned to match Bullet Force's feel. Stats drive gameplay balance;
 | **M4A1** | 28 | ×2.5 (70) | 800 | 30 | 2.3 | Medium-Long | 0.95× |
 | **FAD** | 30 | ×2.5 (75) | 700 | 30 | 2.4 | Medium | 0.95× |
 
-### 1.2 SMGs
+### 1.2 Pistols (Secondary)
 
 | Weapon | Damage | Headshot | RPM | Mag | Reload (s) | Range | Move Speed |
 |--------|--------|----------|-----|-----|------------|-------|------------|
-| **MP5** | 25 | ×2.0 (50) | 900 | 44 | 2.0 | Short-Medium | 1.0× |
-| **Vector** | 20 | ×2.0 (40) | 1200 | 25 | 2.0 | Short | 1.0× |
-
-### 1.3 Snipers
-
-| Weapon | Damage | Headshot | RPM | Mag | Reload (s) | Range | Move Speed |
-|--------|--------|----------|-----|-----|------------|-------|------------|
-| **AWP** | 95 | ×2.0 (190) | Bolt | 5 | 1.75 | Very Long | 0.85× |
-| **M200** | 90 | ×2.0 (180) | Bolt | 10 | 2.0 | Very Long | 0.85× |
-
-### 1.4 Shotguns
-
-| Weapon | Damage/Pellet | Pellets | RPM | Mag | Reload (s) | Range | Move Speed |
-|--------|--------------|---------|-----|-----|------------|-------|------------|
-| **SAIGA** | 15 | 8 | 300 | 8 | 2.5 | Short | 0.90× |
-
-### 1.5 Pistols (Secondary)
-
-| Weapon | Damage | Headshot | RPM | Mag | Reload (s) | Range | Move Speed |
-|--------|--------|----------|-----|-----|------------|-------|------------|
-| **Desert Eagle** | 50 | ×2.0 (100) | Semi | 7 | 1.5 | Medium | 1.0× |
-| **M1911** | 35 | ×2.0 (70) | Semi | 8 | 1.3 | Short-Medium | 1.0× |
-
-### 1.6 Melee
-
-| Weapon | Damage | Range | Speed | Move Speed |
-|--------|--------|-------|-------|------------|
-| **Knife** | 100 (instant kill) | 2m | 0.5s swing | 1.05× |
+| **M1911 (Current)** | 25 | ×3.0 (75) | Semi | 12 | 1.5 | Short-Medium | 1.0× |
 
 ---
 
@@ -330,13 +304,17 @@ if (fireMode === 'bolt' && justPressed && canFire) {
 
 ## 5. Recoil System
 
-### 5.1 Three-Layer Architecture
+### 5.1 Damped Harmonic Oscillator (Spring Physics)
+
+Instead of applying stiff, linear interpolations for weapon recoil, the engine uses **Spring Physics** to simulate the feel of modern competitive shooters (e.g., *Valorant*, *CS2*).
 
 ```
-Layer 1: Primary Kick      → Deterministic vertical + horizontal offset per shot
-Layer 2: Random Jitter     → Small random noise (prevents robotic patterns)
-Layer 3: Spring Recovery   → Camera returns to pre-recoil position over time
+Layer 1: Spring Velocity   → Firing adds instantaneous velocity to a virtual spring.
+Layer 2: Camera Offset     → The spring velocity integrates into camera pitch/yaw offsets.
+Layer 3: Damped Recovery   → Force (-stiffness * position - damping * velocity) naturally pulls the camera back to center.
 ```
+
+This guarantees a dynamic punch that starts violently but dampens out smoothly into the center. Additionally, **Spread (Bloom)** uses an exponential decay curve to ensure rapid initial recovery for perfectly timed tap-firing.
 
 ### 5.2 Per-Weapon Recoil Profiles
 
@@ -646,3 +624,43 @@ Phase 4 — Bolt/Slide (20% of time, empty reload only):
 - Fall back to CPU `ParticleSystem` with reduced counts on WebGL2
 - Pre-compute random values in textures instead of generating per-frame
 - Use `Thin Instances` for shell casings (many identical small objects)
+
+---
+
+## 13. Engine Implementation Details
+
+### 13.1 Modeling Approach: Procedural Native Meshes
+Currently, instead of loading external `.glb` files for the weapons, we are building them **procedurally** inside `WeaponSystem.ts` using Babylon's `MeshBuilder`. 
+
+This is incredibly performant and ensures our download size stays tiny, but it means the design is "blocky" and low-poly. 
+
+**AK-47 Breakdown:**
+Built from 5 primitive shapes grouped under an `akRoot` TransformNode:
+- **Grip**: Box (`width: 0.04, height: 0.12, depth: 0.06`) tilted at $\pi/8$.
+- **Receiver**: Box (`width: 0.05, height: 0.08, depth: 0.3`).
+- **Barrel**: Cylinder (`diameter: 0.02, height: 0.4`).
+- **Magazine**: Box tilted forward (`-Math.PI/8`).
+- **Stock**: Box extending backwards to rest on the shoulder.
+
+**Pistol Breakdown:**
+A simpler 2-part mesh:
+- **Grip**: Small box.
+- **Receiver (Slide)**: Short box resting on top of the grip.
+
+### 13.2 Rigging and Positioning (The Weapon Socket)
+To make the weapon move seamlessly with the player's arms, we use a **Socket Architecture**.
+1. The game loads the `AnimatedSoldier.glb` viewmodel.
+2. We find the bone named `RightHand`.
+3. We attach a `WeaponSocketRoot` node directly to this bone (`attachToBone`).
+4. We parent the active weapon (e.g., `akRoot`) to the socket.
+
+Because bones in `.glb` files (like Mixamo rigs) often have arbitrary rotations, we must apply offsets so the gun rests perfectly in the palm pointing forward.
+Current offsets defined in `WeaponSystem.ts`:
+- **Position Offset**: `[0, 0, 0]` (The root of our procedural gun is exactly at the grip).
+- **Rotation Offset**: `[Math.PI / 2, 0, 0]` (Rotated 90 degrees on the X-axis so it points forward rather than down the arm).
+
+### 13.3 Aim Down Sights (ADS) Alignment
+We use an "Industry Standard" AimPoint approach to handle ADS.
+1. We place an invisible `AimPoint` node precisely on top of the gun's iron sights (`y: 0.08, z: 0.1`).
+2. When the player holds right-click, we calculate the mathematical difference between the camera's center and the `AimPoint`.
+3. We translate the entire viewmodel (arms + gun) to perfectly bridge that gap, ensuring the iron sight aligns exactly with the center of the screen.

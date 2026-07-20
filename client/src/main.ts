@@ -198,14 +198,14 @@ async function createScene(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElem
     return { scene, playerEid, engine };
 }
 
-async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElement, username: string, mapChoice: string = "original") {
+async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElement, username: string, mapChoice: string = "original", roomId: string) {
     try {
         const { scene, playerEid } = await createScene(engine, canvas, mapChoice);
         activeScene = scene;
 
         // Network Setup
         const multiplayerEntities = new MultiplayerEntities(scene);
-        const networkManager = new NetworkManager(username, mapChoice, () => {
+        const networkManager = new NetworkManager(username, roomId, () => {
         });
 
         await initWeapons(playerEid, scene, networkManager);
@@ -560,22 +560,33 @@ if (canvas) {
                     username = "Guest_" + Math.floor(Math.random() * 10000);
                     usernameInput.value = username;
                 }
-                let mapChoice = "original";
-                const mapSelector = document.getElementById("mapSelector") as HTMLSelectElement;
-                if (mapSelector) {
-                    mapChoice = mapSelector.value;
+                
+                const roomIdInput = document.getElementById("selectedRoomId") as HTMLInputElement;
+                const mapInput = document.getElementById("selectedMap") as HTMLInputElement;
+                
+                let roomId = roomIdInput ? roomIdInput.value : "";
+                let mapChoice = mapInput ? mapInput.value : "original";
+                
+                if (!roomId) {
+                    alert("Please select a server or create a match first.");
+                    return;
                 }
+                
                 joinBtn.disabled = true; // Prevent double click
                 joinBtn.innerHTML = `<span class="btn-text">LOADING ENVIRONMENT...</span><div class="btn-glow"></div>`;
                 
                 // Do not dispose the main menu yet! We want to keep rendering it while the new scene loads asynchronously in the background.
-                startGame(engine, canvas, username, mapChoice).then(() => {
+                startGame(engine, canvas, username, mapChoice, roomId).then(() => {
                     // Once fully loaded, hide the UI and dispose the menu
                     loginUI.style.display = "none";
-                    mainMenu.dispose();
+                    const uiLayer = document.getElementById("uiLayer");
+                    if (uiLayer) uiLayer.style.display = "flex";
+                    if ((window as any).mainMenu) {
+                        (window as any).mainMenu.dispose();
+                    }
                 }).catch(err => {
                     joinBtn.disabled = false;
-                    joinBtn.innerHTML = `<span class="btn-text">DEPLOY TO COMBAT</span><div class="btn-glow"></div>`;
+                    joinBtn.innerHTML = `<span class="btn-text">JOIN MATCH</span><div class="btn-glow"></div>`;
                     const errorLog = document.getElementById("errorLog");
                     if (errorLog) errorLog.innerText = "Error loading map: " + (err.message || err);
                 });

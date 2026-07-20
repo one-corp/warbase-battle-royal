@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"math/rand"
 	"net"
 	"net/http"
@@ -67,4 +68,38 @@ func (app *application) connectToServerHandler(w http.ResponseWriter, r *http.Re
 	// 5. Start the network loops in background goroutines
 	go session.StreamUpdatesToPlayer()
 	go session.ListenForPlayerInputs()
+}
+
+func (app *application) listRoomsHandler(w http.ResponseWriter, r *http.Request) {
+	rooms := app.match.ListActiveRooms()
+
+	err := app.writeJSON(w, http.StatusOK, envelope{"rooms": rooms}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+}
+
+func (app *application) createRoomHandler(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Name string `json:"name"`
+		Map  string `json:"map"`
+	}
+
+	err := app.readJSON(w, r, &input)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	if input.Name == "" || input.Map == "" {
+		app.badRequestResponse(w, r, fmt.Errorf("name and map are required"))
+		return
+	}
+
+	room := app.match.CreateRoom(input.Name, input.Map)
+
+	err = app.writeJSON(w, http.StatusCreated, envelope{"room_id": room.ID}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
 }

@@ -8,32 +8,290 @@
   <body>
     <!-- Multiplayer Login UI (Modern Main Menu) -->
     <div id="loginUI" class="main-menu-container">
-      <div class="menu-glass-panel">
-        <h1 class="game-title">WARBASE</h1>
-        <p class="game-subtitle">WEB-BASED TACTICAL SHOOTER</p>
+      
+      <!-- Top Brand -->
+      <div class="menu-top-nav" style="background: transparent; border-bottom: none; pointer-events: none; width: auto;">
+        <div class="nav-brand">
+          <span class="brand-icon">///</span>
+          <span class="brand-text">WARBASE</span>
+        </div>
+      </div>
+
+      <!-- Left Navigation Sidebar -->
+      <div class="main-left-nav">
+        <div class="main-nav-item active" id="nav-join">JOIN MATCH</div>
+        <div class="main-nav-item" id="nav-create">CREATE MATCH</div>
+        <div class="main-nav-item" id="nav-loadouts">LOADOUTS</div>
+        <div class="main-nav-item" id="nav-store">STORE</div>
+        <div class="main-nav-item" id="nav-settings">SETTINGS</div>
+      </div>
+
+      <!-- Server Location Indicator (Bottom Left) -->
+      <div class="server-location-indicator">
+        <div class="server-icon">
+          <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+            <path d="M2 12h20"></path>
+          </svg>
+        </div>
+        <div class="server-details">
+          <span class="server-region">SERVER: US EAST (N. VIRGINIA)</span>
+          <span class="server-ping">PING: <span style="color: #ffaa00;">24ms</span></span>
+        </div>
+      </div>
+
+      <!-- Center Dynamic Content -->
+      <div id="center-content-area" style="position: absolute; left: 400px; top: 100px; bottom: 50px; right: 450px; display: flex; align-items: flex-start; justify-content: flex-start; pointer-events: none;">
         
-        <div class="menu-input-group">
-          <label for="usernameInput">CALLSIGN</label>
+        <!-- Server Browser View -->
+        <div class="menu-glass-panel" id="view-server-browser" style="display: flex; width: 100%; max-width: 800px; pointer-events: auto; max-height: 80%; overflow-y: auto;">
+          <div class="loadout-header">
+            <span class="loadout-title">SERVER BROWSER</span>
+            <span class="loadout-level" style="cursor: pointer;" id="refresh-servers-btn"><strong style="color:#c3834c; font-size: 16px;">REFRESH ↻</strong></span>
+          </div>
+          
+          <div class="server-list" id="server-list-container">
+            <!-- Populated by JS -->
+            <div style="color: rgba(255,255,255,0.5); padding: 20px; font-family: monospace;">Fetching active zones...</div>
+          </div>
+        </div>
+
+        <!-- Create Match View -->
+        <div class="menu-glass-panel" id="view-create-match" style="display: none; width: 100%; max-width: 800px; pointer-events: auto; max-height: 80%; overflow-y: auto;">
+          <div class="loadout-header">
+            <span class="loadout-title">CREATE MATCH</span>
+          </div>
+          
+          <div class="menu-input-group" style="margin-bottom: 25px;">
+             <label style="color: #c3834c; font-weight: bold; letter-spacing: 2px; display: block; margin-bottom: 10px;">OPERATION NAME</label>
+             <input type="text" id="roomNameInput" placeholder="Enter Operation Name..." autocomplete="off" />
+          </div>
+
+          <label style="color: #c3834c; font-weight: bold; letter-spacing: 2px; display: block; margin-bottom: 10px;">SELECT COMBAT ZONE</label>
+          <div class="map-cards-container" id="create-map-cards">
+            <div class="map-card active" data-map="industrial">
+              <div class="map-card-bg"></div>
+              <div class="map-card-title">INDUSTRIAL ZONE</div>
+            </div>
+            <div class="map-card" data-map="village">
+              <div class="map-card-bg"></div>
+              <div class="map-card-title">VILLAGE</div>
+            </div>
+            <div class="map-card" data-map="arena">
+              <div class="map-card-bg"></div>
+              <div class="map-card-title">GAME ARENA</div>
+            </div>
+            <div class="map-card" data-map="ghost_city">
+              <div class="map-card-bg"></div>
+              <div class="map-card-title">GHOST CITY</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loadouts View -->
+        <div class="menu-glass-panel" id="view-loadouts" style="display: none; width: 100%; max-width: 800px; pointer-events: auto; max-height: 80%; overflow-y: auto;">
+          <div class="loadout-header">
+            <span class="loadout-title">RECON</span>
+            <span class="loadout-level">Level <strong style="color:white; font-size: 24px;">24</strong></span>
+          </div>
+
+          <div class="weapon-card">
+            <div class="weapon-category-title">PRIMARY WEAPON</div>
+            <div class="weapon-card-content">
+              <div class="weapon-card-left">
+                <div class="weapon-card-name">AK-47 RIFLE</div>
+                <div class="weapon-card-desc">Tactical, matte black, reliable</div>
+                <div style="font-size: 40px; margin-top: 10px; filter: grayscale(100%) opacity(50%);">🔫</div>
+              </div>
+              <div class="weapon-card-stats">
+                <div class="stat-row"><span class="stat-label">DAMAGE</span><div class="stat-bar-bg"><div class="stat-bar-fill" style="width: 68%;"></div></div><span class="stat-val">68/100</span></div>
+                <div class="stat-row"><span class="stat-label">ACCURACY</span><div class="stat-bar-bg"><div class="stat-bar-fill" style="width: 55%;"></div></div><span class="stat-val">55/100</span></div>
+                <div class="stat-row"><span class="stat-label">RANGE</span><div class="stat-bar-bg"><div class="stat-bar-fill" style="width: 70%;"></div></div><span class="stat-val">70/100</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="weapon-card">
+            <div class="weapon-category-title">SECONDARY WEAPON</div>
+            <div class="weapon-card-content">
+              <div class="weapon-card-left">
+                <div class="weapon-card-name">M1911 PISTOL</div>
+                <div class="weapon-card-desc">Semi-auto, high headshot multiplier</div>
+                <div style="font-size: 30px; margin-top: 10px; filter: grayscale(100%) opacity(50%);">🔫</div>
+              </div>
+              <div class="weapon-card-stats">
+                <div class="stat-row"><span class="stat-label">DAMAGE</span><div class="stat-bar-bg"><div class="stat-bar-fill" style="width: 40%;"></div></div><span class="stat-val">40/100</span></div>
+                <div class="stat-row"><span class="stat-label">ACCURACY</span><div class="stat-bar-bg"><div class="stat-bar-fill" style="width: 75%;"></div></div><span class="stat-val">75/100</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Always-Visible Bottom Right Deployment Hub -->
+      <div class="deployment-hub">
+        <div class="deployment-hub-title" id="deploy-hub-title">NO ZONE SELECTED</div>
+
+        <input type="hidden" id="selectedRoomId" value="" />
+        <input type="hidden" id="selectedMap" value="" />
+        <select id="mapSelector" style="display: none;">
+          <option value="industrial" selected>Industrial Zone</option>
+          <option value="village">Village</option>
+          <option value="arena">Game Arena</option>
+          <option value="ghost_city">Ghost City</option>
+        </select>
+
+        <div class="menu-input-group" style="margin-bottom: 20px;">
           <input type="text" id="usernameInput" placeholder="Enter Callsign..." autocomplete="off" />
         </div>
-        
-        <div class="menu-input-group">
-          <label for="mapSelector">DEPLOYMENT ZONE</label>
-          <select id="mapSelector">
-            <option value="industrial">Industrial Zone (GLB Map)</option>
-            <option value="village">Village (Low Res)</option>
-            <option value="arena">Game Arena</option>
-            <option value="ghost_city">Ghost City</option>
-          </select>
-        </div>
-        
-        <button id="joinButton" disabled class="btn-deploy">
-          <span class="btn-text">INITIALIZING ENGINE...</span>
+
+        <button id="joinButton" disabled class="btn-deploy floating-deploy">
+          <span class="btn-text" id="btn-deploy-text">INITIALIZING ENGINE...</span>
           <div class="btn-glow"></div>
         </button>
         
         <div id="errorLog" class="error-log"></div>
       </div>
+
+      <script>
+        // Simple script to handle UI tabs and map selection
+        // Simple script to handle UI tabs and map selection
+        document.addEventListener('DOMContentLoaded', () => {
+          const navItems = document.querySelectorAll('.main-nav-item');
+          const viewLoadouts = document.getElementById('view-loadouts');
+          const viewServerBrowser = document.getElementById('view-server-browser');
+          const viewCreateMatch = document.getElementById('view-create-match');
+          const btnDeployText = document.getElementById('btn-deploy-text');
+          const deployHubTitle = document.getElementById('deploy-hub-title');
+          const selectedRoomIdInput = document.getElementById('selectedRoomId');
+          const joinButton = document.getElementById('joinButton');
+          const mapSelector = document.getElementById('mapSelector');
+
+          function refreshServers() {
+            const container = document.getElementById('server-list-container');
+            container.innerHTML = '<div style="color: rgba(255,255,255,0.5); padding: 20px; font-family: monospace;">Fetching active zones...</div>';
+            
+            fetch('/api/rooms')
+              .then(res => res.json())
+              .then(data => {
+                container.innerHTML = '';
+                if (!data.rooms || data.rooms.length === 0) {
+                  container.innerHTML = '<div style="color: rgba(255,255,255,0.5); padding: 20px; font-family: monospace;">No active combat zones found. Create one.</div>';
+                  return;
+                }
+                
+                data.rooms.forEach(room => {
+                  const div = document.createElement('div');
+                  div.className = 'server-list-item';
+                  div.innerHTML = `
+                    <div style="display:flex; justify-content: space-between; align-items: center;">
+                      <div>
+                        <div style="color: #fff; font-weight: bold; font-size: 18px; margin-bottom: 5px; text-transform: uppercase;">${room.name}</div>
+                        <div style="color: #c3834c; font-size: 12px; font-family: monospace;">MAP: ${room.map.toUpperCase()} &nbsp;&nbsp;|&nbsp;&nbsp; PLAYERS: ${room.playerCount}</div>
+                      </div>
+                      <button class="server-join-btn">SELECT</button>
+                    </div>
+                  `;
+                  div.querySelector('.server-join-btn').addEventListener('click', () => {
+                    // Deselect all
+                    document.querySelectorAll('.server-list-item').forEach(el => el.style.border = '1px solid rgba(195, 131, 76, 0.2)');
+                    div.style.border = '1px solid #c3834c';
+                    
+                    selectedRoomIdInput.value = room.id;
+                    document.getElementById('selectedMap').value = room.map;
+                    
+                    deployHubTitle.innerText = `SELECTED: ${room.name.toUpperCase()}`;
+                    btnDeployText.innerText = 'JOIN MATCH';
+                    joinButton.disabled = false;
+                  });
+                  container.appendChild(div);
+                });
+              })
+              .catch(err => {
+                container.innerHTML = '<div style="color: red; padding: 20px; font-family: monospace;">Failed to fetch servers.</div>';
+              });
+          }
+
+          document.getElementById('refresh-servers-btn').addEventListener('click', refreshServers);
+
+          navItems.forEach(item => {
+            item.addEventListener('click', () => {
+              // Remove active from all
+              navItems.forEach(n => n.classList.remove('active'));
+              item.classList.add('active');
+              
+              viewLoadouts.style.display = 'none';
+              viewServerBrowser.style.display = 'none';
+              viewCreateMatch.style.display = 'none';
+              
+              if (item.id === 'nav-loadouts') {
+                viewLoadouts.style.display = 'flex';
+              } else if (item.id === 'nav-join') {
+                viewServerBrowser.style.display = 'flex';
+                refreshServers();
+              } else if (item.id === 'nav-create') {
+                viewCreateMatch.style.display = 'flex';
+              }
+            });
+          });
+
+          // Create Match Map Selection Logic
+          const mapCards = document.querySelectorAll('#create-map-cards .map-card');
+          mapCards.forEach(card => {
+            card.addEventListener('click', () => {
+              mapCards.forEach(c => c.classList.remove('active'));
+              card.classList.add('active');
+              mapSelector.value = card.getAttribute('data-map');
+            });
+          });
+
+          // Create Room Logic: Add a button inside view-create-match
+          const createMatchContainer = document.getElementById('view-create-match');
+          const createBtn = document.createElement('button');
+          createBtn.className = 'btn-deploy floating-deploy';
+          createBtn.style.marginTop = '20px';
+          createBtn.style.width = '100%';
+          createBtn.style.position = 'relative';
+          createBtn.innerHTML = `<span class="btn-text">INITIALIZE NEW OPERATION</span><div class="btn-glow"></div>`;
+          createMatchContainer.appendChild(createBtn);
+
+          createBtn.addEventListener('click', () => {
+            const roomName = document.getElementById('roomNameInput').value.trim() || 'Classified Operation';
+            const mapName = mapSelector.value;
+            
+            createBtn.disabled = true;
+            createBtn.querySelector('.btn-text').innerText = 'INITIALIZING...';
+
+            fetch('/api/rooms', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: roomName, map: mapName })
+            })
+            .then(res => res.json())
+            .then(data => {
+              if(data.room_id) {
+                selectedRoomIdInput.value = data.room_id;
+                document.getElementById('selectedMap').value = mapName;
+                // Click the actual join button that main.ts listens to
+                joinButton.disabled = false;
+                joinButton.click();
+              } else {
+                throw new Error("Failed to get room ID");
+              }
+            })
+            .catch(err => {
+              console.error(err);
+              createBtn.disabled = false;
+              createBtn.querySelector('.btn-text').innerText = 'INITIALIZE NEW OPERATION';
+            });
+          });
+
+          // Initial fetch
+          refreshServers();
+        });
+      </script>
     </div>
     
     <script>
@@ -51,7 +309,7 @@
       <div id="crosshair"></div>
       
       <!-- Performance Metrics (Top Left) -->
-      <div id="metricsPanel" style="display: none; position: absolute; top: 15px; left: 15px; background: rgba(0, 0, 0, 0.7); border: 1px solid #444; border-radius: 6px; padding: 10px; color: #00ffcc; font-family: monospace; font-size: 14px; pointer-events: none; z-index: 50;">
+      <div id="metricsPanel" style="display: none; position: absolute; top: 15px; left: 15px; background: rgba(0, 0, 0, 0.7); border: 1px solid #444; border-radius: 6px; padding: 10px; color: #e8b070; font-family: monospace; font-size: 14px; pointer-events: none; z-index: 50;">
         <div style="font-weight: bold; margin-bottom: 5px; color: white;">PERFORMANCE</div>
         <div>FPS: <span id="metricFps">0</span></div>
         <div>CPU Time: <span id="metricCpu">0.0</span> ms</div>
@@ -67,8 +325,34 @@
             <div id="healthBar"></div>
             <span id="healthText">100 HP</span>
         </div>
-        <div class="ammo-container">
-            <span id="ammoText">30 / 120</span>
+        
+        <div class="weapon-selector-hud">
+          <div class="weapon-slot active" id="slot-primary">
+            <div class="slot-number">1</div>
+            <div class="weapon-info">
+              <div class="weapon-name">AK-47</div>
+              <div class="weapon-ammo" id="ammoText">30 / 120</div>
+            </div>
+            <div class="weapon-icon">🔫</div>
+          </div>
+          
+          <div class="weapon-slot" id="slot-secondary">
+            <div class="slot-number">2</div>
+            <div class="weapon-info">
+              <div class="weapon-name">PISTOL</div>
+              <div class="weapon-ammo" id="ammoTextSecondary" style="display: none;">12 / 48</div>
+            </div>
+            <div class="weapon-icon">🔫</div>
+          </div>
+          
+          <div class="weapon-slot" id="slot-grenade">
+            <div class="slot-number">G</div>
+            <div class="weapon-info">
+              <div class="weapon-name">GRENADE</div>
+              <div class="weapon-ammo" id="grenadeCount">(&infin;)</div>
+            </div>
+            <div class="weapon-icon">💣</div>
+          </div>
         </div>
       </div>
 
