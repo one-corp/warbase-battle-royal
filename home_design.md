@@ -5,61 +5,48 @@ This document specifies the official 1:1 Battlefield/CoD-inspired UI architectur
 
 ---
 
-## 1. Design Aesthetics & Layout
-
-### **Top Navigation Bar**
-- **Left**: Player Profile Badge (`NERDY4TW` + Star Emblem).
-- **Center**: Primary Navigation Tabs:
+## 1. Interactive Top Navigation Bar
+- **Player Callsign Badge** (`[EDIT ✏️]`): Clickable span & keybinding `[R / (Y)]`. Opens an interactive prompt allowing players to change their Callsign/Name. Persisted in `localStorage` and sent to the Go WebSocket server upon match deployment.
+- **Primary Navigation Tabs**:
   - `LOADOUTS` (Default Active Tab)
-  - `JOIN ROOM` (Server Browser)
+  - `JOIN ROOM` (Server Browser with dynamic room list & auto-refresh)
   - `CREATE ROOM` (Combat Zone Initialization)
   - `SETTINGS` (System Graphics & Audio Controls)
-- **Right**: In-Game Currency / Status Display (`$ 27,640`).
+- **Currency Readout**: `$ 27,640` (Persisted score/cash readout).
 
 ---
 
-## 2. 3-Column Loadout Architecture
+## 2. Interactive 3-Column Loadout System
 
-The **LOADOUTS** tab features a clean, high-contrast 3-column layout:
-
-### **Left Column: Class Selection & Perks**
+### **Left Column: Class Selector & Perks**
 - **Class Items**:
-  - `ASSAULT`
-  - `TACTICAL` *(Active State: Solid White `#FFFFFF` container with bold Black `#000000` text)*
-  - `SUPPORT`
-  - `ENGINEER`
-  - `MEDIC`
-- **Class Description**: Tactical overview paragraph explaining class abilities and weapon proficiencies.
-- **Perks Section**: 3-slot perk indicator row (`🛡️`, `🎯`, `🔒`) with dashed/solid borders.
+  - `ASSAULT`: Equips AK-47, Deagle, Frag Grenades, Lightweight perk.
+  - `TACTICAL`: Equips M416 Carbine, Glock 18C, Flashbang, Body Armor perk.
+  - `SUPPORT`: Equips M249 LMG, M1911 Pistol, Ammo Crate, Heavy Gunner perk.
+  - `ENGINEER`: Equips MP5 SMG, .44 Revolver, C4 Explosives, Demolition perk.
+  - `MEDIC`: Equips SCAR-L Rifle, USP Compact, Medkit, Combat Medic perk.
+- **Dynamic Descriptions**: Selecting any class dynamically updates description, weapon silhouettes, and perks.
+- **Interactive Perks**: Clicking any perk slot toggles its active state and displays its full tactical effect tooltip.
 
-### **Center Column: 3D Character Showcase**
-- Completely transparent backdrop allowing the Babylon.js 3D character model on the canvas behind the UI to act as the primary visual element.
+### **Center Column: 3D Character Viewport**
+- Fully transparent backdrop allowing the 3D player model on canvas behind to serve as the visual centerpiece.
 
-### **Right Column: Weapon Slots**
-- **Primary Weapon**: `M416` + Vector Silhouette.
-- **Sidearm**: `GLOCK 18C` + Vector Silhouette.
-- **Gadget**: `FLASHBANG` + Vector Silhouette.
-- Each category features a 1px solid White (`rgba(255, 255, 255, 0.2)`) separator line and uppercase category titles.
+### **Right Column: Interactive Weapon Swapping**
+- **Primary / Sidearm / Gadget Slots**: Every slot is clickable and features `[SWAP ⚙️]` triggers.
+- **Weapon Selection Modal**: Clicking any slot opens a modal allowing operators to select alternative weapons (M416, AK-47, M249, MP5, SCAR-L, Sniper R700, Deagle, Glock, C4, Flashbang, etc.).
 
 ---
 
-## 3. Footer / Action Bar
-- **Left**: Squad / Social indicator (`[LT] 👥 14`).
-- **Right**: Gamepad & Keyboard action prompts (`(A) EDIT`, `(Y) RENAME`).
+## 3. Footer Action Prompts & Keybindings
+- **Live Online Counter**: `👥 ONLINE PLAYERS: [X]` dynamically calculated from active server rooms.
+- **Keybindings**:
+  - Pressing `E` or `[E / (A)]` opens the Weapon Swap Selector.
+  - Pressing `R` or `[R / (Y)]` opens the Callsign Rename prompt.
 
 ---
 
 ## 4. Typography & Color Palette
-
-### **Color Palette**
-- **Primary Text & Active Elements**: Pure White (`#FFFFFF`)
-- **Secondary Text / Labels**: Light Gray (`rgba(255, 255, 255, 0.6)`)
+- **Primary Text**: Pure White (`#FFFFFF`)
 - **Active Container Highlight**: Solid White (`#FFFFFF`) with Pure Black (`#000000`) text
 - **Backgrounds**: Transparent Radial Gradient (`rgba(15,18,25,0.75)` to `rgba(5,7,10,0.92)`)
-- **Accent Lines**: 1px White borders (`rgba(255, 255, 255, 0.1)`)
-- *Note: Gold (`#CFA55F`) and Cyan (`#00FFCC`) have been completely deprecated in favor of this strict monochrome palette.*
-
-### **Typography**
-- **Headers & Menu Tabs**: `Oswald` (Sans-serif, Uppercase, bold, 2px - 4px letter-spacing)
-- **Descriptions**: `Inter` / `Segoe UI` (Clean sans-serif for high legibility)
-- **Monospace Stats**: `Share Tech Mono` (Used for server browser stats and map IDs)
+- **Typography**: `Oswald` (Headers/Tabs), `Inter` (Descriptions), `Share Tech Mono` (Stats)
