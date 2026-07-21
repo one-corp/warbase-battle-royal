@@ -72,8 +72,12 @@ func (app *application) connectToServerHandler(w http.ResponseWriter, r *http.Re
 
 func (app *application) listRoomsHandler(w http.ResponseWriter, r *http.Request) {
 	rooms := app.match.ListActiveRooms()
+	onlineCount := app.match.GetTotalOnlinePlayers()
 
-	err := app.writeJSON(w, http.StatusOK, envelope{"rooms": rooms}, nil)
+	err := app.writeJSON(w, http.StatusOK, envelope{
+		"rooms":          rooms,
+		"online_players": onlineCount,
+	}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}

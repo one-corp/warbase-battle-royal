@@ -398,17 +398,18 @@
           fetch('/api/rooms')
             .then(res => res.json())
             .then(data => {
-              let totalPlayers = 0;
+              if (livePlayerCount) {
+                const count = (data.online_players !== undefined) ? data.online_players : 1;
+                livePlayerCount.innerText = Math.max(1, count);
+              }
 
               if (!data.rooms || data.rooms.length === 0) {
                 container.innerHTML = '<div style="color: rgba(255,255,255,0.4); font-family: \'Share Tech Mono\', monospace; padding: 40px 0; text-align: center;">No active combat zones. Create one.</div>';
-                if (livePlayerCount) livePlayerCount.innerText = '1 (YOU)';
                 return;
               }
               
               container.innerHTML = '';
               data.rooms.forEach(room => {
-                totalPlayers += (room.playerCount || 0);
                 const div = document.createElement('div');
                 div.className = 'server-row';
                 div.innerHTML = `
@@ -434,8 +435,6 @@
                 });
                 container.appendChild(div);
               });
-
-              if (livePlayerCount) livePlayerCount.innerText = Math.max(1, totalPlayers);
             })
             .catch(err => {
               container.innerHTML = '<div style="color: #ff4444; font-family: \'Share Tech Mono\', monospace; padding: 40px 0; text-align: center;">Failed to fetch servers.</div>';
