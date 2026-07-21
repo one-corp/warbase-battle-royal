@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WARBASE — Tactical FPS</title>
-    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   </head>
   <body>
     <!-- ═══════════════════════════════════════════════════════════════
@@ -20,7 +20,7 @@
       z-index: 1000; 
       display: flex;
       background: linear-gradient(135deg, rgba(8,10,14,0.92) 0%, rgba(15,18,25,0.95) 50%, rgba(8,10,14,0.92) 100%);
-      font-family: 'Rajdhani', 'Segoe UI', sans-serif;
+      font-family: 'Oswald', 'Segoe UI', sans-serif;
       color: #e0e0e0;
       overflow: hidden;
     ">
@@ -28,7 +28,7 @@
       <div id="menu-sidebar" style="
         width: 320px; min-width: 320px;
         background: linear-gradient(180deg, rgba(12,14,18,0.98) 0%, rgba(18,20,26,0.98) 100%);
-        border-right: 1px solid rgba(207,165,95,0.15);
+        border-right: 1px solid rgba(0,255,204,0.15);
         display: flex; flex-direction: column;
         padding: 0;
         position: relative;
@@ -36,10 +36,10 @@
         <!-- Brand -->
         <div style="padding: 40px 35px 30px; border-bottom: 1px solid rgba(255,255,255,0.06);">
           <div style="display: flex; align-items: center; gap: 12px;">
-            <span style="font-family: 'Share Tech Mono', monospace; font-size: 28px; color: #cfa55f; letter-spacing: 4px;">///</span>
+            <span style="font-family: 'Share Tech Mono', monospace; font-size: 28px; color: #00ffcc; letter-spacing: 4px;">///</span>
             <span style="font-size: 32px; font-weight: 700; letter-spacing: 8px; color: #fff;">WARBASE</span>
           </div>
-          <div style="font-family: 'Share Tech Mono', monospace; font-size: 11px; color: rgba(207,165,95,0.6); margin-top: 8px; letter-spacing: 3px;">TACTICAL OPERATIONS v1.0</div>
+          <div style="font-family: 'Share Tech Mono', monospace; font-size: 11px; color: rgba(0,255,204,0.6); margin-top: 8px; letter-spacing: 3px;">TACTICAL OPERATIONS v1.0</div>
         </div>
 
         <!-- Nav Items -->
@@ -64,7 +64,7 @@
 
         <!-- Server Status (Bottom of sidebar) -->
         <div style="padding: 20px 35px; border-top: 1px solid rgba(255,255,255,0.06); font-family: 'Share Tech Mono', monospace; font-size: 11px;">
-          <div style="color: rgba(207,165,95,0.8); margin-bottom: 4px;">SERVER: AUTO-DETECT</div>
+          <div style="color: rgba(0,255,204,0.8); margin-bottom: 4px;">SERVER: AUTO-DETECT</div>
           <div style="color: rgba(100,255,100,0.7);">● READY TO JOIN</div>
         </div>
       </div>
@@ -77,8 +77,8 @@
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
             <h1 style="font-size: 28px; font-weight: 700; letter-spacing: 4px; color: #fff; margin: 0;">SERVER BROWSER</h1>
             <button id="refresh-servers-btn" style="
-              background: none; border: 1px solid rgba(207,165,95,0.4); color: #cfa55f;
-              font-family: 'Rajdhani', sans-serif; font-size: 14px; font-weight: 600;
+              background: none; border: 1px solid rgba(0,255,204,0.4); color: #00ffcc;
+              font-family: 'Oswald', sans-serif; font-size: 14px; font-weight: 600;
               letter-spacing: 2px; padding: 8px 20px; cursor: pointer;
               transition: all 0.2s;
             ">REFRESH ↻</button>
@@ -93,17 +93,17 @@
           <h1 style="font-size: 28px; font-weight: 700; letter-spacing: 4px; color: #fff; margin: 0 0 30px 0;">CREATE ROOM</h1>
           
           <div style="margin-bottom: 30px;">
-            <label style="display: block; font-size: 12px; font-weight: 600; letter-spacing: 3px; color: #cfa55f; margin-bottom: 10px;">OPERATION NAME</label>
+            <label style="display: block; font-size: 12px; font-weight: 600; letter-spacing: 3px; color: #00ffcc; margin-bottom: 10px;">OPERATION NAME</label>
             <input type="text" id="roomNameInput" placeholder="Enter operation name..." autocomplete="off" style="
               width: 100%; max-width: 500px; padding: 14px 18px;
               background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
-              color: #fff; font-family: 'Rajdhani', sans-serif; font-size: 16px;
+              color: #fff; font-family: 'Oswald', sans-serif; font-size: 16px;
               outline: none; transition: border-color 0.2s;
             " />
           </div>
 
           <div style="margin-bottom: 30px;">
-            <label style="display: block; font-size: 12px; font-weight: 600; letter-spacing: 3px; color: #cfa55f; margin-bottom: 15px;">SELECT COMBAT ZONE</label>
+            <label style="display: block; font-size: 12px; font-weight: 600; letter-spacing: 3px; color: #00ffcc; margin-bottom: 15px;">SELECT COMBAT ZONE</label>
             <div id="create-map-cards" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; max-width: 800px;">
               <div class="map-select-card active" data-map="industrial">
                 <div class="map-select-name">INDUSTRIAL ZONE</div>
@@ -121,8 +121,8 @@
           </div>
 
           <button id="initializeMatchBtn" style="
-            background: linear-gradient(135deg, #cfa55f 0%, #a07830 100%);
-            border: none; color: #0a0a0a; font-family: 'Rajdhani', sans-serif;
+            background: #00ffcc;
+            border: none; color: #0a0a0a; font-family: 'Oswald', sans-serif;
             font-size: 18px; font-weight: 700; letter-spacing: 3px;
             padding: 16px 50px; cursor: pointer; transition: all 0.2s;
             clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
@@ -135,30 +135,30 @@
           <div style="display: flex; flex-direction: column; gap: 20px; max-width: 600px;">
             <!-- Primary -->
             <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 25px;">
-              <div style="font-size: 11px; letter-spacing: 3px; color: #cfa55f; margin-bottom: 12px;">PRIMARY WEAPON</div>
+              <div style="font-size: 11px; letter-spacing: 3px; color: #00ffcc; margin-bottom: 12px;">PRIMARY WEAPON</div>
               <div style="font-size: 22px; font-weight: 700; color: #fff;">AK-47 RIFLE</div>
               <div style="font-size: 13px; color: rgba(255,255,255,0.4); margin-top: 4px;">Tactical, matte black, reliable</div>
               <div style="margin-top: 15px; display: flex; flex-direction: column; gap: 8px;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                   <span style="font-size: 11px; letter-spacing: 2px; color: rgba(255,255,255,0.5); width: 80px;">DAMAGE</span>
-                  <div style="flex: 1; height: 4px; background: rgba(255,255,255,0.1); position: relative;"><div style="width: 68%; height: 100%; background: #cfa55f;"></div></div>
+                  <div style="flex: 1; height: 4px; background: rgba(255,255,255,0.1); position: relative;"><div style="width: 68%; height: 100%; background: #00ffcc;"></div></div>
                   <span style="font-size: 11px; color: rgba(255,255,255,0.5); width: 40px; text-align: right;">68</span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 12px;">
                   <span style="font-size: 11px; letter-spacing: 2px; color: rgba(255,255,255,0.5); width: 80px;">ACCURACY</span>
-                  <div style="flex: 1; height: 4px; background: rgba(255,255,255,0.1); position: relative;"><div style="width: 55%; height: 100%; background: #cfa55f;"></div></div>
+                  <div style="flex: 1; height: 4px; background: rgba(255,255,255,0.1); position: relative;"><div style="width: 55%; height: 100%; background: #00ffcc;"></div></div>
                   <span style="font-size: 11px; color: rgba(255,255,255,0.5); width: 40px; text-align: right;">55</span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 12px;">
                   <span style="font-size: 11px; letter-spacing: 2px; color: rgba(255,255,255,0.5); width: 80px;">RANGE</span>
-                  <div style="flex: 1; height: 4px; background: rgba(255,255,255,0.1); position: relative;"><div style="width: 70%; height: 100%; background: #cfa55f;"></div></div>
+                  <div style="flex: 1; height: 4px; background: rgba(255,255,255,0.1); position: relative;"><div style="width: 70%; height: 100%; background: #00ffcc;"></div></div>
                   <span style="font-size: 11px; color: rgba(255,255,255,0.5); width: 40px; text-align: right;">70</span>
                 </div>
               </div>
             </div>
             <!-- Secondary -->
             <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 25px;">
-              <div style="font-size: 11px; letter-spacing: 3px; color: #cfa55f; margin-bottom: 12px;">SECONDARY WEAPON</div>
+              <div style="font-size: 11px; letter-spacing: 3px; color: #00ffcc; margin-bottom: 12px;">SECONDARY WEAPON</div>
               <div style="font-size: 22px; font-weight: 700; color: #fff;">M1911 PISTOL</div>
               <div style="font-size: 13px; color: rgba(255,255,255,0.4); margin-top: 4px;">Semi-auto, high headshot multiplier</div>
             </div>
@@ -197,14 +197,14 @@
       <div id="menu-deploy" style="
         width: 340px; min-width: 340px;
         background: linear-gradient(180deg, rgba(12,14,18,0.98) 0%, rgba(18,20,26,0.98) 100%);
-        border-left: 1px solid rgba(207,165,95,0.15);
+        border-left: 1px solid rgba(0,255,204,0.15);
         display: flex; flex-direction: column;
         justify-content: flex-end;
         padding: 40px 30px;
       ">
         <!-- Deploy Info -->
         <div style="margin-bottom: 25px;">
-          <div style="font-size: 11px; letter-spacing: 3px; color: rgba(207,165,95,0.6); margin-bottom: 8px;">DEPLOYMENT STATUS</div>
+          <div style="font-size: 11px; letter-spacing: 3px; color: rgba(0,255,204,0.6); margin-bottom: 8px;">DEPLOYMENT STATUS</div>
           <div id="deploy-hub-title" style="font-size: 18px; font-weight: 700; letter-spacing: 2px; color: #fff;">NO ZONE SELECTED</div>
         </div>
 
@@ -220,11 +220,11 @@
 
         <!-- Username -->
         <div style="margin-bottom: 20px;">
-          <label style="display: block; font-size: 11px; letter-spacing: 3px; color: rgba(207,165,95,0.6); margin-bottom: 8px;">CALLSIGN</label>
+          <label style="display: block; font-size: 11px; letter-spacing: 3px; color: rgba(0,255,204,0.6); margin-bottom: 8px;">CALLSIGN</label>
           <input type="text" id="usernameInput" placeholder="Enter callsign..." autocomplete="off" style="
             width: 100%; padding: 12px 16px;
             background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
-            color: #fff; font-family: 'Rajdhani', sans-serif; font-size: 15px;
+            color: #fff; font-family: 'Oswald', sans-serif; font-size: 15px;
             outline: none; transition: border-color 0.2s;
           " />
         </div>
@@ -232,8 +232,8 @@
         <!-- Deploy Button -->
         <button id="joinButton" disabled style="
           width: 100%; padding: 18px; border: none; cursor: pointer;
-          background: linear-gradient(135deg, #cfa55f 0%, #a07830 100%);
-          color: #0a0a0a; font-family: 'Rajdhani', sans-serif;
+          background: #00ffcc;
+          color: #0a0a0a; font-family: 'Oswald', sans-serif;
           font-size: 18px; font-weight: 700; letter-spacing: 4px;
           transition: all 0.3s; opacity: 0.4;
           clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
@@ -266,12 +266,12 @@
     </div>
 
     <!-- Pointer Lock Warning -->
-    <div id="pointerWarning" style="display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 10px 20px; border-radius: 5px; z-index: 1500; font-family: 'Rajdhani', sans-serif;">Click to capture mouse</div>
+    <div id="pointerWarning" style="display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 10px 20px; border-radius: 5px; z-index: 1500; font-family: 'Oswald', sans-serif;">Click to capture mouse</div>
 
     <!-- Scoreboard -->
     <div id="scoreboard" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1800; justify-content: center; align-items: center;">
-      <div style="background: rgba(30,30,30,0.95); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 30px; width: 600px; max-height: 80vh; overflow-y: auto; font-family: 'Rajdhani', sans-serif; color: white;">
-        <h2 style="text-align: center; margin-bottom: 20px; letter-spacing: 4px; color: #cfa55f;">SCOREBOARD</h2>
+      <div style="background: rgba(30,30,30,0.95); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 30px; width: 600px; max-height: 80vh; overflow-y: auto; font-family: 'Oswald', sans-serif; color: white;">
+        <h2 style="text-align: center; margin-bottom: 20px; letter-spacing: 4px; color: #00ffcc;">SCOREBOARD</h2>
         <table style="width: 100%; border-collapse: collapse; text-align: left;">
           <thead>
             <tr style="border-bottom: 2px solid #555;">
@@ -288,7 +288,7 @@
 
     <!-- Exit Confirmation Popup -->
     <div id="exitPopup" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 3000; justify-content: center; align-items: center;">
-      <div style="background: rgba(30,30,30,0.95); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 40px; text-align: center; font-family: 'Rajdhani', sans-serif; color: white;">
+      <div style="background: rgba(30,30,30,0.95); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 40px; text-align: center; font-family: 'Oswald', sans-serif; color: white;">
         <h2 style="font-size: 32px; letter-spacing: 4px; color: #ff4444; margin-bottom: 20px;">EXIT MATCH?</h2>
         <p style="font-size: 18px; color: rgba(255,255,255,0.7); margin-bottom: 30px;">Are you sure you want to return to the main menu?</p>
         <div style="display: flex; gap: 20px; justify-content: center;">
@@ -300,7 +300,7 @@
 
     <!-- Reconnecting Overlay -->
     <div id="reconnectOverlay" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 4000; justify-content: center; align-items: center;">
-      <div style="text-align: center; font-family: 'Rajdhani', sans-serif; color: white;">
+      <div style="text-align: center; font-family: 'Oswald', sans-serif; color: white;">
         <h2 style="font-size: 40px; letter-spacing: 4px; color: #ff9900; margin-bottom: 10px;">CONNECTION LOST</h2>
         <p id="reconnectText" style="font-size: 20px; color: rgba(255,255,255,0.7);">Attempting to reconnect...</p>
       </div>
@@ -356,7 +356,7 @@
                   <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
                       <div style="color: #fff; font-weight: 700; font-size: 16px; letter-spacing: 1px; text-transform: uppercase;">${room.name}</div>
-                      <div style="color: rgba(207,165,95,0.7); font-size: 12px; font-family: 'Share Tech Mono', monospace; margin-top: 4px;">MAP: ${room.map.toUpperCase()} &nbsp;|&nbsp; PLAYERS: ${room.playerCount}</div>
+                      <div style="color: rgba(0,255,204,0.7); font-size: 12px; font-family: 'Share Tech Mono', monospace; margin-top: 4px;">MAP: ${room.map.toUpperCase()} &nbsp;|&nbsp; PLAYERS: ${room.playerCount}</div>
                     </div>
                     <button class="server-select-btn">SELECT</button>
                   </div>

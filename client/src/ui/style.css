@@ -66,27 +66,27 @@ body {
 
 .sidebar-nav-item:hover {
   color: rgba(255,255,255,0.8);
-  background: rgba(207,165,95,0.05);
-  border-left-color: rgba(207,165,95,0.3);
+  background: rgba(0,255,204,0.1);
+  border-left-color: rgba(0,255,204,0.3);
 }
 
 .sidebar-nav-item.active {
-  color: #cfa55f;
-  border-left-color: #cfa55f;
-  background: rgba(207,165,95,0.08);
+  color: #00ffcc;
+  border-left-color: #00ffcc;
+  background: rgba(0,255,204,0.08);
 }
 
 .sidebar-nav-item .nav-indicator {
   width: 6px;
   height: 6px;
-  border-radius: 50%;
+  border-radius: 0;
   background: transparent;
   transition: all 0.25s ease;
 }
 
 .sidebar-nav-item.active .nav-indicator {
-  background: #cfa55f;
-  box-shadow: 0 0 8px rgba(207,165,95,0.5);
+  background: #00ffcc;
+  box-shadow: none;
 }
 
 /* ═══════════════════════════════════════════════════
@@ -118,21 +118,21 @@ body {
 }
 
 .server-row:hover {
-  background: rgba(207,165,95,0.06);
-  border-color: rgba(207,165,95,0.2);
+  background: rgba(0,255,204,0.06);
+  border-color: rgba(0,255,204,0.2);
 }
 
 .server-row.selected {
-  background: rgba(207,165,95,0.1);
-  border-color: rgba(207,165,95,0.4);
-  box-shadow: inset 3px 0 0 #cfa55f;
+  background: rgba(0,255,204,0.1);
+  border-color: rgba(0,255,204,0.4);
+  box-shadow: inset 3px 0 0 #00ffcc;
 }
 
 .server-select-btn {
   background: none;
-  border: 1px solid rgba(207,165,95,0.4);
-  color: #cfa55f;
-  font-family: 'Rajdhani', sans-serif;
+  border: 1px solid rgba(0,255,204,0.4);
+  color: #00ffcc;
+  font-family: 'Oswald', sans-serif;
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 2px;
@@ -142,8 +142,8 @@ body {
 }
 
 .server-select-btn:hover {
-  background: rgba(207,165,95,0.15);
-  border-color: #cfa55f;
+  background: rgba(0,255,204,0.15);
+  border-color: #00ffcc;
 }
 
 /* ═══════════════════════════════════════════════════
@@ -172,17 +172,17 @@ body {
 }
 
 .map-select-card:hover {
-  background: rgba(207,165,95,0.06);
-  border-color: rgba(207,165,95,0.2);
+  background: rgba(0,255,204,0.06);
+  border-color: rgba(0,255,204,0.2);
 }
 
 .map-select-card.active {
-  background: rgba(207,165,95,0.1);
-  border-color: rgba(207,165,95,0.5);
+  background: rgba(0,255,204,0.1);
+  border-color: rgba(0,255,204,0.5);
 }
 
 .map-select-card.active::before {
-  background: #cfa55f;
+  background: #00ffcc;
 }
 
 .map-select-name {
@@ -219,15 +219,15 @@ body {
 }
 
 #refresh-servers-btn:hover {
-  background: rgba(207,165,95,0.15) !important;
-  border-color: #cfa55f !important;
+  background: rgba(0,255,204,0.15) !important;
+  border-color: #00ffcc !important;
 }
 
 /* ═══════════════════════════════════════════════════
    INPUT FOCUS STYLES
 ═══════════════════════════════════════════════════ */
 input[type="text"]:focus {
-  border-color: rgba(207,165,95,0.4) !important;
+  border-color: rgba(0,255,204,0.4) !important;
 }
 
 /* ═══════════════════════════════════════════════════
@@ -236,7 +236,7 @@ input[type="text"]:focus {
 input[type="checkbox"] {
   width: 18px;
   height: 18px;
-  accent-color: #cfa55f;
+  accent-color: #00ffcc;
   cursor: pointer;
 }
 
@@ -252,12 +252,12 @@ input[type="checkbox"] {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(207,165,95,0.3);
+  background: rgba(0,255,204,0.3);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(207,165,95,0.5);
+  background: rgba(0,255,204,0.5);
 }
 
 /* ═══════════════════════════════════════════════════
