@@ -337,11 +337,11 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
                 for (const [id, p] of sortedPlayers) {
                     const safeId = escapeHTML(id);
                     html += `
-                        <tr style="border-bottom: 1px solid #444; color: ${p.isDead ? '#ff4444' : 'white'}">
-                            <td style="padding: 8px;">${id === username ? safeId + ' (You)' : safeId} ${p.isDead ? '(DEAD)' : ''}</td>
-                            <td style="padding: 8px;">${p.kills || 0}</td>
-                            <td style="padding: 8px;">${p.deaths || 0}</td>
-                            <td style="padding: 8px; color: #4ade80;">${p.ping || 0}ms</td>
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.08); color: ${p.isDead ? '#ff4444' : 'white'}">
+                            <td style="padding: 10px; font-weight: 600;">${id === username ? safeId + ' <span style="color: #60a5fa;">(YOU)</span>' : safeId} ${p.isDead ? '<span style="color: #ff4444; font-size: 11px;">[DEAD]</span>' : ''}</td>
+                            <td style="padding: 10px; text-align: center; color: #fff;">${p.kills || 0}</td>
+                            <td style="padding: 10px; text-align: center; color: rgba(255,255,255,0.6);">${p.deaths || 0}</td>
+                            <td style="padding: 10px; text-align: right; color: #4ade80; font-family: 'Share Tech Mono', monospace;">${p.ping || 0}ms</td>
                         </tr>
                     `;
                 }

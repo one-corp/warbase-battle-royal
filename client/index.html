@@ -296,9 +296,28 @@
     <!-- In-Game HUD -->
     <div id="uiLayer" style="display: none;">
       <div id="crosshair" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 20px;">+</div>
-      <div id="scoreboard" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.85); border: 1px solid rgba(255,255,255,0.2); padding: 30px; width: 600px; max-height: 80vh; overflow-y: auto; color: white;">
-        <h2 style="text-align: center; margin-bottom: 20px; font-size: 24px; letter-spacing: 3px;">SCOREBOARD</h2>
-        <div id="scoreboardList"></div>
+    </div>
+
+    <!-- Scoreboard (TAB) Overlay -->
+    <div id="scoreboardUI" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 4500; justify-content: center; align-items: center; font-family: 'Oswald', sans-serif;">
+      <div style="background: rgba(18,20,26,0.95); border: 1px solid rgba(255,255,255,0.2); padding: 30px 40px; width: 650px; color: white; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">
+          <h2 style="margin: 0; font-size: 24px; letter-spacing: 3px; color: #fff;">COMBAT SCOREBOARD</h2>
+          <span id="engineTypeIndicator" style="font-family: 'Share Tech Mono', monospace; font-size: 13px; color: #00FF00;">WebGPU</span>
+        </div>
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-family: 'Inter', sans-serif; font-size: 14px;">
+          <thead>
+            <tr style="border-bottom: 2px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.5); text-transform: uppercase; font-size: 12px; letter-spacing: 1px;">
+              <th style="padding: 10px;">OPERATOR</th>
+              <th style="padding: 10px; text-align: center;">KILLS</th>
+              <th style="padding: 10px; text-align: center;">DEATHS</th>
+              <th style="padding: 10px; text-align: right;">PING</th>
+            </tr>
+          </thead>
+          <tbody id="scoreboardBody">
+            <!-- Dynamic Scoreboard Rows -->
+          </tbody>
+        </table>
       </div>
     </div>
 
