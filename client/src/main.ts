@@ -45,7 +45,7 @@ async function initEngine(canvas: HTMLCanvasElement): Promise<Engine | WebGPUEng
     if (!forceWebGL && await WebGPUEngine.IsSupportedAsync) {
         let engine;
         try {
-            engine = new WebGPUEngine(canvas, { antialias: false, enableGPUDebugMarkers: true });
+            engine = new WebGPUEngine(canvas, { antialias: false });
             await engine.initAsync();
             currentEngineType = "WebGPU";
             return engine;
@@ -192,8 +192,7 @@ async function createScene(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElem
             currentSkybox = scene.createDefaultSkybox(newEnvTexture, true, 1000, 0.3);
         });
     }
-    // SSAO 2 and SSR have been completely removed to guarantee 60+ FPS on all devices.
-    // The game will still look excellent with just the HDRI skybox and Bloom!
+    // Note: SSAO and SSR are enabled dynamically via syncProGraphics when selected in settings.
 
     return { scene, playerEid, engine };
 }
@@ -215,13 +214,17 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
 
         const handleEscape = (e: KeyboardEvent) => {
             if (e.key === "Escape") {
-                document.exitPointerLock();
-                if (exitPopup) {
+                if (document.pointerLockElement === canvas) {
+                    document.exitPointerLock();
+                } else if (exitPopup) {
                     if (exitPopup.style.display === "flex") {
                         exitPopup.style.display = "none";
-                        // Optionally auto-lock again, but browser might require a click
-                    } else {
-                        exitPopup.style.display = "flex";
+                        canvas.requestPointerLock();
+                    } else if (!isLocalDead) {
+                        const scoreboard = document.getElementById("scoreboardUI") || document.getElementById("scoreboard");
+                        if (!scoreboard || scoreboard.style.display !== "flex") {
+                            exitPopup.style.display = "flex";
+                        }
                     }
                 }
             }
@@ -317,35 +320,38 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
                 }
             }
 
-            // Sync Scoreboard
-            const scoreboardBody = document.getElementById("scoreboardBody");
-            if (scoreboardBody) {
-                let html = "";
-                const sortedPlayers = Object.entries(globalState).sort((a, b) => (b[1].kills || 0) - (a[1].kills || 0) || a[0].localeCompare(b[0]));
-                
-                // Helper to prevent XSS
-                const escapeHTML = (str: string) => {
-                    return str.replace(/[&<>'"]/g, tag => ({
-                        '&': '&amp;',
-                        '<': '&lt;',
-                        '>': '&gt;',
-                        "'": '&#39;',
-                        '"': '&quot;'
-                    }[tag] || tag));
-                };
+            // Sync Scoreboard (Optimized: Only update DOM if scoreboard is actually visible)
+            const scoreboardUI = document.getElementById("scoreboardUI");
+            if (scoreboardUI && scoreboardUI.style.display === "flex") {
+                const scoreboardBody = document.getElementById("scoreboardBody");
+                if (scoreboardBody) {
+                    let html = "";
+                    const sortedPlayers = Object.entries(globalState).sort((a, b) => (b[1].kills || 0) - (a[1].kills || 0) || a[0].localeCompare(b[0]));
+                    
+                    // Helper to prevent XSS
+                    const escapeHTML = (str: string) => {
+                        return str.replace(/[&<>'"]/g, tag => ({
+                            '&': '&amp;',
+                            '<': '&lt;',
+                            '>': '&gt;',
+                            "'": '&#39;',
+                            '"': '&quot;'
+                        }[tag] || tag));
+                    };
 
-                for (const [id, p] of sortedPlayers) {
-                    const safeId = escapeHTML(id);
-                    html += `
-                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.08); color: ${p.isDead ? '#ff4444' : 'white'}">
-                            <td style="padding: 10px; font-weight: 600;">${id === username ? safeId + ' <span style="color: #60a5fa;">(YOU)</span>' : safeId} ${p.isDead ? '<span style="color: #ff4444; font-size: 11px;">[DEAD]</span>' : ''}</td>
-                            <td style="padding: 10px; text-align: center; color: #fff;">${p.kills || 0}</td>
-                            <td style="padding: 10px; text-align: center; color: rgba(255,255,255,0.6);">${p.deaths || 0}</td>
-                            <td style="padding: 10px; text-align: right; color: #4ade80; font-family: 'Share Tech Mono', monospace;">${p.ping || 0}ms</td>
-                        </tr>
-                    `;
+                    for (const [id, p] of sortedPlayers) {
+                        const safeId = escapeHTML(id);
+                        html += `
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.08); color: ${p.isDead ? '#ff4444' : 'white'}">
+                                <td style="padding: 10px; font-weight: 600;">${id === username ? safeId + ' <span style="color: #60a5fa;">(YOU)</span>' : safeId} ${p.isDead ? '<span style="color: #ff4444; font-size: 11px;">[DEAD]</span>' : ''}</td>
+                                <td style="padding: 10px; text-align: center; color: #fff;">${p.kills || 0}</td>
+                                <td style="padding: 10px; text-align: center; color: rgba(255,255,255,0.6);">${p.deaths || 0}</td>
+                                <td style="padding: 10px; text-align: right; color: #4ade80; font-family: 'Share Tech Mono', monospace;">${p.ping || 0}ms</td>
+                            </tr>
+                        `;
+                    }
+                    scoreboardBody.innerHTML = html;
                 }
-                scoreboardBody.innerHTML = html;
             }
         };
 
@@ -465,9 +471,17 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
             if (document.pointerLockElement === canvas) {
                 isLocked = true;
                 if (pointerWarning) pointerWarning.style.display = "none";
+                if (exitPopup) exitPopup.style.display = "none";
             } else {
                 isLocked = false;
                 if (pointerWarning) pointerWarning.style.display = "block";
+                
+                if (!isLocalDead) {
+                    const scoreboard = document.getElementById("scoreboardUI") || document.getElementById("scoreboard");
+                    if (!scoreboard || scoreboard.style.display !== "flex") {
+                        if (exitPopup) exitPopup.style.display = "flex";
+                    }
+                }
             }
         };
         document.addEventListener("pointerlockchange", handlePointerLockChange);
@@ -613,18 +627,7 @@ if (canvas) {
         activeScene = mainMenu.scene;
 
         // Frame limiter variables
-        const TARGET_FPS = 140;
-        const MIN_FRAME_TIME = 1000 / TARGET_FPS;
-        let lastRenderTime = performance.now();
-
         engine.runRenderLoop(() => {
-            const now = performance.now();
-            const dt = now - lastRenderTime;
-
-            if (dt < MIN_FRAME_TIME) return;
-
-            lastRenderTime = now;
-
             if (activeScene) activeScene.render();
         });
 

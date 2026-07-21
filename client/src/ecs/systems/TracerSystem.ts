@@ -23,6 +23,10 @@ const tracerEntities: number[] = [];
 let currentTracerIndex = 0;
 
 export function initTracerSystem(scene: Scene) {
+    tracerEntities.length = 0;
+    currentTracerIndex = 0;
+    tracerDataMap.clear();
+
     for (let i = 0; i < MAX_TRACERS; i++) {
         const eid = addEntity(world);
         addComponent(world, Position, eid);

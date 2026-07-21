@@ -82,7 +82,7 @@ func (app *application) listRoomsHandler(w http.ResponseWriter, r *http.Request)
 	// Evict entries older than 15 seconds
 	onlineCount := 0
 	for id, lastSeen := range app.presenceMap {
-		if now.Sub(lastSeen) > 15*time.Second {
+		if now.Sub(lastSeen) > 20*time.Second {
 			delete(app.presenceMap, id)
 		} else {
 			onlineCount++

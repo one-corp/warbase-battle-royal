@@ -263,8 +263,8 @@ body {
 }
 
 .server-row.selected {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: #ffffff;
+  background: rgba(168, 230, 207, 0.15);
+  border-color: #a8e6cf;
 }
 
 .server-select-btn {

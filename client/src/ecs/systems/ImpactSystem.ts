@@ -3,7 +3,13 @@ import { Scene, Vector3, ParticleSystem, Texture, Color4 } from "@babylonjs/core
 let sparkSystem: ParticleSystem | null = null;
 
 export function initImpactSystem(scene: Scene) {
-    if (sparkSystem) return;
+    // If spark system exists but belongs to an old/disposed scene, we must recreate it
+    if (sparkSystem && sparkSystem.getScene() === scene) return;
+    
+    // Cleanup old if it exists
+    if (sparkSystem && sparkSystem.getScene() !== scene) {
+        sparkSystem.dispose();
+    }
 
     sparkSystem = new ParticleSystem("sparks", 200, scene);
     

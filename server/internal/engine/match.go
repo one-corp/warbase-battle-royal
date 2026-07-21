@@ -474,8 +474,10 @@ func (m *Match) Run() {
 							select {
 							case session.outputQueue <- stateData:
 							default:
-								close(session.outputQueue)
 								delete(m.sessions, session)
+								close(session.outputQueue)
+								// Evict from room immediately to prevent zombies
+								go m.Unregister(session)
 							}
 						}
 					}

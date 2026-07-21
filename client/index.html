@@ -66,9 +66,9 @@
             <div class="class-list-column">
               <div class="class-item-list" id="class-item-list">
                 <div class="class-item active" data-class="ASSAULT">ASSAULT</div>
-                <div class="class-item" data-class="SUPPORT" style="opacity: 0.5;">SUPPORT <span style="font-size: 10px; color: #ff9900;">[DEV]</span></div>
-                <div class="class-item" data-class="ENGINEER" style="opacity: 0.5;">ENGINEER <span style="font-size: 10px; color: #ff9900;">[DEV]</span></div>
-                <div class="class-item" data-class="MEDIC" style="opacity: 0.5;">MEDIC <span style="font-size: 10px; color: #ff9900;">[DEV]</span></div>
+                <div class="class-item locked" data-class="SUPPORT" style="opacity: 0.5; cursor: not-allowed; position: relative;" title="Class in development">SUPPORT <span style="font-size: 14px; position: absolute; right: 15px;">🔒</span></div>
+                <div class="class-item locked" data-class="ENGINEER" style="opacity: 0.5; cursor: not-allowed; position: relative;" title="Class in development">ENGINEER <span style="font-size: 14px; position: absolute; right: 15px;">🔒</span></div>
+                <div class="class-item locked" data-class="MEDIC" style="opacity: 0.5; cursor: not-allowed; position: relative;" title="Class in development">MEDIC <span style="font-size: 14px; position: absolute; right: 15px;">🔒</span></div>
               </div>
 
               <div class="class-desc-box" id="class-desc-text">
@@ -153,31 +153,25 @@
           <input type="hidden" id="selectedMap" value="" />
           <input type="hidden" id="mapSelector" value="industrial" />
 
-          <!-- Selected Deployment Box -->
-          <div id="menu-deploy" style="
-            margin-top: 30px; padding: 20px 30px;
-            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1);
-            display: flex; justify-content: space-between; align-items: center;
-          ">
-            <div>
-              <div style="font-size: 11px; letter-spacing: 3px; color: rgba(255,255,255,0.5);">SELECTED DEPLOYMENT</div>
-              <div id="deploy-hub-title" style="font-size: 22px; font-weight: 700; color: #fff; letter-spacing: 2px; margin-top: 4px;">NO ZONE SELECTED</div>
-            </div>
+          <!-- Selected Deployment Button -->
+          <div style="display: flex; justify-content: flex-end; margin-top: 30px;">
             <button id="joinButton" disabled style="
-              background: #ffffff; border: none; color: #000000;
-              font-family: 'Oswald', sans-serif; font-size: 18px; font-weight: 700;
-              letter-spacing: 3px; padding: 14px 40px; cursor: pointer;
-              opacity: 0.4; transition: all 0.15s;
-            "><span id="btn-deploy-text">SELECT A SERVER</span></button>
+              background: linear-gradient(135deg, #ff2a4b 0%, #d80027 100%);
+              border: 1px solid #ff4d6d;
+              box-shadow: 0 0 15px rgba(255, 42, 75, 0.4);
+              color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+              font-family: 'Oswald', sans-serif; font-size: 16px; font-weight: 700;
+              letter-spacing: 2px; padding: 12px 30px; cursor: pointer;
+              opacity: 0.4; transition: all 0.2s ease-in-out;
+            " onmouseover="if(!this.disabled) { this.style.boxShadow='0 0 25px rgba(255, 42, 75, 0.8)'; this.style.transform='translateY(-2px)'; }" onmouseout="if(!this.disabled) { this.style.boxShadow='0 0 15px rgba(255, 42, 75, 0.4)'; this.style.transform='translateY(0)'; }"><span id="btn-deploy-text">SELECT A SERVER</span></button>
           </div>
         </div>
 
         <!-- TAB: CREATE MATCH -->
         <div class="tab-content" id="tab-create">
-          <h1 style="font-size: 28px; font-weight: 700; letter-spacing: 4px; color: #fff; margin: 0 0 30px 0;">CREATE COMBAT ZONE</h1>
           
           <div style="margin-bottom: 30px;">
-            <label style="display: block; font-size: 12px; font-weight: 600; letter-spacing: 3px; color: rgba(255,255,255,0.6); margin-bottom: 10px;">OPERATION NAME</label>
+            <label style="display: block; font-size: 12px; font-weight: 600; letter-spacing: 3px; color: rgba(255,255,255,0.6); margin-bottom: 10px;">ROOM NAME</label>
             <input type="text" id="roomNameInput" placeholder="Enter operation name..." autocomplete="off" style="
               width: 100%; max-width: 500px; padding: 14px 18px;
               background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
@@ -198,8 +192,8 @@
               <div class="map-select-card" data-map="arena">
                 <div class="map-select-name">GAME ARENA</div>
               </div>
-              <div class="map-select-card" data-map="ghost_city">
-                <div class="map-select-name">GHOST CITY</div>
+              <div class="map-select-card locked" data-map="ghost_city" style="opacity: 0.5; cursor: not-allowed; position: relative;" title="Map in development">
+                <div class="map-select-name">GHOST CITY <span style="font-size: 14px; position: absolute; right: 15px; top: 15px;">🔒</span></div>
               </div>
             </div>
           </div>
@@ -307,8 +301,36 @@
     <canvas id="renderCanvas"></canvas>
 
     <!-- In-Game HUD -->
-    <div id="uiLayer" style="display: none;">
-      <div id="crosshair" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 20px;">+</div>
+    <div id="uiLayer" style="display: none; position: fixed; inset: 0; pointer-events: none; z-index: 2000;">
+      <!-- Crosshair -->
+      <div id="crosshair" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 20px; font-weight: 400; text-shadow: 0 0 2px #000;">+</div>
+
+      <!-- Weapon & Ammo Status (Bottom Right) -->
+      <div style="position: absolute; bottom: 40px; right: 50px; display: flex; flex-direction: column; align-items: flex-end; font-family: 'Oswald', sans-serif;">
+        <!-- Reloading Indicator -->
+        <div id="reloadingText" style="display: none; color: #ffeb3b; font-size: 16px; letter-spacing: 2px; margin-bottom: 5px; text-shadow: 0 0 4px #000;">RELOADING...</div>
+        
+        <div style="display: flex; align-items: baseline; gap: 20px; background: rgba(0,0,0,0.4); padding: 10px 20px; border-radius: 4px; border-bottom: 2px solid #fff;">
+          
+          <!-- Primary Weapon -->
+          <div id="hud-slot-primary" class="hud-weapon-slot active" style="text-align: right; opacity: 1; transition: opacity 0.2s;">
+            <div style="font-size: 14px; letter-spacing: 2px; color: rgba(255,255,255,0.6);">AK-47</div>
+            <div id="ammoText" style="font-size: 36px; font-weight: 700; color: #fff; line-height: 1;">30 / 30</div>
+          </div>
+          
+          <!-- Secondary Weapon (Sidearm) -->
+          <div id="hud-slot-secondary" class="hud-weapon-slot" style="text-align: right; opacity: 0.4; transition: opacity 0.2s;">
+            <div style="font-size: 14px; letter-spacing: 2px; color: rgba(255,255,255,0.6);">DEAGLE</div>
+            <div id="ammoTextSecondary" style="font-size: 24px; font-weight: 700; color: #fff; line-height: 1; display: none;">7 / 7</div>
+          </div>
+          
+          <!-- Grenade -->
+          <div style="margin-left: 10px; padding-left: 20px; border-left: 1px solid rgba(255,255,255,0.2); text-align: center;">
+            <div style="font-size: 20px;">💣</div>
+            <div style="font-size: 14px; color: #fff; font-weight: 700;">1</div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Scoreboard (TAB) Overlay -->
@@ -403,7 +425,7 @@
           item.addEventListener('click', () => {
             const className = item.getAttribute('data-class');
             if (className !== 'ASSAULT') {
-              alert(`${className} class is currently IN DEVELOPMENT. Assault is active.`);
+              // Now handled by CSS title and not-allowed cursor
             }
           });
         });
@@ -471,18 +493,16 @@
                     <button class="server-select-btn">SELECT</button>
                   </div>
                 `;
-                div.querySelector('.server-select-btn').addEventListener('click', (e) => {
-                  e.stopPropagation();
+                div.onclick = () => {
                   document.querySelectorAll('.server-row').forEach(el => el.classList.remove('selected'));
                   div.classList.add('selected');
-                  
                   selectedRoomIdInput.value = room.id;
                   document.getElementById('selectedMap').value = room.map;
-                  deployHubTitle.innerText = room.name.toUpperCase();
+                  if (deployHubTitle) deployHubTitle.innerText = room.name.toUpperCase();
                   btnDeployText.innerText = 'DEPLOY TO COMBAT';
                   joinButton.disabled = false;
                   joinButton.style.opacity = '1';
-                });
+                };
                 container.appendChild(div);
               });
             })
@@ -500,6 +520,7 @@
         const mapCards = document.querySelectorAll('#create-map-cards .map-select-card');
         mapCards.forEach(card => {
           card.addEventListener('click', () => {
+            if (card.classList.contains('locked')) return;
             mapCards.forEach(c => c.classList.remove('active'));
             card.classList.add('active');
             mapSelector.value = card.getAttribute('data-map');
@@ -523,9 +544,10 @@
           .then(res => res.json())
           .then(data => {
             if (data.room_id) {
-              selectedRoomIdInput.value = data.room_id;
-              document.getElementById('selectedMap').value = mapName;
-              deployHubTitle.innerText = roomName.toUpperCase();
+              selectedRoomIdInput.value = data.id;
+              document.getElementById('selectedMap').value = data.map;
+              if (deployHubTitle) deployHubTitle.innerText = roomName.toUpperCase();
+              joinButton.disabled = false;
               btnDeployText.innerText = 'DEPLOY TO COMBAT';
               joinButton.disabled = false;
               joinButton.style.opacity = '1';

@@ -9,6 +9,9 @@ const decalEntities: number[] = [];
 let currentDecalIndex = 0;
 
 export function initDecalSystem(scene: Scene) {
+    decalEntities.length = 0;
+    currentDecalIndex = 0;
+
     const mat = new StandardMaterial("bulletHoleMat", scene);
     mat.diffuseTexture = new Texture("https://playground.babylonjs.com/textures/impact.png", scene);
     mat.diffuseTexture.hasAlpha = true;

@@ -596,8 +596,8 @@ export const initWeapons = async (playerEid: number, scene: Scene, networkManage
 
     const ammoTextPrimary = document.getElementById("ammoText");
     const ammoTextSecondary = document.getElementById("ammoTextSecondary");
-    const slotPrimary = document.getElementById("slot-primary");
-    const slotSecondary = document.getElementById("slot-secondary");
+    const slotPrimary = document.getElementById("hud-slot-primary");
+    const slotSecondary = document.getElementById("hud-slot-secondary");
 
     window.addEventListener('ammo-update', (e) => {
         const detail = (e as any).detail;
