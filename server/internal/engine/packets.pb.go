@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        v7.35.1
-// source: packets.proto
+// source: shared/proto/packets.proto
 
 package engine
 
@@ -32,6 +32,7 @@ type ClientEvent struct {
 	//	*ClientEvent_SwitchWeapon
 	//	*ClientEvent_RespawnRequest
 	//	*ClientEvent_ThrowGrenade
+	//	*ClientEvent_Ping
 	Event         isClientEvent_Event `protobuf_oneof:"event"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -39,7 +40,7 @@ type ClientEvent struct {
 
 func (x *ClientEvent) Reset() {
 	*x = ClientEvent{}
-	mi := &file_packets_proto_msgTypes[0]
+	mi := &file_shared_proto_packets_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -51,7 +52,7 @@ func (x *ClientEvent) String() string {
 func (*ClientEvent) ProtoMessage() {}
 
 func (x *ClientEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_packets_proto_msgTypes[0]
+	mi := &file_shared_proto_packets_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -64,7 +65,7 @@ func (x *ClientEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClientEvent.ProtoReflect.Descriptor instead.
 func (*ClientEvent) Descriptor() ([]byte, []int) {
-	return file_packets_proto_rawDescGZIP(), []int{0}
+	return file_shared_proto_packets_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *ClientEvent) GetEvent() isClientEvent_Event {
@@ -137,6 +138,15 @@ func (x *ClientEvent) GetThrowGrenade() *ThrowGrenadeEvent {
 	return nil
 }
 
+func (x *ClientEvent) GetPing() *PingEvent {
+	if x != nil {
+		if x, ok := x.Event.(*ClientEvent_Ping); ok {
+			return x.Ping
+		}
+	}
+	return nil
+}
+
 type isClientEvent_Event interface {
 	isClientEvent_Event()
 }
@@ -169,6 +179,10 @@ type ClientEvent_ThrowGrenade struct {
 	ThrowGrenade *ThrowGrenadeEvent `protobuf:"bytes,7,opt,name=throw_grenade,json=throwGrenade,proto3,oneof"`
 }
 
+type ClientEvent_Ping struct {
+	Ping *PingEvent `protobuf:"bytes,8,opt,name=ping,proto3,oneof"`
+}
+
 func (*ClientEvent_StateUpdate) isClientEvent_Event() {}
 
 func (*ClientEvent_Hit) isClientEvent_Event() {}
@@ -183,6 +197,8 @@ func (*ClientEvent_RespawnRequest) isClientEvent_Event() {}
 
 func (*ClientEvent_ThrowGrenade) isClientEvent_Event() {}
 
+func (*ClientEvent_Ping) isClientEvent_Event() {}
+
 type PlayerStateUpdate struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	X             float32                `protobuf:"fixed32,1,opt,name=x,proto3" json:"x,omitempty"`
@@ -194,13 +210,14 @@ type PlayerStateUpdate struct {
 	Rw            float32                `protobuf:"fixed32,7,opt,name=rw,proto3" json:"rw,omitempty"` // rotation quaternion w
 	Animation     string                 `protobuf:"bytes,8,opt,name=animation,proto3" json:"animation,omitempty"`
 	PlatformId    string                 `protobuf:"bytes,9,opt,name=platform_id,json=platformId,proto3" json:"platform_id,omitempty"`
+	Ping          int32                  `protobuf:"varint,10,opt,name=ping,proto3" json:"ping,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *PlayerStateUpdate) Reset() {
 	*x = PlayerStateUpdate{}
-	mi := &file_packets_proto_msgTypes[1]
+	mi := &file_shared_proto_packets_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -212,7 +229,7 @@ func (x *PlayerStateUpdate) String() string {
 func (*PlayerStateUpdate) ProtoMessage() {}
 
 func (x *PlayerStateUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_packets_proto_msgTypes[1]
+	mi := &file_shared_proto_packets_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -225,7 +242,7 @@ func (x *PlayerStateUpdate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlayerStateUpdate.ProtoReflect.Descriptor instead.
 func (*PlayerStateUpdate) Descriptor() ([]byte, []int) {
-	return file_packets_proto_rawDescGZIP(), []int{1}
+	return file_shared_proto_packets_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *PlayerStateUpdate) GetX() float32 {
@@ -291,6 +308,13 @@ func (x *PlayerStateUpdate) GetPlatformId() string {
 	return ""
 }
 
+func (x *PlayerStateUpdate) GetPing() int32 {
+	if x != nil {
+		return x.Ping
+	}
+	return 0
+}
+
 type HitEvent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	TargetId      string                 `protobuf:"bytes,1,opt,name=target_id,json=targetId,proto3" json:"target_id,omitempty"`
@@ -301,7 +325,7 @@ type HitEvent struct {
 
 func (x *HitEvent) Reset() {
 	*x = HitEvent{}
-	mi := &file_packets_proto_msgTypes[2]
+	mi := &file_shared_proto_packets_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -313,7 +337,7 @@ func (x *HitEvent) String() string {
 func (*HitEvent) ProtoMessage() {}
 
 func (x *HitEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_packets_proto_msgTypes[2]
+	mi := &file_shared_proto_packets_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -326,7 +350,7 @@ func (x *HitEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HitEvent.ProtoReflect.Descriptor instead.
 func (*HitEvent) Descriptor() ([]byte, []int) {
-	return file_packets_proto_rawDescGZIP(), []int{2}
+	return file_shared_proto_packets_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *HitEvent) GetTargetId() string {
@@ -351,7 +375,7 @@ type FireEvent struct {
 
 func (x *FireEvent) Reset() {
 	*x = FireEvent{}
-	mi := &file_packets_proto_msgTypes[3]
+	mi := &file_shared_proto_packets_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -363,7 +387,7 @@ func (x *FireEvent) String() string {
 func (*FireEvent) ProtoMessage() {}
 
 func (x *FireEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_packets_proto_msgTypes[3]
+	mi := &file_shared_proto_packets_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -376,7 +400,7 @@ func (x *FireEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FireEvent.ProtoReflect.Descriptor instead.
 func (*FireEvent) Descriptor() ([]byte, []int) {
-	return file_packets_proto_rawDescGZIP(), []int{3}
+	return file_shared_proto_packets_proto_rawDescGZIP(), []int{3}
 }
 
 type ReloadEvent struct {
@@ -387,7 +411,7 @@ type ReloadEvent struct {
 
 func (x *ReloadEvent) Reset() {
 	*x = ReloadEvent{}
-	mi := &file_packets_proto_msgTypes[4]
+	mi := &file_shared_proto_packets_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -399,7 +423,7 @@ func (x *ReloadEvent) String() string {
 func (*ReloadEvent) ProtoMessage() {}
 
 func (x *ReloadEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_packets_proto_msgTypes[4]
+	mi := &file_shared_proto_packets_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -412,7 +436,7 @@ func (x *ReloadEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReloadEvent.ProtoReflect.Descriptor instead.
 func (*ReloadEvent) Descriptor() ([]byte, []int) {
-	return file_packets_proto_rawDescGZIP(), []int{4}
+	return file_shared_proto_packets_proto_rawDescGZIP(), []int{4}
 }
 
 type SwitchWeaponEvent struct {
@@ -424,7 +448,7 @@ type SwitchWeaponEvent struct {
 
 func (x *SwitchWeaponEvent) Reset() {
 	*x = SwitchWeaponEvent{}
-	mi := &file_packets_proto_msgTypes[5]
+	mi := &file_shared_proto_packets_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -436,7 +460,7 @@ func (x *SwitchWeaponEvent) String() string {
 func (*SwitchWeaponEvent) ProtoMessage() {}
 
 func (x *SwitchWeaponEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_packets_proto_msgTypes[5]
+	mi := &file_shared_proto_packets_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -449,7 +473,7 @@ func (x *SwitchWeaponEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SwitchWeaponEvent.ProtoReflect.Descriptor instead.
 func (*SwitchWeaponEvent) Descriptor() ([]byte, []int) {
-	return file_packets_proto_rawDescGZIP(), []int{5}
+	return file_shared_proto_packets_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *SwitchWeaponEvent) GetWeaponId() string {
@@ -467,7 +491,7 @@ type RespawnRequestEvent struct {
 
 func (x *RespawnRequestEvent) Reset() {
 	*x = RespawnRequestEvent{}
-	mi := &file_packets_proto_msgTypes[6]
+	mi := &file_shared_proto_packets_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -479,7 +503,7 @@ func (x *RespawnRequestEvent) String() string {
 func (*RespawnRequestEvent) ProtoMessage() {}
 
 func (x *RespawnRequestEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_packets_proto_msgTypes[6]
+	mi := &file_shared_proto_packets_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -492,7 +516,7 @@ func (x *RespawnRequestEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RespawnRequestEvent.ProtoReflect.Descriptor instead.
 func (*RespawnRequestEvent) Descriptor() ([]byte, []int) {
-	return file_packets_proto_rawDescGZIP(), []int{6}
+	return file_shared_proto_packets_proto_rawDescGZIP(), []int{6}
 }
 
 type ThrowGrenadeEvent struct {
@@ -509,7 +533,7 @@ type ThrowGrenadeEvent struct {
 
 func (x *ThrowGrenadeEvent) Reset() {
 	*x = ThrowGrenadeEvent{}
-	mi := &file_packets_proto_msgTypes[7]
+	mi := &file_shared_proto_packets_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -521,7 +545,7 @@ func (x *ThrowGrenadeEvent) String() string {
 func (*ThrowGrenadeEvent) ProtoMessage() {}
 
 func (x *ThrowGrenadeEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_packets_proto_msgTypes[7]
+	mi := &file_shared_proto_packets_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -534,7 +558,7 @@ func (x *ThrowGrenadeEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ThrowGrenadeEvent.ProtoReflect.Descriptor instead.
 func (*ThrowGrenadeEvent) Descriptor() ([]byte, []int) {
-	return file_packets_proto_rawDescGZIP(), []int{7}
+	return file_shared_proto_packets_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ThrowGrenadeEvent) GetPx() float32 {
@@ -579,6 +603,94 @@ func (x *ThrowGrenadeEvent) GetVz() float32 {
 	return 0
 }
 
+type ServerPongEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ClientTime    int64                  `protobuf:"varint,1,opt,name=client_time,json=clientTime,proto3" json:"client_time,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ServerPongEvent) Reset() {
+	*x = ServerPongEvent{}
+	mi := &file_shared_proto_packets_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ServerPongEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ServerPongEvent) ProtoMessage() {}
+
+func (x *ServerPongEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_shared_proto_packets_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ServerPongEvent.ProtoReflect.Descriptor instead.
+func (*ServerPongEvent) Descriptor() ([]byte, []int) {
+	return file_shared_proto_packets_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ServerPongEvent) GetClientTime() int64 {
+	if x != nil {
+		return x.ClientTime
+	}
+	return 0
+}
+
+type PingEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ClientTime    int64                  `protobuf:"varint,1,opt,name=client_time,json=clientTime,proto3" json:"client_time,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PingEvent) Reset() {
+	*x = PingEvent{}
+	mi := &file_shared_proto_packets_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PingEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PingEvent) ProtoMessage() {}
+
+func (x *PingEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_shared_proto_packets_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PingEvent.ProtoReflect.Descriptor instead.
+func (*PingEvent) Descriptor() ([]byte, []int) {
+	return file_shared_proto_packets_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *PingEvent) GetClientTime() int64 {
+	if x != nil {
+		return x.ClientTime
+	}
+	return 0
+}
+
 type ServerMessage struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Types that are valid to be assigned to Message:
@@ -592,7 +704,7 @@ type ServerMessage struct {
 
 func (x *ServerMessage) Reset() {
 	*x = ServerMessage{}
-	mi := &file_packets_proto_msgTypes[8]
+	mi := &file_shared_proto_packets_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -604,7 +716,7 @@ func (x *ServerMessage) String() string {
 func (*ServerMessage) ProtoMessage() {}
 
 func (x *ServerMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_packets_proto_msgTypes[8]
+	mi := &file_shared_proto_packets_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -617,7 +729,7 @@ func (x *ServerMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServerMessage.ProtoReflect.Descriptor instead.
 func (*ServerMessage) Descriptor() ([]byte, []int) {
-	return file_packets_proto_rawDescGZIP(), []int{8}
+	return file_shared_proto_packets_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ServerMessage) GetMessage() isServerMessage_Message {
@@ -670,7 +782,7 @@ type GameState struct {
 
 func (x *GameState) Reset() {
 	*x = GameState{}
-	mi := &file_packets_proto_msgTypes[9]
+	mi := &file_shared_proto_packets_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -682,7 +794,7 @@ func (x *GameState) String() string {
 func (*GameState) ProtoMessage() {}
 
 func (x *GameState) ProtoReflect() protoreflect.Message {
-	mi := &file_packets_proto_msgTypes[9]
+	mi := &file_shared_proto_packets_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -695,7 +807,7 @@ func (x *GameState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GameState.ProtoReflect.Descriptor instead.
 func (*GameState) Descriptor() ([]byte, []int) {
-	return file_packets_proto_rawDescGZIP(), []int{9}
+	return file_shared_proto_packets_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *GameState) GetPlayers() map[string]*PlayerState {
@@ -720,13 +832,14 @@ type PlayerState struct {
 	Deaths        int32                  `protobuf:"varint,11,opt,name=deaths,proto3" json:"deaths,omitempty"`
 	IsDead        bool                   `protobuf:"varint,12,opt,name=is_dead,json=isDead,proto3" json:"is_dead,omitempty"`
 	PlatformId    string                 `protobuf:"bytes,13,opt,name=platform_id,json=platformId,proto3" json:"platform_id,omitempty"`
+	Ping          int32                  `protobuf:"varint,14,opt,name=ping,proto3" json:"ping,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *PlayerState) Reset() {
 	*x = PlayerState{}
-	mi := &file_packets_proto_msgTypes[10]
+	mi := &file_shared_proto_packets_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -738,7 +851,7 @@ func (x *PlayerState) String() string {
 func (*PlayerState) ProtoMessage() {}
 
 func (x *PlayerState) ProtoReflect() protoreflect.Message {
-	mi := &file_packets_proto_msgTypes[10]
+	mi := &file_shared_proto_packets_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -751,7 +864,7 @@ func (x *PlayerState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlayerState.ProtoReflect.Descriptor instead.
 func (*PlayerState) Descriptor() ([]byte, []int) {
-	return file_packets_proto_rawDescGZIP(), []int{10}
+	return file_shared_proto_packets_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *PlayerState) GetX() float32 {
@@ -845,6 +958,13 @@ func (x *PlayerState) GetPlatformId() string {
 	return ""
 }
 
+func (x *PlayerState) GetPing() int32 {
+	if x != nil {
+		return x.Ping
+	}
+	return 0
+}
+
 type ServerEvent struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Types that are valid to be assigned to Event:
@@ -854,6 +974,7 @@ type ServerEvent struct {
 	//	*ServerEvent_HitConfirmed
 	//	*ServerEvent_KillConfirmed
 	//	*ServerEvent_ThrowGrenade
+	//	*ServerEvent_Pong
 	Event         isServerEvent_Event `protobuf_oneof:"event"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -861,7 +982,7 @@ type ServerEvent struct {
 
 func (x *ServerEvent) Reset() {
 	*x = ServerEvent{}
-	mi := &file_packets_proto_msgTypes[11]
+	mi := &file_shared_proto_packets_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -873,7 +994,7 @@ func (x *ServerEvent) String() string {
 func (*ServerEvent) ProtoMessage() {}
 
 func (x *ServerEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_packets_proto_msgTypes[11]
+	mi := &file_shared_proto_packets_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -886,7 +1007,7 @@ func (x *ServerEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServerEvent.ProtoReflect.Descriptor instead.
 func (*ServerEvent) Descriptor() ([]byte, []int) {
-	return file_packets_proto_rawDescGZIP(), []int{11}
+	return file_shared_proto_packets_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ServerEvent) GetEvent() isServerEvent_Event {
@@ -941,6 +1062,15 @@ func (x *ServerEvent) GetThrowGrenade() *ServerThrowGrenadeEvent {
 	return nil
 }
 
+func (x *ServerEvent) GetPong() *ServerPongEvent {
+	if x != nil {
+		if x, ok := x.Event.(*ServerEvent_Pong); ok {
+			return x.Pong
+		}
+	}
+	return nil
+}
+
 type isServerEvent_Event interface {
 	isServerEvent_Event()
 }
@@ -965,6 +1095,10 @@ type ServerEvent_ThrowGrenade struct {
 	ThrowGrenade *ServerThrowGrenadeEvent `protobuf:"bytes,5,opt,name=throw_grenade,json=throwGrenade,proto3,oneof"`
 }
 
+type ServerEvent_Pong struct {
+	Pong *ServerPongEvent `protobuf:"bytes,6,opt,name=pong,proto3,oneof"`
+}
+
 func (*ServerEvent_Respawn) isServerEvent_Event() {}
 
 func (*ServerEvent_Fire) isServerEvent_Event() {}
@@ -974,6 +1108,8 @@ func (*ServerEvent_HitConfirmed) isServerEvent_Event() {}
 func (*ServerEvent_KillConfirmed) isServerEvent_Event() {}
 
 func (*ServerEvent_ThrowGrenade) isServerEvent_Event() {}
+
+func (*ServerEvent_Pong) isServerEvent_Event() {}
 
 type RespawnEvent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -986,7 +1122,7 @@ type RespawnEvent struct {
 
 func (x *RespawnEvent) Reset() {
 	*x = RespawnEvent{}
-	mi := &file_packets_proto_msgTypes[12]
+	mi := &file_shared_proto_packets_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -998,7 +1134,7 @@ func (x *RespawnEvent) String() string {
 func (*RespawnEvent) ProtoMessage() {}
 
 func (x *RespawnEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_packets_proto_msgTypes[12]
+	mi := &file_shared_proto_packets_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1011,7 +1147,7 @@ func (x *RespawnEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RespawnEvent.ProtoReflect.Descriptor instead.
 func (*RespawnEvent) Descriptor() ([]byte, []int) {
-	return file_packets_proto_rawDescGZIP(), []int{12}
+	return file_shared_proto_packets_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *RespawnEvent) GetX() float32 {
@@ -1044,7 +1180,7 @@ type ServerFireEvent struct {
 
 func (x *ServerFireEvent) Reset() {
 	*x = ServerFireEvent{}
-	mi := &file_packets_proto_msgTypes[13]
+	mi := &file_shared_proto_packets_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1056,7 +1192,7 @@ func (x *ServerFireEvent) String() string {
 func (*ServerFireEvent) ProtoMessage() {}
 
 func (x *ServerFireEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_packets_proto_msgTypes[13]
+	mi := &file_shared_proto_packets_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1069,7 +1205,7 @@ func (x *ServerFireEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServerFireEvent.ProtoReflect.Descriptor instead.
 func (*ServerFireEvent) Descriptor() ([]byte, []int) {
-	return file_packets_proto_rawDescGZIP(), []int{13}
+	return file_shared_proto_packets_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ServerFireEvent) GetShooterId() string {
@@ -1087,7 +1223,7 @@ type HitConfirmedEvent struct {
 
 func (x *HitConfirmedEvent) Reset() {
 	*x = HitConfirmedEvent{}
-	mi := &file_packets_proto_msgTypes[14]
+	mi := &file_shared_proto_packets_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1099,7 +1235,7 @@ func (x *HitConfirmedEvent) String() string {
 func (*HitConfirmedEvent) ProtoMessage() {}
 
 func (x *HitConfirmedEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_packets_proto_msgTypes[14]
+	mi := &file_shared_proto_packets_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1112,7 +1248,7 @@ func (x *HitConfirmedEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HitConfirmedEvent.ProtoReflect.Descriptor instead.
 func (*HitConfirmedEvent) Descriptor() ([]byte, []int) {
-	return file_packets_proto_rawDescGZIP(), []int{14}
+	return file_shared_proto_packets_proto_rawDescGZIP(), []int{16}
 }
 
 type KillConfirmedEvent struct {
@@ -1123,7 +1259,7 @@ type KillConfirmedEvent struct {
 
 func (x *KillConfirmedEvent) Reset() {
 	*x = KillConfirmedEvent{}
-	mi := &file_packets_proto_msgTypes[15]
+	mi := &file_shared_proto_packets_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1135,7 +1271,7 @@ func (x *KillConfirmedEvent) String() string {
 func (*KillConfirmedEvent) ProtoMessage() {}
 
 func (x *KillConfirmedEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_packets_proto_msgTypes[15]
+	mi := &file_shared_proto_packets_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1148,7 +1284,7 @@ func (x *KillConfirmedEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KillConfirmedEvent.ProtoReflect.Descriptor instead.
 func (*KillConfirmedEvent) Descriptor() ([]byte, []int) {
-	return file_packets_proto_rawDescGZIP(), []int{15}
+	return file_shared_proto_packets_proto_rawDescGZIP(), []int{17}
 }
 
 type ServerThrowGrenadeEvent struct {
@@ -1166,7 +1302,7 @@ type ServerThrowGrenadeEvent struct {
 
 func (x *ServerThrowGrenadeEvent) Reset() {
 	*x = ServerThrowGrenadeEvent{}
-	mi := &file_packets_proto_msgTypes[16]
+	mi := &file_shared_proto_packets_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1178,7 +1314,7 @@ func (x *ServerThrowGrenadeEvent) String() string {
 func (*ServerThrowGrenadeEvent) ProtoMessage() {}
 
 func (x *ServerThrowGrenadeEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_packets_proto_msgTypes[16]
+	mi := &file_shared_proto_packets_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1191,7 +1327,7 @@ func (x *ServerThrowGrenadeEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServerThrowGrenadeEvent.ProtoReflect.Descriptor instead.
 func (*ServerThrowGrenadeEvent) Descriptor() ([]byte, []int) {
-	return file_packets_proto_rawDescGZIP(), []int{16}
+	return file_shared_proto_packets_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ServerThrowGrenadeEvent) GetShooterId() string {
@@ -1243,11 +1379,11 @@ func (x *ServerThrowGrenadeEvent) GetVz() float32 {
 	return 0
 }
 
-var File_packets_proto protoreflect.FileDescriptor
+var File_shared_proto_packets_proto protoreflect.FileDescriptor
 
-const file_packets_proto_rawDesc = "" +
+const file_shared_proto_packets_proto_rawDesc = "" +
 	"\n" +
-	"\rpackets.proto\x12\awarbase\"\xa7\x03\n" +
+	"\x1ashared/proto/packets.proto\x12\awarbase\"\xd1\x03\n" +
 	"\vClientEvent\x12?\n" +
 	"\fstate_update\x18\x01 \x01(\v2\x1a.warbase.PlayerStateUpdateH\x00R\vstateUpdate\x12%\n" +
 	"\x03hit\x18\x02 \x01(\v2\x11.warbase.HitEventH\x00R\x03hit\x12(\n" +
@@ -1255,8 +1391,9 @@ const file_packets_proto_rawDesc = "" +
 	"\x06reload\x18\x04 \x01(\v2\x14.warbase.ReloadEventH\x00R\x06reload\x12A\n" +
 	"\rswitch_weapon\x18\x05 \x01(\v2\x1a.warbase.SwitchWeaponEventH\x00R\fswitchWeapon\x12G\n" +
 	"\x0frespawn_request\x18\x06 \x01(\v2\x1c.warbase.RespawnRequestEventH\x00R\x0erespawnRequest\x12A\n" +
-	"\rthrow_grenade\x18\a \x01(\v2\x1a.warbase.ThrowGrenadeEventH\x00R\fthrowGrenadeB\a\n" +
-	"\x05event\"\xbc\x01\n" +
+	"\rthrow_grenade\x18\a \x01(\v2\x1a.warbase.ThrowGrenadeEventH\x00R\fthrowGrenade\x12(\n" +
+	"\x04ping\x18\b \x01(\v2\x12.warbase.PingEventH\x00R\x04pingB\a\n" +
+	"\x05event\"\xd0\x01\n" +
 	"\x11PlayerStateUpdate\x12\f\n" +
 	"\x01x\x18\x01 \x01(\x02R\x01x\x12\f\n" +
 	"\x01y\x18\x02 \x01(\x02R\x01y\x12\f\n" +
@@ -1267,7 +1404,9 @@ const file_packets_proto_rawDesc = "" +
 	"\x02rw\x18\a \x01(\x02R\x02rw\x12\x1c\n" +
 	"\tanimation\x18\b \x01(\tR\tanimation\x12\x1f\n" +
 	"\vplatform_id\x18\t \x01(\tR\n" +
-	"platformId\"?\n" +
+	"platformId\x12\x12\n" +
+	"\x04ping\x18\n" +
+	" \x01(\x05R\x04ping\"?\n" +
 	"\bHitEvent\x12\x1b\n" +
 	"\ttarget_id\x18\x01 \x01(\tR\btargetId\x12\x16\n" +
 	"\x06damage\x18\x02 \x01(\x05R\x06damage\"\v\n" +
@@ -1282,7 +1421,13 @@ const file_packets_proto_rawDesc = "" +
 	"\x02pz\x18\x03 \x01(\x02R\x02pz\x12\x0e\n" +
 	"\x02vx\x18\x04 \x01(\x02R\x02vx\x12\x0e\n" +
 	"\x02vy\x18\x05 \x01(\x02R\x02vy\x12\x0e\n" +
-	"\x02vz\x18\x06 \x01(\x02R\x02vz\"\x8a\x01\n" +
+	"\x02vz\x18\x06 \x01(\x02R\x02vz\"2\n" +
+	"\x0fServerPongEvent\x12\x1f\n" +
+	"\vclient_time\x18\x01 \x01(\x03R\n" +
+	"clientTime\",\n" +
+	"\tPingEvent\x12\x1f\n" +
+	"\vclient_time\x18\x01 \x01(\x03R\n" +
+	"clientTime\"\x8a\x01\n" +
 	"\rServerMessage\x123\n" +
 	"\n" +
 	"game_state\x18\x01 \x01(\v2\x12.warbase.GameStateH\x00R\tgameState\x129\n" +
@@ -1292,7 +1437,7 @@ const file_packets_proto_rawDesc = "" +
 	"\aplayers\x18\x01 \x03(\v2\x1f.warbase.GameState.PlayersEntryR\aplayers\x1aP\n" +
 	"\fPlayersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12*\n" +
-	"\x05value\x18\x02 \x01(\v2\x14.warbase.PlayerStateR\x05value:\x028\x01\"\x95\x02\n" +
+	"\x05value\x18\x02 \x01(\v2\x14.warbase.PlayerStateR\x05value:\x028\x01\"\xa9\x02\n" +
 	"\vPlayerState\x12\f\n" +
 	"\x01x\x18\x01 \x01(\x02R\x01x\x12\f\n" +
 	"\x01y\x18\x02 \x01(\x02R\x01y\x12\f\n" +
@@ -1308,13 +1453,15 @@ const file_packets_proto_rawDesc = "" +
 	"\x06deaths\x18\v \x01(\x05R\x06deaths\x12\x17\n" +
 	"\ais_dead\x18\f \x01(\bR\x06isDead\x12\x1f\n" +
 	"\vplatform_id\x18\r \x01(\tR\n" +
-	"platformId\"\xcb\x02\n" +
+	"platformId\x12\x12\n" +
+	"\x04ping\x18\x0e \x01(\x05R\x04ping\"\xfb\x02\n" +
 	"\vServerEvent\x121\n" +
 	"\arespawn\x18\x01 \x01(\v2\x15.warbase.RespawnEventH\x00R\arespawn\x12.\n" +
 	"\x04fire\x18\x02 \x01(\v2\x18.warbase.ServerFireEventH\x00R\x04fire\x12A\n" +
 	"\rhit_confirmed\x18\x03 \x01(\v2\x1a.warbase.HitConfirmedEventH\x00R\fhitConfirmed\x12D\n" +
 	"\x0ekill_confirmed\x18\x04 \x01(\v2\x1b.warbase.KillConfirmedEventH\x00R\rkillConfirmed\x12G\n" +
-	"\rthrow_grenade\x18\x05 \x01(\v2 .warbase.ServerThrowGrenadeEventH\x00R\fthrowGrenadeB\a\n" +
+	"\rthrow_grenade\x18\x05 \x01(\v2 .warbase.ServerThrowGrenadeEventH\x00R\fthrowGrenade\x12.\n" +
+	"\x04pong\x18\x06 \x01(\v2\x18.warbase.ServerPongEventH\x00R\x04pongB\a\n" +
 	"\x05event\"8\n" +
 	"\fRespawnEvent\x12\f\n" +
 	"\x01x\x18\x01 \x01(\x02R\x01x\x12\f\n" +
@@ -1336,19 +1483,19 @@ const file_packets_proto_rawDesc = "" +
 	"\x02vz\x18\a \x01(\x02R\x02vzB'Z%warbase-server/internal/engine;engineb\x06proto3"
 
 var (
-	file_packets_proto_rawDescOnce sync.Once
-	file_packets_proto_rawDescData []byte
+	file_shared_proto_packets_proto_rawDescOnce sync.Once
+	file_shared_proto_packets_proto_rawDescData []byte
 )
 
-func file_packets_proto_rawDescGZIP() []byte {
-	file_packets_proto_rawDescOnce.Do(func() {
-		file_packets_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_packets_proto_rawDesc), len(file_packets_proto_rawDesc)))
+func file_shared_proto_packets_proto_rawDescGZIP() []byte {
+	file_shared_proto_packets_proto_rawDescOnce.Do(func() {
+		file_shared_proto_packets_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_shared_proto_packets_proto_rawDesc), len(file_shared_proto_packets_proto_rawDesc)))
 	})
-	return file_packets_proto_rawDescData
+	return file_shared_proto_packets_proto_rawDescData
 }
 
-var file_packets_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
-var file_packets_proto_goTypes = []any{
+var file_shared_proto_packets_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
+var file_shared_proto_packets_proto_goTypes = []any{
 	(*ClientEvent)(nil),             // 0: warbase.ClientEvent
 	(*PlayerStateUpdate)(nil),       // 1: warbase.PlayerStateUpdate
 	(*HitEvent)(nil),                // 2: warbase.HitEvent
@@ -1357,18 +1504,20 @@ var file_packets_proto_goTypes = []any{
 	(*SwitchWeaponEvent)(nil),       // 5: warbase.SwitchWeaponEvent
 	(*RespawnRequestEvent)(nil),     // 6: warbase.RespawnRequestEvent
 	(*ThrowGrenadeEvent)(nil),       // 7: warbase.ThrowGrenadeEvent
-	(*ServerMessage)(nil),           // 8: warbase.ServerMessage
-	(*GameState)(nil),               // 9: warbase.GameState
-	(*PlayerState)(nil),             // 10: warbase.PlayerState
-	(*ServerEvent)(nil),             // 11: warbase.ServerEvent
-	(*RespawnEvent)(nil),            // 12: warbase.RespawnEvent
-	(*ServerFireEvent)(nil),         // 13: warbase.ServerFireEvent
-	(*HitConfirmedEvent)(nil),       // 14: warbase.HitConfirmedEvent
-	(*KillConfirmedEvent)(nil),      // 15: warbase.KillConfirmedEvent
-	(*ServerThrowGrenadeEvent)(nil), // 16: warbase.ServerThrowGrenadeEvent
-	nil,                             // 17: warbase.GameState.PlayersEntry
+	(*ServerPongEvent)(nil),         // 8: warbase.ServerPongEvent
+	(*PingEvent)(nil),               // 9: warbase.PingEvent
+	(*ServerMessage)(nil),           // 10: warbase.ServerMessage
+	(*GameState)(nil),               // 11: warbase.GameState
+	(*PlayerState)(nil),             // 12: warbase.PlayerState
+	(*ServerEvent)(nil),             // 13: warbase.ServerEvent
+	(*RespawnEvent)(nil),            // 14: warbase.RespawnEvent
+	(*ServerFireEvent)(nil),         // 15: warbase.ServerFireEvent
+	(*HitConfirmedEvent)(nil),       // 16: warbase.HitConfirmedEvent
+	(*KillConfirmedEvent)(nil),      // 17: warbase.KillConfirmedEvent
+	(*ServerThrowGrenadeEvent)(nil), // 18: warbase.ServerThrowGrenadeEvent
+	nil,                             // 19: warbase.GameState.PlayersEntry
 }
-var file_packets_proto_depIdxs = []int32{
+var file_shared_proto_packets_proto_depIdxs = []int32{
 	1,  // 0: warbase.ClientEvent.state_update:type_name -> warbase.PlayerStateUpdate
 	2,  // 1: warbase.ClientEvent.hit:type_name -> warbase.HitEvent
 	3,  // 2: warbase.ClientEvent.fire:type_name -> warbase.FireEvent
@@ -1376,28 +1525,30 @@ var file_packets_proto_depIdxs = []int32{
 	5,  // 4: warbase.ClientEvent.switch_weapon:type_name -> warbase.SwitchWeaponEvent
 	6,  // 5: warbase.ClientEvent.respawn_request:type_name -> warbase.RespawnRequestEvent
 	7,  // 6: warbase.ClientEvent.throw_grenade:type_name -> warbase.ThrowGrenadeEvent
-	9,  // 7: warbase.ServerMessage.game_state:type_name -> warbase.GameState
-	11, // 8: warbase.ServerMessage.server_event:type_name -> warbase.ServerEvent
-	17, // 9: warbase.GameState.players:type_name -> warbase.GameState.PlayersEntry
-	12, // 10: warbase.ServerEvent.respawn:type_name -> warbase.RespawnEvent
-	13, // 11: warbase.ServerEvent.fire:type_name -> warbase.ServerFireEvent
-	14, // 12: warbase.ServerEvent.hit_confirmed:type_name -> warbase.HitConfirmedEvent
-	15, // 13: warbase.ServerEvent.kill_confirmed:type_name -> warbase.KillConfirmedEvent
-	16, // 14: warbase.ServerEvent.throw_grenade:type_name -> warbase.ServerThrowGrenadeEvent
-	10, // 15: warbase.GameState.PlayersEntry.value:type_name -> warbase.PlayerState
-	16, // [16:16] is the sub-list for method output_type
-	16, // [16:16] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	9,  // 7: warbase.ClientEvent.ping:type_name -> warbase.PingEvent
+	11, // 8: warbase.ServerMessage.game_state:type_name -> warbase.GameState
+	13, // 9: warbase.ServerMessage.server_event:type_name -> warbase.ServerEvent
+	19, // 10: warbase.GameState.players:type_name -> warbase.GameState.PlayersEntry
+	14, // 11: warbase.ServerEvent.respawn:type_name -> warbase.RespawnEvent
+	15, // 12: warbase.ServerEvent.fire:type_name -> warbase.ServerFireEvent
+	16, // 13: warbase.ServerEvent.hit_confirmed:type_name -> warbase.HitConfirmedEvent
+	17, // 14: warbase.ServerEvent.kill_confirmed:type_name -> warbase.KillConfirmedEvent
+	18, // 15: warbase.ServerEvent.throw_grenade:type_name -> warbase.ServerThrowGrenadeEvent
+	8,  // 16: warbase.ServerEvent.pong:type_name -> warbase.ServerPongEvent
+	12, // 17: warbase.GameState.PlayersEntry.value:type_name -> warbase.PlayerState
+	18, // [18:18] is the sub-list for method output_type
+	18, // [18:18] is the sub-list for method input_type
+	18, // [18:18] is the sub-list for extension type_name
+	18, // [18:18] is the sub-list for extension extendee
+	0,  // [0:18] is the sub-list for field type_name
 }
 
-func init() { file_packets_proto_init() }
-func file_packets_proto_init() {
-	if File_packets_proto != nil {
+func init() { file_shared_proto_packets_proto_init() }
+func file_shared_proto_packets_proto_init() {
+	if File_shared_proto_packets_proto != nil {
 		return
 	}
-	file_packets_proto_msgTypes[0].OneofWrappers = []any{
+	file_shared_proto_packets_proto_msgTypes[0].OneofWrappers = []any{
 		(*ClientEvent_StateUpdate)(nil),
 		(*ClientEvent_Hit)(nil),
 		(*ClientEvent_Fire)(nil),
@@ -1405,33 +1556,35 @@ func file_packets_proto_init() {
 		(*ClientEvent_SwitchWeapon)(nil),
 		(*ClientEvent_RespawnRequest)(nil),
 		(*ClientEvent_ThrowGrenade)(nil),
+		(*ClientEvent_Ping)(nil),
 	}
-	file_packets_proto_msgTypes[8].OneofWrappers = []any{
+	file_shared_proto_packets_proto_msgTypes[10].OneofWrappers = []any{
 		(*ServerMessage_GameState)(nil),
 		(*ServerMessage_ServerEvent)(nil),
 	}
-	file_packets_proto_msgTypes[11].OneofWrappers = []any{
+	file_shared_proto_packets_proto_msgTypes[13].OneofWrappers = []any{
 		(*ServerEvent_Respawn)(nil),
 		(*ServerEvent_Fire)(nil),
 		(*ServerEvent_HitConfirmed)(nil),
 		(*ServerEvent_KillConfirmed)(nil),
 		(*ServerEvent_ThrowGrenade)(nil),
+		(*ServerEvent_Pong)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_packets_proto_rawDesc), len(file_packets_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_shared_proto_packets_proto_rawDesc), len(file_shared_proto_packets_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   18,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_packets_proto_goTypes,
-		DependencyIndexes: file_packets_proto_depIdxs,
-		MessageInfos:      file_packets_proto_msgTypes,
+		GoTypes:           file_shared_proto_packets_proto_goTypes,
+		DependencyIndexes: file_shared_proto_packets_proto_depIdxs,
+		MessageInfos:      file_shared_proto_packets_proto_msgTypes,
 	}.Build()
-	File_packets_proto = out.File
-	file_packets_proto_goTypes = nil
-	file_packets_proto_depIdxs = nil
+	File_shared_proto_packets_proto = out.File
+	file_shared_proto_packets_proto_goTypes = nil
+	file_shared_proto_packets_proto_depIdxs = nil
 }

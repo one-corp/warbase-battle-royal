@@ -44,8 +44,11 @@ export namespace warbase {
         /** ClientEvent throwGrenade. */
         throwGrenade?: (warbase.ThrowGrenadeEvent.$Properties|null);
 
+        /** ClientEvent ping. */
+        ping?: (warbase.PingEvent.$Properties|null);
+
         /** ClientEvent event. */
-        event?: ("stateUpdate"|"hit"|"fire"|"reload"|"switchWeapon"|"respawnRequest"|"throwGrenade");
+        event?: ("stateUpdate"|"hit"|"fire"|"reload"|"switchWeapon"|"respawnRequest"|"throwGrenade"|"ping");
 
         /**
          * Creates a new ClientEvent instance using the specified properties.
@@ -152,8 +155,11 @@ export namespace warbase {
             /** ClientEvent throwGrenade */
             throwGrenade?: (warbase.ThrowGrenadeEvent.$Properties|null);
 
+            /** ClientEvent ping */
+            ping?: (warbase.PingEvent.$Properties|null);
+
             /** ClientEvent event */
-            event?: ("stateUpdate"|"hit"|"fire"|"reload"|"switchWeapon"|"respawnRequest"|"throwGrenade");
+            event?: ("stateUpdate"|"hit"|"fire"|"reload"|"switchWeapon"|"respawnRequest"|"throwGrenade"|"ping");
 
             /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
@@ -168,9 +174,10 @@ export namespace warbase {
           switchWeapon?: warbase.SwitchWeaponEvent.$Shape|null;
           respawnRequest?: warbase.RespawnRequestEvent.$Shape|null;
           throwGrenade?: warbase.ThrowGrenadeEvent.$Shape|null;
+          ping?: warbase.PingEvent.$Shape|null;
           $unknowns?: Uint8Array[];
         } & (
-          ({ event?: undefined; stateUpdate?: null; hit?: null; fire?: null; reload?: null; switchWeapon?: null; respawnRequest?: null; throwGrenade?: null }|{ event?: "stateUpdate"; stateUpdate: warbase.PlayerStateUpdate.$Shape; hit?: null; fire?: null; reload?: null; switchWeapon?: null; respawnRequest?: null; throwGrenade?: null }|{ event?: "hit"; stateUpdate?: null; hit: warbase.HitEvent.$Shape; fire?: null; reload?: null; switchWeapon?: null; respawnRequest?: null; throwGrenade?: null }|{ event?: "fire"; stateUpdate?: null; hit?: null; fire: warbase.FireEvent.$Shape; reload?: null; switchWeapon?: null; respawnRequest?: null; throwGrenade?: null }|{ event?: "reload"; stateUpdate?: null; hit?: null; fire?: null; reload: warbase.ReloadEvent.$Shape; switchWeapon?: null; respawnRequest?: null; throwGrenade?: null }|{ event?: "switchWeapon"; stateUpdate?: null; hit?: null; fire?: null; reload?: null; switchWeapon: warbase.SwitchWeaponEvent.$Shape; respawnRequest?: null; throwGrenade?: null }|{ event?: "respawnRequest"; stateUpdate?: null; hit?: null; fire?: null; reload?: null; switchWeapon?: null; respawnRequest: warbase.RespawnRequestEvent.$Shape; throwGrenade?: null }|{ event?: "throwGrenade"; stateUpdate?: null; hit?: null; fire?: null; reload?: null; switchWeapon?: null; respawnRequest?: null; throwGrenade: warbase.ThrowGrenadeEvent.$Shape })
+          ({ event?: undefined; stateUpdate?: null; hit?: null; fire?: null; reload?: null; switchWeapon?: null; respawnRequest?: null; throwGrenade?: null; ping?: null }|{ event?: "stateUpdate"; stateUpdate: warbase.PlayerStateUpdate.$Shape; hit?: null; fire?: null; reload?: null; switchWeapon?: null; respawnRequest?: null; throwGrenade?: null; ping?: null }|{ event?: "hit"; stateUpdate?: null; hit: warbase.HitEvent.$Shape; fire?: null; reload?: null; switchWeapon?: null; respawnRequest?: null; throwGrenade?: null; ping?: null }|{ event?: "fire"; stateUpdate?: null; hit?: null; fire: warbase.FireEvent.$Shape; reload?: null; switchWeapon?: null; respawnRequest?: null; throwGrenade?: null; ping?: null }|{ event?: "reload"; stateUpdate?: null; hit?: null; fire?: null; reload: warbase.ReloadEvent.$Shape; switchWeapon?: null; respawnRequest?: null; throwGrenade?: null; ping?: null }|{ event?: "switchWeapon"; stateUpdate?: null; hit?: null; fire?: null; reload?: null; switchWeapon: warbase.SwitchWeaponEvent.$Shape; respawnRequest?: null; throwGrenade?: null; ping?: null }|{ event?: "respawnRequest"; stateUpdate?: null; hit?: null; fire?: null; reload?: null; switchWeapon?: null; respawnRequest: warbase.RespawnRequestEvent.$Shape; throwGrenade?: null; ping?: null }|{ event?: "throwGrenade"; stateUpdate?: null; hit?: null; fire?: null; reload?: null; switchWeapon?: null; respawnRequest?: null; throwGrenade: warbase.ThrowGrenadeEvent.$Shape; ping?: null }|{ event?: "ping"; stateUpdate?: null; hit?: null; fire?: null; reload?: null; switchWeapon?: null; respawnRequest?: null; throwGrenade?: null; ping: warbase.PingEvent.$Shape })
         );
     }
 
@@ -219,6 +226,9 @@ export namespace warbase {
 
         /** PlayerStateUpdate platformId. */
         platformId: string;
+
+        /** PlayerStateUpdate ping. */
+        ping: number;
 
         /**
          * Creates a new PlayerStateUpdate instance using the specified properties.
@@ -330,6 +340,9 @@ export namespace warbase {
 
             /** PlayerStateUpdate platformId */
             platformId?: (string|null);
+
+            /** PlayerStateUpdate ping */
+            ping?: (number|null);
 
             /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
@@ -1060,6 +1073,240 @@ export namespace warbase {
     }
 
     /**
+     * Properties of a ServerPongEvent.
+     * @deprecated Use warbase.ServerPongEvent.$Properties instead.
+     */
+    interface IServerPongEvent extends warbase.ServerPongEvent.$Properties {
+    }
+
+    /** Represents a ServerPongEvent. */
+    class ServerPongEvent {
+
+        /**
+         * Constructs a new ServerPongEvent.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: warbase.ServerPongEvent.$Properties);
+
+        /** Unknown fields preserved while decoding when enabled */
+        $unknowns?: Uint8Array[];
+
+        /** ServerPongEvent clientTime. */
+        clientTime: (number|Long);
+
+        /**
+         * Creates a new ServerPongEvent instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns ServerPongEvent instance
+         */
+        static create(properties: warbase.ServerPongEvent.$Shape): warbase.ServerPongEvent & warbase.ServerPongEvent.$Shape;
+        static create(properties?: warbase.ServerPongEvent.$Properties): warbase.ServerPongEvent;
+
+        /**
+         * Encodes the specified ServerPongEvent message. Does not implicitly {@link warbase.ServerPongEvent.verify|verify} messages.
+         * @param message ServerPongEvent message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encode(message: warbase.ServerPongEvent.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Encodes the specified ServerPongEvent message, length delimited. Does not implicitly {@link warbase.ServerPongEvent.verify|verify} messages.
+         * @param message ServerPongEvent message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encodeDelimited(message: warbase.ServerPongEvent.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Decodes a ServerPongEvent message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns {warbase.ServerPongEvent & warbase.ServerPongEvent.$Shape} ServerPongEvent
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): warbase.ServerPongEvent & warbase.ServerPongEvent.$Shape;
+
+        /**
+         * Decodes a ServerPongEvent message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns {warbase.ServerPongEvent & warbase.ServerPongEvent.$Shape} ServerPongEvent
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): warbase.ServerPongEvent & warbase.ServerPongEvent.$Shape;
+
+        /**
+         * Verifies a ServerPongEvent message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        static verify(message: { [k: string]: any }): (string|null);
+
+        /**
+         * Creates a ServerPongEvent message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns ServerPongEvent
+         */
+        static fromObject(object: { [k: string]: any }): warbase.ServerPongEvent;
+
+        /**
+         * Creates a plain object from a ServerPongEvent message. Also converts values to other types if specified.
+         * @param message ServerPongEvent
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        static toObject(message: warbase.ServerPongEvent, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+        /**
+         * Converts this ServerPongEvent to JSON.
+         * @returns JSON object
+         */
+        toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the type url for ServerPongEvent
+         * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns The type url
+         */
+        static getTypeUrl(prefix?: string): string;
+    }
+
+    namespace ServerPongEvent {
+
+        /** Properties of a ServerPongEvent. */
+        interface $Properties {
+
+            /** ServerPongEvent clientTime */
+            clientTime?: (number|Long|null);
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+        }
+
+        /** Shape of a ServerPongEvent. */
+        type $Shape = warbase.ServerPongEvent.$Properties;
+    }
+
+    /**
+     * Properties of a PingEvent.
+     * @deprecated Use warbase.PingEvent.$Properties instead.
+     */
+    interface IPingEvent extends warbase.PingEvent.$Properties {
+    }
+
+    /** Represents a PingEvent. */
+    class PingEvent {
+
+        /**
+         * Constructs a new PingEvent.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: warbase.PingEvent.$Properties);
+
+        /** Unknown fields preserved while decoding when enabled */
+        $unknowns?: Uint8Array[];
+
+        /** PingEvent clientTime. */
+        clientTime: (number|Long);
+
+        /**
+         * Creates a new PingEvent instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns PingEvent instance
+         */
+        static create(properties: warbase.PingEvent.$Shape): warbase.PingEvent & warbase.PingEvent.$Shape;
+        static create(properties?: warbase.PingEvent.$Properties): warbase.PingEvent;
+
+        /**
+         * Encodes the specified PingEvent message. Does not implicitly {@link warbase.PingEvent.verify|verify} messages.
+         * @param message PingEvent message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encode(message: warbase.PingEvent.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Encodes the specified PingEvent message, length delimited. Does not implicitly {@link warbase.PingEvent.verify|verify} messages.
+         * @param message PingEvent message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encodeDelimited(message: warbase.PingEvent.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Decodes a PingEvent message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns {warbase.PingEvent & warbase.PingEvent.$Shape} PingEvent
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): warbase.PingEvent & warbase.PingEvent.$Shape;
+
+        /**
+         * Decodes a PingEvent message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns {warbase.PingEvent & warbase.PingEvent.$Shape} PingEvent
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): warbase.PingEvent & warbase.PingEvent.$Shape;
+
+        /**
+         * Verifies a PingEvent message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        static verify(message: { [k: string]: any }): (string|null);
+
+        /**
+         * Creates a PingEvent message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns PingEvent
+         */
+        static fromObject(object: { [k: string]: any }): warbase.PingEvent;
+
+        /**
+         * Creates a plain object from a PingEvent message. Also converts values to other types if specified.
+         * @param message PingEvent
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        static toObject(message: warbase.PingEvent, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+        /**
+         * Converts this PingEvent to JSON.
+         * @returns JSON object
+         */
+        toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the type url for PingEvent
+         * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns The type url
+         */
+        static getTypeUrl(prefix?: string): string;
+    }
+
+    namespace PingEvent {
+
+        /** Properties of a PingEvent. */
+        interface $Properties {
+
+            /** PingEvent clientTime */
+            clientTime?: (number|Long|null);
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+        }
+
+        /** Shape of a PingEvent. */
+        type $Shape = warbase.PingEvent.$Properties;
+    }
+
+    /**
      * Properties of a ServerMessage.
      * @deprecated Use warbase.ServerMessage.$Properties instead.
      */
@@ -1369,6 +1616,9 @@ export namespace warbase {
         /** PlayerState platformId. */
         platformId: string;
 
+        /** PlayerState ping. */
+        ping: number;
+
         /**
          * Creates a new PlayerState instance using the specified properties.
          * @param [properties] Properties to set
@@ -1492,6 +1742,9 @@ export namespace warbase {
             /** PlayerState platformId */
             platformId?: (string|null);
 
+            /** PlayerState ping */
+            ping?: (number|null);
+
             /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
@@ -1534,8 +1787,11 @@ export namespace warbase {
         /** ServerEvent throwGrenade. */
         throwGrenade?: (warbase.ServerThrowGrenadeEvent.$Properties|null);
 
+        /** ServerEvent pong. */
+        pong?: (warbase.ServerPongEvent.$Properties|null);
+
         /** ServerEvent event. */
-        event?: ("respawn"|"fire"|"hitConfirmed"|"killConfirmed"|"throwGrenade");
+        event?: ("respawn"|"fire"|"hitConfirmed"|"killConfirmed"|"throwGrenade"|"pong");
 
         /**
          * Creates a new ServerEvent instance using the specified properties.
@@ -1636,8 +1892,11 @@ export namespace warbase {
             /** ServerEvent throwGrenade */
             throwGrenade?: (warbase.ServerThrowGrenadeEvent.$Properties|null);
 
+            /** ServerEvent pong */
+            pong?: (warbase.ServerPongEvent.$Properties|null);
+
             /** ServerEvent event */
-            event?: ("respawn"|"fire"|"hitConfirmed"|"killConfirmed"|"throwGrenade");
+            event?: ("respawn"|"fire"|"hitConfirmed"|"killConfirmed"|"throwGrenade"|"pong");
 
             /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
@@ -1650,9 +1909,10 @@ export namespace warbase {
           hitConfirmed?: warbase.HitConfirmedEvent.$Shape|null;
           killConfirmed?: warbase.KillConfirmedEvent.$Shape|null;
           throwGrenade?: warbase.ServerThrowGrenadeEvent.$Shape|null;
+          pong?: warbase.ServerPongEvent.$Shape|null;
           $unknowns?: Uint8Array[];
         } & (
-          ({ event?: undefined; respawn?: null; fire?: null; hitConfirmed?: null; killConfirmed?: null; throwGrenade?: null }|{ event?: "respawn"; respawn: warbase.RespawnEvent.$Shape; fire?: null; hitConfirmed?: null; killConfirmed?: null; throwGrenade?: null }|{ event?: "fire"; respawn?: null; fire: warbase.ServerFireEvent.$Shape; hitConfirmed?: null; killConfirmed?: null; throwGrenade?: null }|{ event?: "hitConfirmed"; respawn?: null; fire?: null; hitConfirmed: warbase.HitConfirmedEvent.$Shape; killConfirmed?: null; throwGrenade?: null }|{ event?: "killConfirmed"; respawn?: null; fire?: null; hitConfirmed?: null; killConfirmed: warbase.KillConfirmedEvent.$Shape; throwGrenade?: null }|{ event?: "throwGrenade"; respawn?: null; fire?: null; hitConfirmed?: null; killConfirmed?: null; throwGrenade: warbase.ServerThrowGrenadeEvent.$Shape })
+          ({ event?: undefined; respawn?: null; fire?: null; hitConfirmed?: null; killConfirmed?: null; throwGrenade?: null; pong?: null }|{ event?: "respawn"; respawn: warbase.RespawnEvent.$Shape; fire?: null; hitConfirmed?: null; killConfirmed?: null; throwGrenade?: null; pong?: null }|{ event?: "fire"; respawn?: null; fire: warbase.ServerFireEvent.$Shape; hitConfirmed?: null; killConfirmed?: null; throwGrenade?: null; pong?: null }|{ event?: "hitConfirmed"; respawn?: null; fire?: null; hitConfirmed: warbase.HitConfirmedEvent.$Shape; killConfirmed?: null; throwGrenade?: null; pong?: null }|{ event?: "killConfirmed"; respawn?: null; fire?: null; hitConfirmed?: null; killConfirmed: warbase.KillConfirmedEvent.$Shape; throwGrenade?: null; pong?: null }|{ event?: "throwGrenade"; respawn?: null; fire?: null; hitConfirmed?: null; killConfirmed?: null; throwGrenade: warbase.ServerThrowGrenadeEvent.$Shape; pong?: null }|{ event?: "pong"; respawn?: null; fire?: null; hitConfirmed?: null; killConfirmed?: null; throwGrenade?: null; pong: warbase.ServerPongEvent.$Shape })
         );
     }
 

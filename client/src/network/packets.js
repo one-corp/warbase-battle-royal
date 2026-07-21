@@ -3,7 +3,7 @@ import $protobuf from "protobufjs/minimal.js";
 
 // Common aliases
 const $Reader = $protobuf.Reader, $Writer = $protobuf.Writer, $util = $protobuf.util;
-const $Object = $util.global.Object, $undefined = $util.global.undefined, $Error = $util.global.Error, $TypeError = $util.global.TypeError, $Number = $util.global.Number, $String = $util.global.String, $isFinite = $util.global.isFinite, $Boolean = $util.global.Boolean;
+const $Object = $util.global.Object, $undefined = $util.global.undefined, $Error = $util.global.Error, $TypeError = $util.global.TypeError, $Number = $util.global.Number, $String = $util.global.String, $isFinite = $util.global.isFinite, $parseInt = $util.global.parseInt, $BigInt = $util.global.BigInt, $Boolean = $util.global.Boolean;
 
 // Exported root namespace
 const $root = $protobuf.roots["default"] || ($protobuf.roots["default"] = {});
@@ -29,7 +29,8 @@ export const warbase = $root.warbase = (() => {
          * @property {warbase.SwitchWeaponEvent.$Properties|null} [switchWeapon] ClientEvent switchWeapon
          * @property {warbase.RespawnRequestEvent.$Properties|null} [respawnRequest] ClientEvent respawnRequest
          * @property {warbase.ThrowGrenadeEvent.$Properties|null} [throwGrenade] ClientEvent throwGrenade
-         * @property {"stateUpdate"|"hit"|"fire"|"reload"|"switchWeapon"|"respawnRequest"|"throwGrenade"} [event] ClientEvent event
+         * @property {warbase.PingEvent.$Properties|null} [ping] ClientEvent ping
+         * @property {"stateUpdate"|"hit"|"fire"|"reload"|"switchWeapon"|"respawnRequest"|"throwGrenade"|"ping"} [event] ClientEvent event
          * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
          */
 
@@ -51,9 +52,10 @@ export const warbase = $root.warbase = (() => {
          *   switchWeapon?: warbase.SwitchWeaponEvent.$Shape|null;
          *   respawnRequest?: warbase.RespawnRequestEvent.$Shape|null;
          *   throwGrenade?: warbase.ThrowGrenadeEvent.$Shape|null;
+         *   ping?: warbase.PingEvent.$Shape|null;
          *   $unknowns?: Array.<Uint8Array>;
          * } & (
-         *   ({ event?: undefined; stateUpdate?: null; hit?: null; fire?: null; reload?: null; switchWeapon?: null; respawnRequest?: null; throwGrenade?: null }|{ event?: "stateUpdate"; stateUpdate: warbase.PlayerStateUpdate.$Shape; hit?: null; fire?: null; reload?: null; switchWeapon?: null; respawnRequest?: null; throwGrenade?: null }|{ event?: "hit"; stateUpdate?: null; hit: warbase.HitEvent.$Shape; fire?: null; reload?: null; switchWeapon?: null; respawnRequest?: null; throwGrenade?: null }|{ event?: "fire"; stateUpdate?: null; hit?: null; fire: warbase.FireEvent.$Shape; reload?: null; switchWeapon?: null; respawnRequest?: null; throwGrenade?: null }|{ event?: "reload"; stateUpdate?: null; hit?: null; fire?: null; reload: warbase.ReloadEvent.$Shape; switchWeapon?: null; respawnRequest?: null; throwGrenade?: null }|{ event?: "switchWeapon"; stateUpdate?: null; hit?: null; fire?: null; reload?: null; switchWeapon: warbase.SwitchWeaponEvent.$Shape; respawnRequest?: null; throwGrenade?: null }|{ event?: "respawnRequest"; stateUpdate?: null; hit?: null; fire?: null; reload?: null; switchWeapon?: null; respawnRequest: warbase.RespawnRequestEvent.$Shape; throwGrenade?: null }|{ event?: "throwGrenade"; stateUpdate?: null; hit?: null; fire?: null; reload?: null; switchWeapon?: null; respawnRequest?: null; throwGrenade: warbase.ThrowGrenadeEvent.$Shape })
+         *   ({ event?: undefined; stateUpdate?: null; hit?: null; fire?: null; reload?: null; switchWeapon?: null; respawnRequest?: null; throwGrenade?: null; ping?: null }|{ event?: "stateUpdate"; stateUpdate: warbase.PlayerStateUpdate.$Shape; hit?: null; fire?: null; reload?: null; switchWeapon?: null; respawnRequest?: null; throwGrenade?: null; ping?: null }|{ event?: "hit"; stateUpdate?: null; hit: warbase.HitEvent.$Shape; fire?: null; reload?: null; switchWeapon?: null; respawnRequest?: null; throwGrenade?: null; ping?: null }|{ event?: "fire"; stateUpdate?: null; hit?: null; fire: warbase.FireEvent.$Shape; reload?: null; switchWeapon?: null; respawnRequest?: null; throwGrenade?: null; ping?: null }|{ event?: "reload"; stateUpdate?: null; hit?: null; fire?: null; reload: warbase.ReloadEvent.$Shape; switchWeapon?: null; respawnRequest?: null; throwGrenade?: null; ping?: null }|{ event?: "switchWeapon"; stateUpdate?: null; hit?: null; fire?: null; reload?: null; switchWeapon: warbase.SwitchWeaponEvent.$Shape; respawnRequest?: null; throwGrenade?: null; ping?: null }|{ event?: "respawnRequest"; stateUpdate?: null; hit?: null; fire?: null; reload?: null; switchWeapon?: null; respawnRequest: warbase.RespawnRequestEvent.$Shape; throwGrenade?: null; ping?: null }|{ event?: "throwGrenade"; stateUpdate?: null; hit?: null; fire?: null; reload?: null; switchWeapon?: null; respawnRequest?: null; throwGrenade: warbase.ThrowGrenadeEvent.$Shape; ping?: null }|{ event?: "ping"; stateUpdate?: null; hit?: null; fire?: null; reload?: null; switchWeapon?: null; respawnRequest?: null; throwGrenade?: null; ping: warbase.PingEvent.$Shape })
          * )} warbase.ClientEvent.$Shape
          */
 
@@ -128,17 +130,25 @@ export const warbase = $root.warbase = (() => {
          */
         ClientEvent.prototype.throwGrenade = null;
 
+        /**
+         * ClientEvent ping.
+         * @member {warbase.PingEvent.$Properties|null|undefined} ping
+         * @memberof warbase.ClientEvent
+         * @instance
+         */
+        ClientEvent.prototype.ping = null;
+
         // OneOf field names bound to virtual getters and setters
         let $oneOfFields;
 
         /**
          * ClientEvent event.
-         * @member {"stateUpdate"|"hit"|"fire"|"reload"|"switchWeapon"|"respawnRequest"|"throwGrenade"|undefined} event
+         * @member {"stateUpdate"|"hit"|"fire"|"reload"|"switchWeapon"|"respawnRequest"|"throwGrenade"|"ping"|undefined} event
          * @memberof warbase.ClientEvent
          * @instance
          */
         $Object.defineProperty(ClientEvent.prototype, "event", {
-            get: $util.oneOfGetter($oneOfFields = ["stateUpdate", "hit", "fire", "reload", "switchWeapon", "respawnRequest", "throwGrenade"]),
+            get: $util.oneOfGetter($oneOfFields = ["stateUpdate", "hit", "fire", "reload", "switchWeapon", "respawnRequest", "throwGrenade", "ping"]),
             set: $util.oneOfSetter($oneOfFields)
         });
 
@@ -188,6 +198,8 @@ export const warbase = $root.warbase = (() => {
                 $root.warbase.RespawnRequestEvent.encode(message.respawnRequest, writer.uint32(/* id 6, wireType 2 =*/50).fork(), _depth + 1).ldelim();
             if (message.throwGrenade != null && $Object.hasOwnProperty.call(message, "throwGrenade"))
                 $root.warbase.ThrowGrenadeEvent.encode(message.throwGrenade, writer.uint32(/* id 7, wireType 2 =*/58).fork(), _depth + 1).ldelim();
+            if (message.ping != null && $Object.hasOwnProperty.call(message, "ping"))
+                $root.warbase.PingEvent.encode(message.ping, writer.uint32(/* id 8, wireType 2 =*/66).fork(), _depth + 1).ldelim();
             if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                 for (let i = 0; i < message.$unknowns.length; ++i)
                     writer.raw(message.$unknowns[i]);
@@ -282,6 +294,13 @@ export const warbase = $root.warbase = (() => {
                             break;
                         message.throwGrenade = $root.warbase.ThrowGrenadeEvent.decode(reader, reader.uint32(), $undefined, _depth + 1, message.throwGrenade);
                         message.event = "throwGrenade";
+                        continue;
+                    }
+                case 8: {
+                        if (wireType !== 2)
+                            break;
+                        message.ping = $root.warbase.PingEvent.decode(reader, reader.uint32(), $undefined, _depth + 1, message.ping);
+                        message.event = "ping";
                         continue;
                     }
                 }
@@ -396,6 +415,16 @@ export const warbase = $root.warbase = (() => {
                         return "throwGrenade." + error;
                 }
             }
+            if (message.ping != null && $Object.hasOwnProperty.call(message, "ping")) {
+                if (properties.event === 1)
+                    return "event: multiple values";
+                properties.event = 1;
+                {
+                    let error = $root.warbase.PingEvent.verify(message.ping, _depth + 1);
+                    if (error)
+                        return "ping." + error;
+                }
+            }
             return null;
         };
 
@@ -452,6 +481,11 @@ export const warbase = $root.warbase = (() => {
                     throw $TypeError(".warbase.ClientEvent.throwGrenade: object expected");
                 message.throwGrenade = $root.warbase.ThrowGrenadeEvent.fromObject(object.throwGrenade, _depth + 1);
             }
+            if (object.ping != null) {
+                if (!$util.isObject(object.ping))
+                    throw $TypeError(".warbase.ClientEvent.ping: object expected");
+                message.ping = $root.warbase.PingEvent.fromObject(object.ping, _depth + 1);
+            }
             return message;
         };
 
@@ -507,6 +541,11 @@ export const warbase = $root.warbase = (() => {
                 if (options.oneofs)
                     object.event = "throwGrenade";
             }
+            if (message.ping != null && $Object.hasOwnProperty.call(message, "ping")) {
+                object.ping = $root.warbase.PingEvent.toObject(message.ping, options, _depth + 1);
+                if (options.oneofs)
+                    object.event = "ping";
+            }
             return object;
         };
 
@@ -552,6 +591,7 @@ export const warbase = $root.warbase = (() => {
          * @property {number|null} [rw] PlayerStateUpdate rw
          * @property {string|null} [animation] PlayerStateUpdate animation
          * @property {string|null} [platformId] PlayerStateUpdate platformId
+         * @property {number|null} [ping] PlayerStateUpdate ping
          * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
          */
 
@@ -656,6 +696,14 @@ export const warbase = $root.warbase = (() => {
         PlayerStateUpdate.prototype.platformId = "";
 
         /**
+         * PlayerStateUpdate ping.
+         * @member {number} ping
+         * @memberof warbase.PlayerStateUpdate
+         * @instance
+         */
+        PlayerStateUpdate.prototype.ping = 0;
+
+        /**
          * Creates a new PlayerStateUpdate instance using the specified properties.
          * @function create
          * @memberof warbase.PlayerStateUpdate
@@ -705,6 +753,8 @@ export const warbase = $root.warbase = (() => {
                 writer.uint32(/* id 8, wireType 2 =*/66).string(message.animation);
             if (message.platformId != null && $Object.hasOwnProperty.call(message, "platformId") && message.platformId !== "")
                 writer.uint32(/* id 9, wireType 2 =*/74).string(message.platformId);
+            if (message.ping != null && $Object.hasOwnProperty.call(message, "ping") && message.ping !== 0)
+                writer.uint32(/* id 10, wireType 0 =*/80).int32(message.ping);
             if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                 for (let i = 0; i < message.$unknowns.length; ++i)
                     writer.raw(message.$unknowns[i]);
@@ -833,6 +883,15 @@ export const warbase = $root.warbase = (() => {
                             delete message.platformId;
                         continue;
                     }
+                case 10: {
+                        if (wireType !== 0)
+                            break;
+                        if (value = reader.int32())
+                            message.ping = value;
+                        else
+                            delete message.ping;
+                        continue;
+                    }
                 }
                 reader.skipType(wireType, _depth, tag);
                 if (!reader.discardUnknown) {
@@ -903,6 +962,9 @@ export const warbase = $root.warbase = (() => {
             if (message.platformId != null && $Object.hasOwnProperty.call(message, "platformId"))
                 if (!$util.isString(message.platformId))
                     return "platformId: string expected";
+            if (message.ping != null && $Object.hasOwnProperty.call(message, "ping"))
+                if (!$util.isInteger(message.ping))
+                    return "ping: integer expected";
             return null;
         };
 
@@ -951,6 +1013,9 @@ export const warbase = $root.warbase = (() => {
             if (object.platformId != null)
                 if (typeof object.platformId !== "string" || object.platformId.length)
                     message.platformId = $String(object.platformId);
+            if (object.ping != null)
+                if ($Number(object.ping) !== 0)
+                    message.ping = object.ping | 0;
             return message;
         };
 
@@ -981,6 +1046,7 @@ export const warbase = $root.warbase = (() => {
                 object.rw = 0;
                 object.animation = "";
                 object.platformId = "";
+                object.ping = 0;
             }
             if (message.x != null && $Object.hasOwnProperty.call(message, "x"))
                 object.x = options.json && !$isFinite(message.x) ? $String(message.x) : message.x;
@@ -1000,6 +1066,8 @@ export const warbase = $root.warbase = (() => {
                 object.animation = message.animation;
             if (message.platformId != null && $Object.hasOwnProperty.call(message, "platformId"))
                 object.platformId = message.platformId;
+            if (message.ping != null && $Object.hasOwnProperty.call(message, "ping"))
+                object.ping = message.ping;
             return object;
         };
 
@@ -2644,6 +2712,558 @@ export const warbase = $root.warbase = (() => {
         return ThrowGrenadeEvent;
     })();
 
+    warbase.ServerPongEvent = (function() {
+
+        /**
+         * Properties of a ServerPongEvent.
+         * @typedef {Object} warbase.ServerPongEvent.$Properties
+         * @property {number|Long|null} [clientTime] ServerPongEvent clientTime
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+
+        /**
+         * Properties of a ServerPongEvent.
+         * @memberof warbase
+         * @interface IServerPongEvent
+         * @augments warbase.ServerPongEvent.$Properties
+         * @deprecated Use warbase.ServerPongEvent.$Properties instead.
+         */
+
+        /**
+         * Shape of a ServerPongEvent.
+         * @typedef {warbase.ServerPongEvent.$Properties} warbase.ServerPongEvent.$Shape
+         */
+
+        /**
+         * Constructs a new ServerPongEvent.
+         * @memberof warbase
+         * @classdesc Represents a ServerPongEvent.
+         * @constructor
+         * @param {warbase.ServerPongEvent.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+        const ServerPongEvent = function (properties) {
+            if (properties)
+                for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                        this[keys[i]] = properties[keys[i]];
+        };
+
+        /**
+         * ServerPongEvent clientTime.
+         * @member {number|Long} clientTime
+         * @memberof warbase.ServerPongEvent
+         * @instance
+         */
+        ServerPongEvent.prototype.clientTime = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
+
+        /**
+         * Creates a new ServerPongEvent instance using the specified properties.
+         * @function create
+         * @memberof warbase.ServerPongEvent
+         * @static
+         * @param {warbase.ServerPongEvent.$Properties=} [properties] Properties to set
+         * @returns {warbase.ServerPongEvent} ServerPongEvent instance
+         * @type {{
+         *   (properties: warbase.ServerPongEvent.$Shape): warbase.ServerPongEvent & warbase.ServerPongEvent.$Shape;
+         *   (properties?: warbase.ServerPongEvent.$Properties): warbase.ServerPongEvent;
+         * }}
+         */
+        ServerPongEvent.create = function(properties) {
+            return new ServerPongEvent(properties);
+        };
+
+        /**
+         * Encodes the specified ServerPongEvent message. Does not implicitly {@link warbase.ServerPongEvent.verify|verify} messages.
+         * @function encode
+         * @memberof warbase.ServerPongEvent
+         * @static
+         * @param {warbase.ServerPongEvent.$Properties} message ServerPongEvent message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        ServerPongEvent.encode = function (message, writer, _depth) {
+            if (!writer)
+                writer = $Writer.create();
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            if (message.clientTime != null && $Object.hasOwnProperty.call(message, "clientTime") && (typeof message.clientTime === "object" ? message.clientTime.low || message.clientTime.high : message.clientTime !== 0))
+                writer.uint32(/* id 1, wireType 0 =*/8).int64(message.clientTime);
+            if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                for (let i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
+            return writer;
+        };
+
+        /**
+         * Encodes the specified ServerPongEvent message, length delimited. Does not implicitly {@link warbase.ServerPongEvent.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof warbase.ServerPongEvent
+         * @static
+         * @param {warbase.ServerPongEvent.$Properties} message ServerPongEvent message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        ServerPongEvent.encodeDelimited = function(message, writer) {
+            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+        };
+
+        /**
+         * Decodes a ServerPongEvent message from the specified reader or buffer.
+         * @function decode
+         * @memberof warbase.ServerPongEvent
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {warbase.ServerPongEvent & warbase.ServerPongEvent.$Shape} ServerPongEvent
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        ServerPongEvent.decode = function (reader, length, _end, _depth, _target) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw $Error("max depth exceeded");
+            let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.warbase.ServerPongEvent(), value;
+            while (reader.pos < end) {
+                let start = reader.pos;
+                let tag = reader.tag();
+                if (tag === _end) {
+                    _end = $undefined;
+                    break;
+                }
+                let wireType = tag & 7;
+                switch (tag >>>= 3) {
+                case 1: {
+                        if (wireType !== 0)
+                            break;
+                        if (typeof (value = reader.int64()) === "object" ? value.low || value.high : value !== 0)
+                            message.clientTime = value;
+                        else
+                            delete message.clientTime;
+                        continue;
+                    }
+                }
+                reader.skipType(wireType, _depth, tag);
+                if (!reader.discardUnknown) {
+                    $util.makeProp(message, "$unknowns", false);
+                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                }
+            }
+            if (_end !== $undefined)
+                throw $Error("missing end group");
+            return message;
+        };
+
+        /**
+         * Decodes a ServerPongEvent message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof warbase.ServerPongEvent
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {warbase.ServerPongEvent & warbase.ServerPongEvent.$Shape} ServerPongEvent
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        ServerPongEvent.decodeDelimited = function(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a ServerPongEvent message.
+         * @function verify
+         * @memberof warbase.ServerPongEvent
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        ServerPongEvent.verify = function (message, _depth) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
+            if (message.clientTime != null && $Object.hasOwnProperty.call(message, "clientTime"))
+                if (!$util.isInteger(message.clientTime) && !(message.clientTime && $util.isInteger(message.clientTime.low) && $util.isInteger(message.clientTime.high)))
+                    return "clientTime: integer|Long expected";
+            return null;
+        };
+
+        /**
+         * Creates a ServerPongEvent message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof warbase.ServerPongEvent
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {warbase.ServerPongEvent} ServerPongEvent
+         */
+        ServerPongEvent.fromObject = function (object, _depth) {
+            if (object instanceof $root.warbase.ServerPongEvent)
+                return object;
+            if (!$util.isObject(object))
+                throw $TypeError(".warbase.ServerPongEvent: object expected");
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let message = new $root.warbase.ServerPongEvent();
+            if (object.clientTime != null)
+                if (typeof object.clientTime === "object" ? object.clientTime.low || object.clientTime.high : $Number(object.clientTime) !== 0)
+                    if ($util.Long)
+                        message.clientTime = $util.Long.fromValue(object.clientTime, false);
+                    else if (typeof object.clientTime === "string")
+                        message.clientTime = $parseInt(object.clientTime, 10);
+                    else if (typeof object.clientTime === "number")
+                        message.clientTime = object.clientTime;
+                    else if (typeof object.clientTime === "object")
+                        message.clientTime = new $util.LongBits(object.clientTime.low >>> 0, object.clientTime.high >>> 0).toNumber();
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a ServerPongEvent message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof warbase.ServerPongEvent
+         * @static
+         * @param {warbase.ServerPongEvent} message ServerPongEvent
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        ServerPongEvent.toObject = function (message, options, _depth) {
+            if (!options)
+                options = {};
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let object = {};
+            if (options.defaults)
+                if ($util.Long) {
+                    let long = new $util.Long(0, 0, false);
+                    object.clientTime = options.longs === $String ? long.toString() : options.longs === $Number ? long.toNumber() : typeof $BigInt !== "undefined" && options.longs === $BigInt ? long.toBigInt() : long;
+                } else
+                    object.clientTime = options.longs === $String ? "0" : typeof $BigInt !== "undefined" && options.longs === $BigInt ? $BigInt("0") : 0;
+            if (message.clientTime != null && $Object.hasOwnProperty.call(message, "clientTime"))
+                if (typeof $BigInt !== "undefined" && options.longs === $BigInt)
+                    object.clientTime = typeof message.clientTime === "number" ? $BigInt(message.clientTime) : $util.Long.fromBits(message.clientTime.low >>> 0, message.clientTime.high >>> 0, false).toBigInt();
+                else if (typeof message.clientTime === "number")
+                    object.clientTime = options.longs === $String ? $String(message.clientTime) : message.clientTime;
+                else
+                    object.clientTime = options.longs === $String ? $util.Long.prototype.toString.call(message.clientTime) : options.longs === $Number ? new $util.LongBits(message.clientTime.low >>> 0, message.clientTime.high >>> 0).toNumber() : message.clientTime;
+            return object;
+        };
+
+        /**
+         * Converts this ServerPongEvent to JSON.
+         * @function toJSON
+         * @memberof warbase.ServerPongEvent
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        ServerPongEvent.prototype.toJSON = function() {
+            return ServerPongEvent.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        /**
+         * Gets the type url for ServerPongEvent
+         * @function getTypeUrl
+         * @memberof warbase.ServerPongEvent
+         * @static
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
+         */
+        ServerPongEvent.getTypeUrl = function(prefix) {
+            if (prefix === $undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/warbase.ServerPongEvent";
+        };
+
+        return ServerPongEvent;
+    })();
+
+    warbase.PingEvent = (function() {
+
+        /**
+         * Properties of a PingEvent.
+         * @typedef {Object} warbase.PingEvent.$Properties
+         * @property {number|Long|null} [clientTime] PingEvent clientTime
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+
+        /**
+         * Properties of a PingEvent.
+         * @memberof warbase
+         * @interface IPingEvent
+         * @augments warbase.PingEvent.$Properties
+         * @deprecated Use warbase.PingEvent.$Properties instead.
+         */
+
+        /**
+         * Shape of a PingEvent.
+         * @typedef {warbase.PingEvent.$Properties} warbase.PingEvent.$Shape
+         */
+
+        /**
+         * Constructs a new PingEvent.
+         * @memberof warbase
+         * @classdesc Represents a PingEvent.
+         * @constructor
+         * @param {warbase.PingEvent.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+        const PingEvent = function (properties) {
+            if (properties)
+                for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                        this[keys[i]] = properties[keys[i]];
+        };
+
+        /**
+         * PingEvent clientTime.
+         * @member {number|Long} clientTime
+         * @memberof warbase.PingEvent
+         * @instance
+         */
+        PingEvent.prototype.clientTime = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
+
+        /**
+         * Creates a new PingEvent instance using the specified properties.
+         * @function create
+         * @memberof warbase.PingEvent
+         * @static
+         * @param {warbase.PingEvent.$Properties=} [properties] Properties to set
+         * @returns {warbase.PingEvent} PingEvent instance
+         * @type {{
+         *   (properties: warbase.PingEvent.$Shape): warbase.PingEvent & warbase.PingEvent.$Shape;
+         *   (properties?: warbase.PingEvent.$Properties): warbase.PingEvent;
+         * }}
+         */
+        PingEvent.create = function(properties) {
+            return new PingEvent(properties);
+        };
+
+        /**
+         * Encodes the specified PingEvent message. Does not implicitly {@link warbase.PingEvent.verify|verify} messages.
+         * @function encode
+         * @memberof warbase.PingEvent
+         * @static
+         * @param {warbase.PingEvent.$Properties} message PingEvent message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        PingEvent.encode = function (message, writer, _depth) {
+            if (!writer)
+                writer = $Writer.create();
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            if (message.clientTime != null && $Object.hasOwnProperty.call(message, "clientTime") && (typeof message.clientTime === "object" ? message.clientTime.low || message.clientTime.high : message.clientTime !== 0))
+                writer.uint32(/* id 1, wireType 0 =*/8).int64(message.clientTime);
+            if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                for (let i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
+            return writer;
+        };
+
+        /**
+         * Encodes the specified PingEvent message, length delimited. Does not implicitly {@link warbase.PingEvent.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof warbase.PingEvent
+         * @static
+         * @param {warbase.PingEvent.$Properties} message PingEvent message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        PingEvent.encodeDelimited = function(message, writer) {
+            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+        };
+
+        /**
+         * Decodes a PingEvent message from the specified reader or buffer.
+         * @function decode
+         * @memberof warbase.PingEvent
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {warbase.PingEvent & warbase.PingEvent.$Shape} PingEvent
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        PingEvent.decode = function (reader, length, _end, _depth, _target) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw $Error("max depth exceeded");
+            let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.warbase.PingEvent(), value;
+            while (reader.pos < end) {
+                let start = reader.pos;
+                let tag = reader.tag();
+                if (tag === _end) {
+                    _end = $undefined;
+                    break;
+                }
+                let wireType = tag & 7;
+                switch (tag >>>= 3) {
+                case 1: {
+                        if (wireType !== 0)
+                            break;
+                        if (typeof (value = reader.int64()) === "object" ? value.low || value.high : value !== 0)
+                            message.clientTime = value;
+                        else
+                            delete message.clientTime;
+                        continue;
+                    }
+                }
+                reader.skipType(wireType, _depth, tag);
+                if (!reader.discardUnknown) {
+                    $util.makeProp(message, "$unknowns", false);
+                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                }
+            }
+            if (_end !== $undefined)
+                throw $Error("missing end group");
+            return message;
+        };
+
+        /**
+         * Decodes a PingEvent message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof warbase.PingEvent
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {warbase.PingEvent & warbase.PingEvent.$Shape} PingEvent
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        PingEvent.decodeDelimited = function(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a PingEvent message.
+         * @function verify
+         * @memberof warbase.PingEvent
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        PingEvent.verify = function (message, _depth) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
+            if (message.clientTime != null && $Object.hasOwnProperty.call(message, "clientTime"))
+                if (!$util.isInteger(message.clientTime) && !(message.clientTime && $util.isInteger(message.clientTime.low) && $util.isInteger(message.clientTime.high)))
+                    return "clientTime: integer|Long expected";
+            return null;
+        };
+
+        /**
+         * Creates a PingEvent message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof warbase.PingEvent
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {warbase.PingEvent} PingEvent
+         */
+        PingEvent.fromObject = function (object, _depth) {
+            if (object instanceof $root.warbase.PingEvent)
+                return object;
+            if (!$util.isObject(object))
+                throw $TypeError(".warbase.PingEvent: object expected");
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let message = new $root.warbase.PingEvent();
+            if (object.clientTime != null)
+                if (typeof object.clientTime === "object" ? object.clientTime.low || object.clientTime.high : $Number(object.clientTime) !== 0)
+                    if ($util.Long)
+                        message.clientTime = $util.Long.fromValue(object.clientTime, false);
+                    else if (typeof object.clientTime === "string")
+                        message.clientTime = $parseInt(object.clientTime, 10);
+                    else if (typeof object.clientTime === "number")
+                        message.clientTime = object.clientTime;
+                    else if (typeof object.clientTime === "object")
+                        message.clientTime = new $util.LongBits(object.clientTime.low >>> 0, object.clientTime.high >>> 0).toNumber();
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a PingEvent message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof warbase.PingEvent
+         * @static
+         * @param {warbase.PingEvent} message PingEvent
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        PingEvent.toObject = function (message, options, _depth) {
+            if (!options)
+                options = {};
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let object = {};
+            if (options.defaults)
+                if ($util.Long) {
+                    let long = new $util.Long(0, 0, false);
+                    object.clientTime = options.longs === $String ? long.toString() : options.longs === $Number ? long.toNumber() : typeof $BigInt !== "undefined" && options.longs === $BigInt ? long.toBigInt() : long;
+                } else
+                    object.clientTime = options.longs === $String ? "0" : typeof $BigInt !== "undefined" && options.longs === $BigInt ? $BigInt("0") : 0;
+            if (message.clientTime != null && $Object.hasOwnProperty.call(message, "clientTime"))
+                if (typeof $BigInt !== "undefined" && options.longs === $BigInt)
+                    object.clientTime = typeof message.clientTime === "number" ? $BigInt(message.clientTime) : $util.Long.fromBits(message.clientTime.low >>> 0, message.clientTime.high >>> 0, false).toBigInt();
+                else if (typeof message.clientTime === "number")
+                    object.clientTime = options.longs === $String ? $String(message.clientTime) : message.clientTime;
+                else
+                    object.clientTime = options.longs === $String ? $util.Long.prototype.toString.call(message.clientTime) : options.longs === $Number ? new $util.LongBits(message.clientTime.low >>> 0, message.clientTime.high >>> 0).toNumber() : message.clientTime;
+            return object;
+        };
+
+        /**
+         * Converts this PingEvent to JSON.
+         * @function toJSON
+         * @memberof warbase.PingEvent
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        PingEvent.prototype.toJSON = function() {
+            return PingEvent.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        /**
+         * Gets the type url for PingEvent
+         * @function getTypeUrl
+         * @memberof warbase.PingEvent
+         * @static
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
+         */
+        PingEvent.getTypeUrl = function(prefix) {
+            if (prefix === $undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/warbase.PingEvent";
+        };
+
+        return PingEvent;
+    })();
+
     warbase.ServerMessage = (function() {
 
         /**
@@ -3296,6 +3916,7 @@ export const warbase = $root.warbase = (() => {
          * @property {number|null} [deaths] PlayerState deaths
          * @property {boolean|null} [isDead] PlayerState isDead
          * @property {string|null} [platformId] PlayerState platformId
+         * @property {number|null} [ping] PlayerState ping
          * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
          */
 
@@ -3432,6 +4053,14 @@ export const warbase = $root.warbase = (() => {
         PlayerState.prototype.platformId = "";
 
         /**
+         * PlayerState ping.
+         * @member {number} ping
+         * @memberof warbase.PlayerState
+         * @instance
+         */
+        PlayerState.prototype.ping = 0;
+
+        /**
          * Creates a new PlayerState instance using the specified properties.
          * @function create
          * @memberof warbase.PlayerState
@@ -3489,6 +4118,8 @@ export const warbase = $root.warbase = (() => {
                 writer.uint32(/* id 12, wireType 0 =*/96).bool(message.isDead);
             if (message.platformId != null && $Object.hasOwnProperty.call(message, "platformId") && message.platformId !== "")
                 writer.uint32(/* id 13, wireType 2 =*/106).string(message.platformId);
+            if (message.ping != null && $Object.hasOwnProperty.call(message, "ping") && message.ping !== 0)
+                writer.uint32(/* id 14, wireType 0 =*/112).int32(message.ping);
             if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                 for (let i = 0; i < message.$unknowns.length; ++i)
                     writer.raw(message.$unknowns[i]);
@@ -3653,6 +4284,15 @@ export const warbase = $root.warbase = (() => {
                             delete message.platformId;
                         continue;
                     }
+                case 14: {
+                        if (wireType !== 0)
+                            break;
+                        if (value = reader.int32())
+                            message.ping = value;
+                        else
+                            delete message.ping;
+                        continue;
+                    }
                 }
                 reader.skipType(wireType, _depth, tag);
                 if (!reader.discardUnknown) {
@@ -3735,6 +4375,9 @@ export const warbase = $root.warbase = (() => {
             if (message.platformId != null && $Object.hasOwnProperty.call(message, "platformId"))
                 if (!$util.isString(message.platformId))
                     return "platformId: string expected";
+            if (message.ping != null && $Object.hasOwnProperty.call(message, "ping"))
+                if (!$util.isInteger(message.ping))
+                    return "ping: integer expected";
             return null;
         };
 
@@ -3795,6 +4438,9 @@ export const warbase = $root.warbase = (() => {
             if (object.platformId != null)
                 if (typeof object.platformId !== "string" || object.platformId.length)
                     message.platformId = $String(object.platformId);
+            if (object.ping != null)
+                if ($Number(object.ping) !== 0)
+                    message.ping = object.ping | 0;
             return message;
         };
 
@@ -3829,6 +4475,7 @@ export const warbase = $root.warbase = (() => {
                 object.deaths = 0;
                 object.isDead = false;
                 object.platformId = "";
+                object.ping = 0;
             }
             if (message.x != null && $Object.hasOwnProperty.call(message, "x"))
                 object.x = options.json && !$isFinite(message.x) ? $String(message.x) : message.x;
@@ -3856,6 +4503,8 @@ export const warbase = $root.warbase = (() => {
                 object.isDead = message.isDead;
             if (message.platformId != null && $Object.hasOwnProperty.call(message, "platformId"))
                 object.platformId = message.platformId;
+            if (message.ping != null && $Object.hasOwnProperty.call(message, "ping"))
+                object.ping = message.ping;
             return object;
         };
 
@@ -3897,7 +4546,8 @@ export const warbase = $root.warbase = (() => {
          * @property {warbase.HitConfirmedEvent.$Properties|null} [hitConfirmed] ServerEvent hitConfirmed
          * @property {warbase.KillConfirmedEvent.$Properties|null} [killConfirmed] ServerEvent killConfirmed
          * @property {warbase.ServerThrowGrenadeEvent.$Properties|null} [throwGrenade] ServerEvent throwGrenade
-         * @property {"respawn"|"fire"|"hitConfirmed"|"killConfirmed"|"throwGrenade"} [event] ServerEvent event
+         * @property {warbase.ServerPongEvent.$Properties|null} [pong] ServerEvent pong
+         * @property {"respawn"|"fire"|"hitConfirmed"|"killConfirmed"|"throwGrenade"|"pong"} [event] ServerEvent event
          * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
          */
 
@@ -3917,9 +4567,10 @@ export const warbase = $root.warbase = (() => {
          *   hitConfirmed?: warbase.HitConfirmedEvent.$Shape|null;
          *   killConfirmed?: warbase.KillConfirmedEvent.$Shape|null;
          *   throwGrenade?: warbase.ServerThrowGrenadeEvent.$Shape|null;
+         *   pong?: warbase.ServerPongEvent.$Shape|null;
          *   $unknowns?: Array.<Uint8Array>;
          * } & (
-         *   ({ event?: undefined; respawn?: null; fire?: null; hitConfirmed?: null; killConfirmed?: null; throwGrenade?: null }|{ event?: "respawn"; respawn: warbase.RespawnEvent.$Shape; fire?: null; hitConfirmed?: null; killConfirmed?: null; throwGrenade?: null }|{ event?: "fire"; respawn?: null; fire: warbase.ServerFireEvent.$Shape; hitConfirmed?: null; killConfirmed?: null; throwGrenade?: null }|{ event?: "hitConfirmed"; respawn?: null; fire?: null; hitConfirmed: warbase.HitConfirmedEvent.$Shape; killConfirmed?: null; throwGrenade?: null }|{ event?: "killConfirmed"; respawn?: null; fire?: null; hitConfirmed?: null; killConfirmed: warbase.KillConfirmedEvent.$Shape; throwGrenade?: null }|{ event?: "throwGrenade"; respawn?: null; fire?: null; hitConfirmed?: null; killConfirmed?: null; throwGrenade: warbase.ServerThrowGrenadeEvent.$Shape })
+         *   ({ event?: undefined; respawn?: null; fire?: null; hitConfirmed?: null; killConfirmed?: null; throwGrenade?: null; pong?: null }|{ event?: "respawn"; respawn: warbase.RespawnEvent.$Shape; fire?: null; hitConfirmed?: null; killConfirmed?: null; throwGrenade?: null; pong?: null }|{ event?: "fire"; respawn?: null; fire: warbase.ServerFireEvent.$Shape; hitConfirmed?: null; killConfirmed?: null; throwGrenade?: null; pong?: null }|{ event?: "hitConfirmed"; respawn?: null; fire?: null; hitConfirmed: warbase.HitConfirmedEvent.$Shape; killConfirmed?: null; throwGrenade?: null; pong?: null }|{ event?: "killConfirmed"; respawn?: null; fire?: null; hitConfirmed?: null; killConfirmed: warbase.KillConfirmedEvent.$Shape; throwGrenade?: null; pong?: null }|{ event?: "throwGrenade"; respawn?: null; fire?: null; hitConfirmed?: null; killConfirmed?: null; throwGrenade: warbase.ServerThrowGrenadeEvent.$Shape; pong?: null }|{ event?: "pong"; respawn?: null; fire?: null; hitConfirmed?: null; killConfirmed?: null; throwGrenade?: null; pong: warbase.ServerPongEvent.$Shape })
          * )} warbase.ServerEvent.$Shape
          */
 
@@ -3978,17 +4629,25 @@ export const warbase = $root.warbase = (() => {
          */
         ServerEvent.prototype.throwGrenade = null;
 
+        /**
+         * ServerEvent pong.
+         * @member {warbase.ServerPongEvent.$Properties|null|undefined} pong
+         * @memberof warbase.ServerEvent
+         * @instance
+         */
+        ServerEvent.prototype.pong = null;
+
         // OneOf field names bound to virtual getters and setters
         let $oneOfFields;
 
         /**
          * ServerEvent event.
-         * @member {"respawn"|"fire"|"hitConfirmed"|"killConfirmed"|"throwGrenade"|undefined} event
+         * @member {"respawn"|"fire"|"hitConfirmed"|"killConfirmed"|"throwGrenade"|"pong"|undefined} event
          * @memberof warbase.ServerEvent
          * @instance
          */
         $Object.defineProperty(ServerEvent.prototype, "event", {
-            get: $util.oneOfGetter($oneOfFields = ["respawn", "fire", "hitConfirmed", "killConfirmed", "throwGrenade"]),
+            get: $util.oneOfGetter($oneOfFields = ["respawn", "fire", "hitConfirmed", "killConfirmed", "throwGrenade", "pong"]),
             set: $util.oneOfSetter($oneOfFields)
         });
 
@@ -4034,6 +4693,8 @@ export const warbase = $root.warbase = (() => {
                 $root.warbase.KillConfirmedEvent.encode(message.killConfirmed, writer.uint32(/* id 4, wireType 2 =*/34).fork(), _depth + 1).ldelim();
             if (message.throwGrenade != null && $Object.hasOwnProperty.call(message, "throwGrenade"))
                 $root.warbase.ServerThrowGrenadeEvent.encode(message.throwGrenade, writer.uint32(/* id 5, wireType 2 =*/42).fork(), _depth + 1).ldelim();
+            if (message.pong != null && $Object.hasOwnProperty.call(message, "pong"))
+                $root.warbase.ServerPongEvent.encode(message.pong, writer.uint32(/* id 6, wireType 2 =*/50).fork(), _depth + 1).ldelim();
             if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                 for (let i = 0; i < message.$unknowns.length; ++i)
                     writer.raw(message.$unknowns[i]);
@@ -4114,6 +4775,13 @@ export const warbase = $root.warbase = (() => {
                             break;
                         message.throwGrenade = $root.warbase.ServerThrowGrenadeEvent.decode(reader, reader.uint32(), $undefined, _depth + 1, message.throwGrenade);
                         message.event = "throwGrenade";
+                        continue;
+                    }
+                case 6: {
+                        if (wireType !== 2)
+                            break;
+                        message.pong = $root.warbase.ServerPongEvent.decode(reader, reader.uint32(), $undefined, _depth + 1, message.pong);
+                        message.event = "pong";
                         continue;
                     }
                 }
@@ -4208,6 +4876,16 @@ export const warbase = $root.warbase = (() => {
                         return "throwGrenade." + error;
                 }
             }
+            if (message.pong != null && $Object.hasOwnProperty.call(message, "pong")) {
+                if (properties.event === 1)
+                    return "event: multiple values";
+                properties.event = 1;
+                {
+                    let error = $root.warbase.ServerPongEvent.verify(message.pong, _depth + 1);
+                    if (error)
+                        return "pong." + error;
+                }
+            }
             return null;
         };
 
@@ -4254,6 +4932,11 @@ export const warbase = $root.warbase = (() => {
                     throw $TypeError(".warbase.ServerEvent.throwGrenade: object expected");
                 message.throwGrenade = $root.warbase.ServerThrowGrenadeEvent.fromObject(object.throwGrenade, _depth + 1);
             }
+            if (object.pong != null) {
+                if (!$util.isObject(object.pong))
+                    throw $TypeError(".warbase.ServerEvent.pong: object expected");
+                message.pong = $root.warbase.ServerPongEvent.fromObject(object.pong, _depth + 1);
+            }
             return message;
         };
 
@@ -4298,6 +4981,11 @@ export const warbase = $root.warbase = (() => {
                 object.throwGrenade = $root.warbase.ServerThrowGrenadeEvent.toObject(message.throwGrenade, options, _depth + 1);
                 if (options.oneofs)
                     object.event = "throwGrenade";
+            }
+            if (message.pong != null && $Object.hasOwnProperty.call(message, "pong")) {
+                object.pong = $root.warbase.ServerPongEvent.toObject(message.pong, options, _depth + 1);
+                if (options.oneofs)
+                    object.event = "pong";
             }
             return object;
         };

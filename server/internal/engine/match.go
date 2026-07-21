@@ -287,7 +287,22 @@ func (m *Match) Run() {
 						}
 						player.State.Animation = event.StateUpdate.Animation
 						player.State.PlatformId = event.StateUpdate.PlatformId
+						player.State.Ping = event.StateUpdate.Ping
 					}
+
+				case *ClientEvent_Ping:
+					pongMsg := &ServerMessage{
+						Message: &ServerMessage_ServerEvent{
+							ServerEvent: &ServerEvent{
+								Event: &ServerEvent_Pong{
+									Pong: &ServerPongEvent{
+										ClientTime: event.Ping.ClientTime,
+									},
+								},
+							},
+						},
+					}
+					m.sendDirectEventLocked(message.SenderID, pongMsg)
 
 				case *ClientEvent_Hit:
 					targetIdx, okTarget := room.PlayerIndices[event.Hit.TargetId]
@@ -446,6 +461,7 @@ func (m *Match) Run() {
 					cachedP.Deaths = p.State.Deaths
 					cachedP.IsDead = p.State.IsDead
 					cachedP.PlatformId = p.State.PlatformId
+					cachedP.Ping = p.State.Ping
 				}
 				room.CachedServerMsg.Message = &ServerMessage_GameState{
 					GameState: room.CachedGameState,

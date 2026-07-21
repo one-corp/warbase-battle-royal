@@ -16,6 +16,7 @@ export interface PlayerState {
     deaths: number;
     isDead: boolean;
     platformId?: string;
+    ping: number;
 }
 
 export class NetworkManager {
@@ -31,6 +32,8 @@ export class NetworkManager {
 
     private onConnectCb: () => void;
     private reconnectAttempts = 0;
+    private pingInterval: number | null = null;
+    public currentPing: number = 0;
     
     constructor(username: string, room: string, onConnect: () => void) {
         this.username = username;
@@ -50,6 +53,19 @@ export class NetworkManager {
             this.reconnectAttempts = 0;
             const reconnectOverlay = document.getElementById("reconnectOverlay");
             if (reconnectOverlay) reconnectOverlay.style.display = "none";
+            
+            // Start Ping Loop
+            if (this.pingInterval) clearInterval(this.pingInterval);
+            this.pingInterval = window.setInterval(() => {
+                if (this.ws.readyState === WebSocket.OPEN) {
+                    const pingMsg = warbase.ClientEvent.create({
+                        ping: { clientTime: Date.now() }
+                    });
+                    const buffer = warbase.ClientEvent.encode(pingMsg).finish();
+                    this.ws.send(buffer);
+                }
+            }, 1000);
+
             this.onConnectCb();
         };
 
@@ -67,6 +83,11 @@ export class NetworkManager {
             if (reconnectOverlay) reconnectOverlay.style.display = "flex";
             if (reconnectText) reconnectText.innerText = `Attempting to reconnect in ${backoff / 1000}s... (Attempt ${this.reconnectAttempts})`;
             
+            if (this.pingInterval) {
+                clearInterval(this.pingInterval);
+                this.pingInterval = null;
+            }
+
             console.log(`Reconnecting in ${backoff}ms... (Attempt ${this.reconnectAttempts})`);
             setTimeout(() => this.connect(), backoff);
         };
@@ -94,7 +115,8 @@ export class NetworkManager {
                             kills: p.kills ?? 0,
                             deaths: p.deaths ?? 0,
                             isDead: p.isDead ?? false,
-                            platformId: p.platformId ?? undefined
+                            platformId: p.platformId ?? undefined,
+                            ping: p.ping ?? 0
                         };
                     }
                     this.onStateReceived(state);
@@ -118,6 +140,9 @@ export class NetworkManager {
                             evt.throwGrenade.vy ?? 0,
                             evt.throwGrenade.vz ?? 0
                         );
+                    } else if (evt.pong) {
+                        const rtt = Date.now() - Number(evt.pong.clientTime);
+                        this.currentPing = rtt;
                     }
                 }
             } catch (e) {
@@ -169,7 +194,8 @@ export class NetworkManager {
                 rz: rot.z,
                 rw: rot.w,
                 animation: anim,
-                platformId: platformId
+                platformId: platformId,
+                ping: this.currentPing
             }
         });
         const buffer = warbase.ClientEvent.encode(clientEvent).finish();

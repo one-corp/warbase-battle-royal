@@ -17,6 +17,7 @@ message ClientEvent {
         SwitchWeaponEvent switch_weapon = 5;
         RespawnRequestEvent respawn_request = 6;
         ThrowGrenadeEvent throw_grenade = 7;
+        PingEvent ping = 8;
     }
 }
 
@@ -30,6 +31,7 @@ message PlayerStateUpdate {
     float rw = 7; // rotation quaternion w
     string animation = 8;
     string platform_id = 9;
+    int32 ping = 10;
 }
 
 message HitEvent {
@@ -50,6 +52,14 @@ message ThrowGrenadeEvent {
     float vx = 4;
     float vy = 5;
     float vz = 6;
+}
+
+message ServerPongEvent {
+    int64 client_time = 1;
+}
+
+message PingEvent {
+    int64 client_time = 1;
 }
 
 // --------------------------
@@ -81,6 +91,7 @@ message PlayerState {
     int32 deaths = 11;
     bool is_dead = 12;
     string platform_id = 13;
+    int32 ping = 14;
 }
 
 message ServerEvent {
@@ -90,6 +101,7 @@ message ServerEvent {
         HitConfirmedEvent hit_confirmed = 3;
         KillConfirmedEvent kill_confirmed = 4;
         ServerThrowGrenadeEvent throw_grenade = 5;
+        ServerPongEvent pong = 6;
     }
 }
 

@@ -27,8 +27,8 @@ import { playerMovementSystem } from './ecs/systems/PlayerMovementSystem';
 import { updateTracers } from './ecs/systems/TracerSystem';
 import { PhysicsSystem } from './ecs/systems/PhysicsSystem';
 import { InputComponent, PlayerComponent, Position } from './ecs/Components';
-import { entityCameras, entityMeshes, entityPhysicsBodies } from './ecs/ViewMaps';
-import { world } from './ecs/World';
+import { entityCameras, entityMeshes, entityPhysicsBodies, clearAllViewMaps } from './ecs/ViewMaps';
+import { world, clearECSWorld } from './ecs/World';
 import { initWeapons, createWeaponSystem } from './physics/WeaponSystem';
 import { throwNetworkGrenade } from './physics/GrenadeSystem';
 import { NetworkManager } from "./network/NetworkManager";
@@ -249,6 +249,11 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
                 if (scene && (scene as any).cleanupEventListeners) {
                     (scene as any).cleanupEventListeners();
                 }
+                
+                // CRITICAL: Clean up ECS and ViewMaps before destroying the scene
+                clearECSWorld();
+                clearAllViewMaps();
+                
                 scene.dispose();
                 activeScene = null;
                 
@@ -336,7 +341,7 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
                             <td style="padding: 8px;">${id === username ? safeId + ' (You)' : safeId} ${p.isDead ? '(DEAD)' : ''}</td>
                             <td style="padding: 8px;">${p.kills || 0}</td>
                             <td style="padding: 8px;">${p.deaths || 0}</td>
-                            <td style="padding: 8px; color: #4ade80;">12ms</td>
+                            <td style="padding: 8px; color: #4ade80;">${p.ping || 0}ms</td>
                         </tr>
                     `;
                 }
