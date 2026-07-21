@@ -62,7 +62,7 @@ export class NetworkManager {
                         ping: { clientTime: Date.now() }
                     });
                     const buffer = warbase.ClientEvent.encode(pingMsg).finish();
-                    this.ws.send(buffer);
+                    this.ws.send(buffer as BufferSource);
                 }
             }, 1000);
 
