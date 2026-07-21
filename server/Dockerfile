@@ -9,7 +9,7 @@ COPY client/ .
 RUN npm run build
 
 # Stage 2: Build Backend (Go)
-FROM golang:1.22-alpine AS backend-builder
+FROM golang:alpine AS backend-builder
 WORKDIR /app/server
 # Copy go mod files to cache dependencies
 COPY server/go.mod server/go.sum* ./
