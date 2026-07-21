@@ -320,7 +320,7 @@
         const profileNameSpan = document.getElementById('player-profile-name');
         const usernameInput = document.getElementById('usernameInput');
 
-        let savedName = localStorage.getItem('warbase_player_name') || 'Nerdy4tw';
+        let savedName = localStorage.getItem('warbase_player_name') || ('Operator_' + Math.floor(100 + Math.random() * 900));
         setPlayerName(savedName);
 
         function setPlayerName(name) {
