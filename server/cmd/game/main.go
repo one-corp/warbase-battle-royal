@@ -4,6 +4,7 @@ import (
 	"flag"
 	"os"
 	"sync"
+	"time"
 
 	"warbase-server/internal/engine"
 	"warbase-server/internal/jsonlog"
@@ -15,10 +16,12 @@ type config struct {
 }
 
 type application struct {
-	config config
-	logger *jsonlog.Logger
-	match  *engine.Match
-	wg     sync.WaitGroup
+	config        config
+	logger        *jsonlog.Logger
+	match         *engine.Match
+	wg            sync.WaitGroup
+	presenceMu    sync.Mutex
+	presenceMap   map[string]time.Time
 }
 
 func main() {
@@ -35,9 +38,10 @@ func main() {
 	go match.Run()
 
 	app := &application{
-		config: cfg,
-		logger: logger,
-		match:  match,
+		config:      cfg,
+		logger:      logger,
+		match:       match,
+		presenceMap: make(map[string]time.Time),
 	}
 
 	err := app.serve()

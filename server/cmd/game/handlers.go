@@ -71,8 +71,29 @@ func (app *application) connectToServerHandler(w http.ResponseWriter, r *http.Re
 }
 
 func (app *application) listRoomsHandler(w http.ResponseWriter, r *http.Request) {
+	cid := r.URL.Query().Get("cid")
+	now := time.Now()
+
+	app.presenceMu.Lock()
+	if cid != "" {
+		app.presenceMap[cid] = now
+	}
+	// Evict entries older than 15 seconds
+	onlineCount := 0
+	for id, lastSeen := range app.presenceMap {
+		if now.Sub(lastSeen) > 15*time.Second {
+			delete(app.presenceMap, id)
+		} else {
+			onlineCount++
+		}
+	}
+	app.presenceMu.Unlock()
+
+	if onlineCount == 0 {
+		onlineCount = 1
+	}
+
 	rooms := app.match.ListActiveRooms()
-	onlineCount := app.match.GetTotalOnlinePlayers()
 
 	err := app.writeJSON(w, http.StatusOK, envelope{
 		"rooms":          rooms,
