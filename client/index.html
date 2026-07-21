@@ -58,7 +58,7 @@
       <!-- ── MAIN CONTENT AREA ── -->
       <div id="menu-center" style="flex: 1; display: flex; flex-direction: column; padding: 40px 60px 20px; overflow: hidden; position: relative;">
         
-        <!-- TAB: LOADOUTS (Interactive Layout - ASSAULT Unlocked, Others Locked) -->
+        <!-- TAB: LOADOUTS (Clean & Authentic) -->
         <div class="tab-content active" id="tab-loadouts">
           <div class="loadout-container">
             
@@ -78,7 +78,6 @@
               <div class="perks-section">
                 <div class="perks-title" style="display: flex; justify-content: space-between;">
                   <span>PERKS</span>
-                  <span id="perk-status-text" style="font-size: 11px; font-family: 'Share Tech Mono', monospace; color: rgba(255,255,255,0.5);">CLICK TO TOGGLE</span>
                 </div>
                 <div class="perks-icons-row" id="perks-icons-row">
                   <div class="perk-box active" data-perk="Lightweight" title="Lightweight: +15% Sprint Speed">⚡</div>
@@ -91,13 +90,12 @@
             <!-- Center Column: Focal area for 3D character -->
             <div class="character-view-column"></div>
 
-            <!-- Right Column: Interactive Weapon Slots -->
+            <!-- Right Column: Equipped Loadout Display -->
             <div class="weapon-slots-column">
               <!-- Primary Weapon Slot -->
-              <div class="weapon-slot-card" id="slot-primary" style="cursor: pointer;" title="Click to swap Primary Weapon">
+              <div class="weapon-slot-card" id="slot-primary">
                 <div class="weapon-slot-header">
                   <span>PRIMARY</span>
-                  <span style="font-size: 11px; color: rgba(255,255,255,0.4);">[SWAP ⚙️]</span>
                 </div>
                 <div class="weapon-slot-title" id="primary-weapon-name">AK-47 RIFLE</div>
                 <div class="weapon-slot-image-box" id="primary-weapon-svg">
@@ -109,10 +107,9 @@
               </div>
 
               <!-- Sidearm Slot -->
-              <div class="weapon-slot-card" id="slot-sidearm" style="cursor: pointer;" title="Click to swap Sidearm">
+              <div class="weapon-slot-card" id="slot-sidearm">
                 <div class="weapon-slot-header">
                   <span>SIDEARM</span>
-                  <span style="font-size: 11px; color: rgba(255,255,255,0.4);">[SWAP ⚙️]</span>
                 </div>
                 <div class="weapon-slot-title" id="sidearm-weapon-name">DEAGLE .50</div>
                 <div class="weapon-slot-image-box" id="sidearm-weapon-svg">
@@ -123,10 +120,9 @@
               </div>
 
               <!-- Gadget Slot -->
-              <div class="weapon-slot-card" id="slot-gadget" style="cursor: pointer;" title="Click to swap Gadget">
+              <div class="weapon-slot-card" id="slot-gadget">
                 <div class="weapon-slot-header">
                   <span>GADGET</span>
-                  <span style="font-size: 11px; color: rgba(255,255,255,0.4);">[SWAP ⚙️]</span>
                 </div>
                 <div class="weapon-slot-title" id="gadget-weapon-name">FRAG GRENADE</div>
                 <div class="weapon-slot-image-box" id="gadget-weapon-svg">
@@ -265,7 +261,7 @@
 
       </div>
 
-      <!-- ── INTERACTIVE FOOTER ACTION BAR ── -->
+      <!-- ── FOOTER ACTION BAR ── -->
       <div id="bottom-footer-bar" style="
         height: 45px; min-height: 45px;
         background: rgba(0, 0, 0, 0.8);
@@ -277,7 +273,6 @@
           <span id="live-online-indicator">👥 ONLINE PLAYERS: <strong id="live-player-count" style="color: #fff;">1</strong></span>
         </div>
         <div style="display: flex; align-items: center; gap: 25px;">
-          <button id="btn-footer-edit" style="background: none; border: none; color: rgba(255,255,255,0.8); font-family: 'Oswald', sans-serif; font-size: 13px; letter-spacing: 2px; cursor: pointer;"><strong style="color: #fff;">[E / (A)]</strong> EDIT LOADOUT</button>
           <button id="btn-footer-rename" style="background: none; border: none; color: rgba(255,255,255,0.8); font-family: 'Oswald', sans-serif; font-size: 13px; letter-spacing: 2px; cursor: pointer;"><strong style="color: #fff;">[R / (Y)]</strong> RENAME CALLSIGN</button>
         </div>
       </div>
@@ -292,17 +287,6 @@
           <button id="btnExitConfirm" style="background: #ff2a4d; border: none; color: #fff; font-family: 'Oswald', sans-serif; font-size: 16px; font-weight: 700; letter-spacing: 2px; padding: 12px 30px; cursor: pointer;">CONFIRM EXIT</button>
           <button id="btnExitCancel" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-family: 'Oswald', sans-serif; font-size: 16px; font-weight: 700; letter-spacing: 2px; padding: 12px 30px; cursor: pointer;">CANCEL</button>
         </div>
-      </div>
-    </div>
-
-    <!-- Interactive Weapon Selection Modal -->
-    <div id="weaponSelectModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 3000; justify-content: center; align-items: center;">
-      <div style="background: rgba(18,20,26,0.95); border: 1px solid rgba(255,255,255,0.2); padding: 35px; width: 500px; color: #fff;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-          <h2 id="modal-slot-title" style="font-size: 22px; letter-spacing: 3px; margin: 0;">SELECT WEAPON</h2>
-          <button id="closeWeaponModal" style="background: none; border: none; color: #fff; font-size: 20px; cursor: pointer;">✕</button>
-        </div>
-        <div id="weapon-options-list" style="display: flex; flex-direction: column; gap: 10px;"></div>
       </div>
     </div>
 
@@ -327,8 +311,7 @@
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════════
-         INTERACTIVE MENU LOGIC — Class Switching, Weapon Swapping, 
-         Callsign Rename, Perks, Keybindings, Server Browser
+         REAL MENU LOGIC — Callsign Rename, Keybindings, Dynamic Server Browser
     ═══════════════════════════════════════════════════════════════ -->
     <script>
       document.addEventListener('DOMContentLoaded', () => {
@@ -358,90 +341,22 @@
         profileContainer.addEventListener('click', promptRename);
         document.getElementById('btn-footer-rename').addEventListener('click', promptRename);
 
-        // ── 2. Class & Loadout State System (ASSAULT unlocked, others locked in dev) ──
-        const classData = {
-          ASSAULT: {
-            unlocked: true,
-            desc: "Assault specialists push the frontline with high mobility and rapid-fire rifles. Perfect for aggressive tactical combat.",
-            primary: { name: "AK-47 RIFLE", svg: `<svg width="220" height="60" viewBox="0 0 200 60" fill="none" stroke="#fff" stroke-width="2"><path d="M10 35 L40 35 L50 25 L120 25 L130 30 L180 30 L190 35 L190 40 L160 40 L150 48 L145 40 L60 40 L55 52 L50 40 Z"/><rect x="80" y="20" width="25" height="5" fill="#fff"/></svg>` },
-            sidearm: { name: "DEAGLE .50", svg: `<svg width="150" height="50" viewBox="0 0 150 50" fill="none" stroke="#fff" stroke-width="2"><path d="M30 20 L120 20 L125 25 L125 32 L95 32 L85 45 L78 32 L30 32 Z"/></svg>` },
-            gadget: { name: "FRAG GRENADE", svg: `<svg width="60" height="50" viewBox="0 0 60 50" fill="none" stroke="#fff" stroke-width="2"><circle cx="30" cy="25" r="14"/><rect x="25" y="5" width="10" height="6"/></svg>` },
-            perks: [
-              { icon: "⚡", title: "Lightweight", desc: "+15% Sprint Speed" },
-              { icon: "🎯", title: "Steady Aim", desc: "-20% Recoil" },
-              { icon: "💥", title: "Scavenger", desc: "Refill Ammo on Kills" }
-            ]
-          },
-          SUPPORT: { unlocked: false, name: "SUPPORT" },
-          ENGINEER: { unlocked: false, name: "ENGINEER" },
-          MEDIC: { unlocked: false, name: "MEDIC" }
-        };
-
-        const classItems = document.querySelectorAll('.class-item');
-        const classDescText = document.getElementById('class-desc-text');
-        const primaryName = document.getElementById('primary-weapon-name');
-        const primarySvg = document.getElementById('primary-weapon-svg');
-        const sidearmName = document.getElementById('sidearm-weapon-name');
-        const sidearmSvg = document.getElementById('sidearm-weapon-svg');
-        const gadgetName = document.getElementById('gadget-weapon-name');
-        const gadgetSvg = document.getElementById('gadget-weapon-svg');
-        const perksRow = document.getElementById('perks-icons-row');
-        const perkStatusText = document.getElementById('perk-status-text');
-
-        let activeClassKey = 'ASSAULT';
-
-        function selectClass(className) {
-          const info = classData[className];
-          if (!info) return;
-
-          if (!info.unlocked) {
-            alert(`${className} class is currently IN DEVELOPMENT. Assault is active.`);
-            return;
-          }
-
-          activeClassKey = className;
-          localStorage.setItem('warbase_active_class', className);
-
-          classItems.forEach(item => {
-            if (item.getAttribute('data-class') === className) {
-              item.classList.add('active');
-            } else {
-              item.classList.remove('active');
-            }
-          });
-
-          classDescText.innerText = info.desc;
-          primaryName.innerText = info.primary.name;
-          primarySvg.innerHTML = info.primary.svg;
-          sidearmName.innerText = info.sidearm.name;
-          sidearmSvg.innerHTML = info.sidearm.svg;
-          gadgetName.innerText = info.gadget.name;
-          gadgetSvg.innerHTML = info.gadget.svg;
-
-          // Render Perks
-          perksRow.innerHTML = '';
-          info.perks.forEach((p, idx) => {
-            const div = document.createElement('div');
-            div.className = idx < 2 ? 'perk-box active' : 'perk-box';
-            div.innerHTML = p.icon;
-            div.title = `${p.title}: ${p.desc}`;
-            div.style.cursor = 'pointer';
-            div.addEventListener('click', () => {
-              div.classList.toggle('active');
-              perkStatusText.innerText = `${p.title.toUpperCase()}: ${p.desc.toUpperCase()}`;
-            });
-            perksRow.appendChild(div);
-          });
-        }
-
-        classItems.forEach(item => {
-          item.addEventListener('click', () => {
-            selectClass(item.getAttribute('data-class'));
-          });
+        // Keyboard Shortcut (R for Rename Callsign)
+        window.addEventListener('keydown', (e) => {
+          if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+          if (e.key.toLowerCase() === 'r') promptRename();
         });
 
-        // Initialize class loadout
-        selectClass('ASSAULT');
+        // ── 2. Class Selection Notification for Locked Classes ──
+        const classItems = document.querySelectorAll('.class-item');
+        classItems.forEach(item => {
+          item.addEventListener('click', () => {
+            const className = item.getAttribute('data-class');
+            if (className !== 'ASSAULT') {
+              alert(`${className} class is currently IN DEVELOPMENT. Assault is active.`);
+            }
+          });
+        });
 
         // ── 3. ESC Exit Modal Cancel Button Handler ──
         const exitPopup = document.getElementById('exitPopup');
@@ -452,59 +367,7 @@
           });
         }
 
-        // ── 4. Interactive Weapon Selector Modal ──
-        const weaponSelectModal = document.getElementById('weaponSelectModal');
-        const modalSlotTitle = document.getElementById('modal-slot-title');
-        const weaponOptionsList = document.getElementById('weapon-options-list');
-        const closeWeaponModal = document.getElementById('closeWeaponModal');
-
-        const weaponInventory = {
-          PRIMARY: ["AK-47 RIFLE", "M416 CARBINE", "M249 LMG", "MP5 SMG", "SCAR-L RIFLE", "SNIPER R700"],
-          SIDEARM: ["DEAGLE .50", "GLOCK 18C", "M1911 PISTOL", "REVOLVER .44", "USP COMPACT"],
-          GADGET: ["FRAG GRENADE", "FLASHBANG", "AMMO CRATE", "C4 EXPLOSIVE", "MEDKIT"]
-        };
-
-        let currentEditingSlot = "PRIMARY";
-
-        function openWeaponModal(slotType) {
-          currentEditingSlot = slotType;
-          modalSlotTitle.innerText = `SELECT ${slotType}`;
-          weaponOptionsList.innerHTML = '';
-
-          const options = weaponInventory[slotType] || [];
-          options.forEach(wName => {
-            const btn = document.createElement('button');
-            btn.style.cssText = "background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 14px 20px; font-family: 'Oswald', sans-serif; font-size: 16px; letter-spacing: 2px; text-align: left; cursor: pointer; transition: all 0.15s;";
-            btn.innerText = wName;
-            btn.addEventListener('mouseenter', () => (btn.style.background = '#ffffff', btn.style.color = '#000'));
-            btn.addEventListener('mouseleave', () => (btn.style.background = 'rgba(255,255,255,0.05)', btn.style.color = '#fff'));
-            
-            btn.addEventListener('click', () => {
-              if (slotType === 'PRIMARY') primaryName.innerText = wName;
-              if (slotType === 'SIDEARM') sidearmName.innerText = wName;
-              if (slotType === 'GADGET') gadgetName.innerText = wName;
-              weaponSelectModal.style.display = 'none';
-            });
-            weaponOptionsList.appendChild(btn);
-          });
-
-          weaponSelectModal.style.display = 'flex';
-        }
-
-        document.getElementById('slot-primary').addEventListener('click', () => openWeaponModal('PRIMARY'));
-        document.getElementById('slot-sidearm').addEventListener('click', () => openWeaponModal('SIDEARM'));
-        document.getElementById('slot-gadget').addEventListener('click', () => openWeaponModal('GADGET'));
-        document.getElementById('btn-footer-edit').addEventListener('click', () => openWeaponModal('PRIMARY'));
-        closeWeaponModal.addEventListener('click', () => weaponSelectModal.style.display = 'none');
-
-        // Keyboard Shortcuts (E for Edit, R for Rename)
-        window.addEventListener('keydown', (e) => {
-          if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
-          if (e.key.toLowerCase() === 'e') openWeaponModal('PRIMARY');
-          if (e.key.toLowerCase() === 'r') promptRename();
-        });
-
-        // ── 5. Tab Navigation ──
+        // ── 4. Tab Navigation ──
         const navItems = document.querySelectorAll('.sidebar-nav-item, .top-nav-item');
         const tabs = document.querySelectorAll('.tab-content');
         
@@ -521,7 +384,7 @@
           });
         });
 
-        // ── 6. Server Browser & Dynamic Player Count ──
+        // ── 5. Real-Time Dynamic Server Browser & Online Player Counter ──
         const joinButton = document.getElementById('joinButton');
         const selectedRoomIdInput = document.getElementById('selectedRoomId');
         const deployHubTitle = document.getElementById('deploy-hub-title');
@@ -531,12 +394,10 @@
 
         function refreshServers() {
           const container = document.getElementById('server-list-container');
-          container.innerHTML = '<div style="color: rgba(255,255,255,0.4); font-family: \'Share Tech Mono\', monospace; padding: 40px 0; text-align: center;">Fetching active combat zones...</div>';
           
           fetch('/api/rooms')
             .then(res => res.json())
             .then(data => {
-              container.innerHTML = '';
               let totalPlayers = 0;
 
               if (!data.rooms || data.rooms.length === 0) {
@@ -545,6 +406,7 @@
                 return;
               }
               
+              container.innerHTML = '';
               data.rooms.forEach(room => {
                 totalPlayers += (room.playerCount || 0);
                 const div = document.createElement('div');
@@ -582,7 +444,10 @@
 
         document.getElementById('refresh-servers-btn').addEventListener('click', refreshServers);
 
-        // ── 7. Create Match: Map Selection ──
+        // Auto-refresh server list and live player count every 5 seconds
+        setInterval(refreshServers, 5000);
+
+        // ── 6. Create Match: Map Selection ──
         const mapCards = document.querySelectorAll('#create-map-cards .map-select-card');
         mapCards.forEach(card => {
           card.addEventListener('click', () => {
@@ -592,7 +457,7 @@
           });
         });
 
-        // ── 8. Create Match: Initialize Button ──
+        // ── 7. Create Match: Initialize Button ──
         const createBtn = document.getElementById('initializeMatchBtn');
         createBtn.addEventListener('click', () => {
           const roomName = document.getElementById('roomNameInput').value.trim() || 'Classified Operation';
