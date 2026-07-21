@@ -87,11 +87,6 @@ func (m *Match) CreateRoom(name string, mapName string) *Room {
 	m.roomsMutex.Unlock()
 	
 	return room
-}
-
-func (m *Match) GetTotalOnlinePlayers() int {
-	return len(m.sessions)
-}
 
 func (m *Match) ListActiveRooms() []RoomInfo {
 	m.roomsMutex.RLock()

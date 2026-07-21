@@ -273,7 +273,20 @@
           <span id="live-online-indicator">👥 ONLINE PLAYERS: <strong id="live-player-count" style="color: #fff;">1</strong></span>
         </div>
         <div style="display: flex; align-items: center; gap: 25px;">
-          <button id="btn-footer-rename" style="background: none; border: none; color: rgba(255,255,255,0.8); font-family: 'Oswald', sans-serif; font-size: 13px; letter-spacing: 2px; cursor: pointer;"><strong style="color: #fff;">[R / (Y)]</strong> RENAME CALLSIGN</button>
+          <button id="btn-footer-rename" style="background: none; border: none; color: rgba(255,255,255,0.8); font-family: 'Oswald', sans-serif; font-size: 13px; letter-spacing: 2px; cursor: pointer;"><strong style="color: #fff;">[EDIT]</strong> RENAME CALLSIGN</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Rename Callsign Modal ── -->
+    <div id="renameModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 5000; justify-content: center; align-items: center;">
+      <div style="background: rgba(18,20,26,0.95); border: 1px solid rgba(255,255,255,0.2); padding: 35px 40px; text-align: center; font-family: 'Oswald', sans-serif; color: white; width: 420px;">
+        <h2 style="font-size: 24px; letter-spacing: 3px; margin: 0 0 10px 0; color: #fff;">OPERATOR CALLSIGN</h2>
+        <p style="font-size: 13px; color: rgba(255,255,255,0.5); margin-bottom: 20px; font-family: 'Inter', sans-serif;">Enter your custom combat callsign below.</p>
+        <input type="text" id="callsignModalInput" style="width: 100%; padding: 12px 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-family: 'Oswald', sans-serif; font-size: 18px; text-transform: uppercase; outline: none; margin-bottom: 25px; box-sizing: border-box;" autocomplete="off" maxlength="16" />
+        <div style="display: flex; gap: 15px; justify-content: center;">
+          <button id="btnRenameSave" style="background: #ffffff; border: none; color: #000; font-family: 'Oswald', sans-serif; font-size: 16px; font-weight: 700; letter-spacing: 2px; padding: 10px 25px; cursor: pointer;">SAVE</button>
+          <button id="btnRenameCancel" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-family: 'Oswald', sans-serif; font-size: 16px; font-weight: 700; letter-spacing: 2px; padding: 10px 25px; cursor: pointer;">CANCEL</button>
         </div>
       </div>
     </div>
@@ -356,21 +369,33 @@
           usernameInput.value = cleanName;
         }
 
-        function promptRename() {
-          const newName = prompt('Enter your Callsign / Operator Name:', savedName);
-          if (newName !== null) {
-            setPlayerName(newName);
+        function openRenameModal() {
+          const renameModal = document.getElementById('renameModal');
+          const callsignInput = document.getElementById('callsignModalInput');
+          if (renameModal && callsignInput) {
+            callsignInput.value = savedName;
+            renameModal.style.display = 'flex';
+            setTimeout(() => callsignInput.focus(), 50);
           }
         }
 
-        profileContainer.addEventListener('click', promptRename);
-        document.getElementById('btn-footer-rename').addEventListener('click', promptRename);
+        function closeRenameModal() {
+          const renameModal = document.getElementById('renameModal');
+          if (renameModal) renameModal.style.display = 'none';
+        }
 
-        // Keyboard Shortcut (R for Rename Callsign)
-        window.addEventListener('keydown', (e) => {
-          if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
-          if (e.key.toLowerCase() === 'r') promptRename();
+        profileContainer.addEventListener('click', openRenameModal);
+        document.getElementById('btn-footer-rename').addEventListener('click', openRenameModal);
+        
+        document.getElementById('btnRenameSave').addEventListener('click', () => {
+          const input = document.getElementById('callsignModalInput');
+          if (input && input.value.trim()) {
+            setPlayerName(input.value.trim());
+          }
+          closeRenameModal();
         });
+
+        document.getElementById('btnRenameCancel').addEventListener('click', closeRenameModal);
 
         // ── 2. Class Selection Notification for Locked Classes ──
         const classItems = document.querySelectorAll('.class-item');
