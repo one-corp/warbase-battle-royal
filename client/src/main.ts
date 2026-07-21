@@ -645,10 +645,11 @@ if (canvas) {
 
             joinBtn.addEventListener("click", () => {
                 console.log("=== JOIN BUTTON CLICKED IN MAIN.TS ===");
-                let username = usernameInput.value.trim();
-                if (!username || username.toLowerCase() === "guest") {
-                    username = "Guest_" + Math.floor(Math.random() * 10000);
-                    usernameInput.value = username;
+                let username = localStorage.getItem("warbase_player_name") || usernameInput.value.trim();
+                if (!username || username.toLowerCase() === "guest" || username.toLowerCase() === "callsign") {
+                    username = "Operator_" + Math.floor(Math.random() * 1000);
+                    localStorage.setItem("warbase_player_name", username);
+                    if (usernameInput) usernameInput.value = username;
                 }
                 
                 const roomIdInput = document.getElementById("selectedRoomId") as HTMLInputElement;
