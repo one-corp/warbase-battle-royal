@@ -35,6 +35,9 @@ func main() {
 	logger := jsonlog.New(os.Stdout, jsonlog.LevelInfo)
 
 	match := engine.NewMatch()
+	match.CreateRoom("Industrial Zone Alpha", "industrial")
+	match.CreateRoom("Village Tactical", "village")
+	match.CreateRoom("Game Arena CQB", "arena")
 	go match.Run()
 
 	app := &application{

@@ -105,8 +105,7 @@ function createGlbBot(
                 let diff = targetYaw - currentYaw;
                 
                 // Normalize diff to -PI to PI
-                while (diff < -Math.PI) diff += Math.PI * 2;
-                while (diff > Math.PI) diff -= Math.PI * 2;
+                diff = Math.atan2(Math.sin(diff), Math.cos(diff));
                 
                 capsule.rotation.y += diff * 5 * dt;
 

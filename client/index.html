@@ -202,7 +202,51 @@
           ">INITIALIZE OPERATION</button>
         </div>
  
-        <!-- Settings moved to In-Game Tab Overlay -->
+        <!-- TAB: SETTINGS -->
+        <div class="tab-content" id="tab-settings">
+          <div style="margin-bottom: 30px;">
+            <h1 style="font-size: 28px; font-weight: 700; letter-spacing: 4px; color: #fff; margin: 0 0 25px 0;">SYSTEM SETTINGS</h1>
+            
+            <div style="display: flex; flex-direction: column; gap: 15px; max-width: 500px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); padding: 25px;">
+              
+              <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.04); padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.02);">
+                <span style="font-size: 13px; font-family: 'Outfit', sans-serif; font-weight: 600; letter-spacing: 1px;">ANTI-ALIASING (MSAA)</span>
+                <input type="checkbox" id="menu-optMSAA" />
+              </div>
+              
+              <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.04); padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.02);">
+                <span style="font-size: 13px; font-family: 'Outfit', sans-serif; font-weight: 600; letter-spacing: 1px;">ANISOTROPIC FILTER</span>
+                <input type="checkbox" id="menu-optAnisotropic" />
+              </div>
+              
+              <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.04); padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.02);">
+                <span style="font-size: 13px; font-family: 'Outfit', sans-serif; font-weight: 600; letter-spacing: 1px;">AMBIENT OCCLUSION (SSAO)</span>
+                <input type="checkbox" id="menu-optSSAO" />
+              </div>
+              
+              <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.04); padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.02);">
+                <span style="font-size: 13px; font-family: 'Outfit', sans-serif; font-weight: 600; letter-spacing: 1px;">REFLECTIONS (SSR)</span>
+                <input type="checkbox" id="menu-optSSR" />
+              </div>
+              
+              <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.04); padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.02);">
+                <span style="font-size: 13px; font-family: 'Outfit', sans-serif; font-weight: 600; letter-spacing: 1px;">CHROMATIC ABERRATION</span>
+                <input type="checkbox" id="menu-optChromatic" />
+              </div>
+              
+              <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.04); padding: 12px 16px;">
+                <span style="font-size: 13px; font-family: 'Outfit', sans-serif; font-weight: 600; letter-spacing: 1px;">SKYBOX ENVIRONMENT</span>
+                <select id="menu-skyboxSelector" style="background: #111; color: #ff2a4b; border: 1px solid #ff2a4b; font-family: 'Outfit', sans-serif; font-size: 12px; padding: 6px 12px; outline: none; cursor: pointer;">
+                  <option value="skybox">BLUE SKY</option>
+                  <option value="TropicalSunnyDay" selected>TROPICAL</option>
+                  <option value="country.env">COUNTRY HDR</option>
+                  <option value="environment.env">STUDIO HDR</option>
+                </select>
+              </div>
+              
+            </div>
+          </div>
+        </div>
  
       </div>
  
@@ -586,6 +630,66 @@
             createBtn.innerText = 'INITIALIZE OPERATION';
           });
         });
+
+        // ── 8. Settings Menu Tab Sync with ESC Settings ──
+        const settingsKeys = ['optMSAA', 'optAnisotropic', 'optSSAO', 'optSSR', 'optChromatic'];
+        
+        // Load initial state for Menu Checkboxes
+        settingsKeys.forEach(key => {
+          const menuEl = document.getElementById('menu-' + key);
+          if (menuEl) {
+            menuEl.checked = localStorage.getItem(key) === 'true';
+            menuEl.addEventListener('change', () => {
+              const checked = menuEl.checked;
+              localStorage.setItem(key, checked ? 'true' : 'false');
+              
+              const escEl = document.getElementById(key);
+              if (escEl) {
+                escEl.checked = checked;
+                escEl.dispatchEvent(new Event('change'));
+              }
+            });
+          }
+        });
+
+        // Load initial state for Menu Skybox
+        const menuSkybox = document.getElementById('menu-skyboxSelector');
+        if (menuSkybox) {
+          menuSkybox.value = localStorage.getItem('skyboxSelector') || 'TropicalSunnyDay';
+          menuSkybox.addEventListener('change', () => {
+            const val = menuSkybox.value;
+            localStorage.setItem('skyboxSelector', val);
+            
+            const escSkybox = document.getElementById('skyboxSelector');
+            if (escSkybox) {
+              escSkybox.value = val;
+              escSkybox.dispatchEvent(new Event('change'));
+            }
+          });
+        }
+
+        // Setup reverse listeners (ESC Menu changes sync back to Settings Tab)
+        settingsKeys.forEach(key => {
+          const escEl = document.getElementById(key);
+          if (escEl) {
+            escEl.addEventListener('change', () => {
+              const menuEl = document.getElementById('menu-' + key);
+              if (menuEl) {
+                menuEl.checked = escEl.checked;
+              }
+            });
+          }
+        });
+
+        const escSkybox = document.getElementById('skyboxSelector');
+        if (escSkybox) {
+          escSkybox.addEventListener('change', () => {
+            const menuSkybox = document.getElementById('menu-skyboxSelector');
+            if (menuSkybox) {
+              menuSkybox.value = escSkybox.value;
+            }
+          });
+        }
 
         // Initial fetch
         document.getElementById('nav-join').addEventListener('click', refreshServers);

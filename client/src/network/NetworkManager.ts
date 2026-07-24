@@ -249,8 +249,14 @@ export class NetworkManager {
     }
 
     public disconnect() {
+        if (this.pingInterval) {
+            clearInterval(this.pingInterval);
+            this.pingInterval = null;
+        }
         if (this.ws) {
             this.ws.onclose = null; // Prevent reconnect attempts
+            this.ws.onerror = null;
+            this.ws.onmessage = null;
             this.ws.close();
         }
     }

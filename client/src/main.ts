@@ -372,6 +372,7 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
 
         let isLocalDead = false;
         let respawnTimerActive = false;
+        let respawnInterval: any = null;
 
         networkManager.onStateReceived = (globalState) => {
             multiplayerEntities.updateNetworkState(globalState, username);
@@ -399,11 +400,15 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
                         respawnTimerActive = true;
                         let timeLeft = 3;
                         const timerSpan = document.getElementById("respawnTimer");
-                        const interval = setInterval(() => {
+                        if (respawnInterval) clearInterval(respawnInterval);
+                        respawnInterval = setInterval(() => {
                             timeLeft--;
                             if (timerSpan) timerSpan.innerText = timeLeft.toString();
                             if (timeLeft <= 0) {
-                                clearInterval(interval);
+                                if (respawnInterval) {
+                                    clearInterval(respawnInterval);
+                                    respawnInterval = null;
+                                }
                                 networkManager.sendRespawnRequest();
                             }
                         }, 1000);
@@ -452,6 +457,10 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
         networkManager.onRespawn = (x?: number, y?: number, z?: number) => {
             isLocalDead = false;
             respawnTimerActive = false;
+            if (respawnInterval) {
+                clearInterval(respawnInterval);
+                respawnInterval = null;
+            }
             
             const deathScreen = document.getElementById("deathScreen");
             if (deathScreen) deathScreen.style.display = "none";
@@ -618,9 +627,14 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
 
         // Store cleanup handles on the scene so they can be triggered from btnExitConfirm
         (scene as any).cleanupEventListeners = () => {
+            window.removeEventListener("keydown", handleEscape);
             canvas.removeEventListener("click", handleCanvasClick);
             document.removeEventListener("pointerlockchange", handlePointerLockChange);
             window.removeEventListener("keydown", handleTabDown);
+            if (respawnInterval) {
+                clearInterval(respawnInterval);
+                respawnInterval = null;
+            }
         };
 
         // Engine Select Logic

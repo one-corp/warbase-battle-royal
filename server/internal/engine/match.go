@@ -183,7 +183,7 @@ func (m *Match) Run() {
 			if _, ok := m.sessions[session]; ok {
 				delete(m.sessions, session)
 				m.activePlayers.Add(-1)
-				close(session.outputQueue)
+				session.SafeClose()
 			}
 
 			// Zombie fix: Always try to delete player state, even if session was forcefully evicted.
@@ -277,7 +277,7 @@ func (m *Match) Run() {
 						room.PlayerEntities = append(room.PlayerEntities, *newPlayer)
 						idx = len(room.PlayerEntities) - 1
 						room.PlayerIndices[message.SenderID] = idx
-						room.CachedGameState.Players[message.SenderID] = &PlayerState{}
+						room.CachedGameState.Players[message.SenderID] = room.PlayerEntities[idx].State
 						room.playerCount.Add(1)
 					}
 					player := &room.PlayerEntities[idx]
@@ -457,24 +457,6 @@ func (m *Match) Run() {
 				}
 
 				// Update cached broadcast payload
-				for i := range room.PlayerEntities {
-					p := &room.PlayerEntities[i]
-					cachedP := room.CachedGameState.Players[p.ID]
-					cachedP.X = p.State.X
-					cachedP.Y = p.State.Y
-					cachedP.Z = p.State.Z
-					cachedP.Rx = p.State.Rx
-					cachedP.Ry = p.State.Ry
-					cachedP.Rz = p.State.Rz
-					cachedP.Rw = p.State.Rw
-					cachedP.Animation = p.State.Animation
-					cachedP.Health = p.State.Health
-					cachedP.Kills = p.State.Kills
-					cachedP.Deaths = p.State.Deaths
-					cachedP.IsDead = p.State.IsDead
-					cachedP.PlatformId = p.State.PlatformId
-					cachedP.Ping = p.State.Ping
-				}
 				room.CachedServerMsg.Message = &ServerMessage_GameState{
 					GameState: room.CachedGameState,
 				}
@@ -487,7 +469,7 @@ func (m *Match) Run() {
 							case session.outputQueue <- stateData:
 							default:
 								delete(m.sessions, session)
-								close(session.outputQueue)
+								session.SafeClose()
 								// Evict from room immediately to prevent zombies
 								go m.Unregister(session)
 							}

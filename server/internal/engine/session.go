@@ -2,6 +2,7 @@ package engine
 
 import (
 	"log"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -21,6 +22,7 @@ type GameSession struct {
 	outputQueue chan []byte
 	PlayerID    string
 	RoomID      string
+	closeOnce   sync.Once
 }
 
 // NewGameSession initializes a new websocket client safely
@@ -32,6 +34,12 @@ func NewGameSession(match *Match, conn *websocket.Conn, playerID string, roomID 
 		PlayerID:    playerID,
 		RoomID:      roomID,
 	}
+}
+
+func (s *GameSession) SafeClose() {
+	s.closeOnce.Do(func() {
+		close(s.outputQueue)
+	})
 }
 
 // ListenForPlayerInputs runs continuously in the background, catching packets from the browser.
