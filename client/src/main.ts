@@ -3,19 +3,22 @@ import {
     Scene,
     Vector3,
     DirectionalLight,
+    HemisphericLight,
     Engine,
     HavokPlugin,
     Quaternion,
     CubeTexture,
     ShadowGenerator,
     DefaultRenderingPipeline,
-    ImageProcessingConfiguration,
     WebGPUEngine,
     Ray,
     SceneInstrumentation,
     EngineInstrumentation,
     SSAO2RenderingPipeline,
-    ScreenSpaceReflectionPostProcess
+    ScreenSpaceReflectionPostProcess,
+    AbstractMesh,
+    Texture,
+    Color3
 } from '@babylonjs/core';
 import '@babylonjs/core/Engines/WebGPU/Extensions/index.js';
 import HavokPhysics from '@babylonjs/havok';
@@ -33,11 +36,43 @@ import { initWeapons, createWeaponSystem } from './physics/WeaponSystem';
 import { throwNetworkGrenade } from './physics/GrenadeSystem';
 import { NetworkManager } from "./network/NetworkManager";
 import { MultiplayerEntities } from "./network/MultiplayerEntities";
+import { ScopeUI } from "./ui/ScopeUI";
 
 import { MainMenuScene } from "./engine/MainMenuScene";
 
 export let currentEngineType = "WebGL 2.0";
 export let activeScene: Scene | null = null;
+
+function applySkyboxPreset(scene: Scene, presetName: string, oldSkybox?: AbstractMesh | null): AbstractMesh {
+    if (oldSkybox) {
+        try { oldSkybox.dispose(); } catch (e) {}
+    }
+
+    const isPBR = presetName.endsWith(".env");
+    let texture: Texture | CubeTexture;
+    
+    if (isPBR) {
+        texture = CubeTexture.CreateFromPrefilteredData(`https://playground.babylonjs.com/textures/${presetName}`, scene);
+    } else {
+        texture = new CubeTexture(`https://playground.babylonjs.com/textures/${presetName}`, scene);
+    }
+
+    // createDefaultSkybox: (texture, pbr, scale, blur, setGlobalEnvTexture)
+    // If not PBR, use standard material skybox (pbr=false) so pure 6-sided textures work perfectly without blur.
+    const newSkybox = scene.createDefaultSkybox(texture, isPBR, 1000, 0, false)!;
+    
+    // glTF/GLB models ALWAYS use PBR materials, which strictly require an environmentTexture.
+    // Without this, the shadows on the map are 100% black because standard HemisphericLights don't work on PBR ambient.
+    try {
+        const pbrLightingEnv = CubeTexture.CreateFromPrefilteredData("https://playground.babylonjs.com/textures/country.env", scene);
+        scene.environmentTexture = pbrLightingEnv;
+        scene.environmentIntensity = 1.0; // Normalized ambient lighting
+    } catch (e) {
+        console.warn("Failed to load lighting env");
+    }
+
+    return newSkybox;
+}
 
 async function initEngine(canvas: HTMLCanvasElement): Promise<Engine | WebGPUEngine> {
     const forceWebGL = localStorage.getItem("forceWebGL") === "true";
@@ -74,15 +109,21 @@ async function createScene(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElem
     const hk = new HavokPlugin(true, havokInstance);
     scene.enablePhysics(new Vector3(0, -15.328, 0), hk);
 
-    // 1. Image Based Lighting & Skybox (Switched to standard neutral environment)
-    const envTexture = CubeTexture.CreateFromPrefilteredData("https://playground.babylonjs.com/textures/environment.env", scene);
-    scene.environmentTexture = envTexture;
-    let currentSkybox = scene.createDefaultSkybox(envTexture, true, 1000, 0.3);
+    // Initialize decoupled Scope UI Overlay
+    ScopeUI.init();
+
+    // 1. Image Based Lighting & Dynamic Multi-Skybox Setup
+    const selectedSkybox = localStorage.getItem("optSkybox") || "skybox";
+    let currentSkybox: AbstractMesh | null = applySkyboxPreset(scene, selectedSkybox);
 
     // 2. Realistic Sun Lighting & Cascaded Shadows
     const sun = new DirectionalLight("sun", new Vector3(-1, -2, -1), scene);
     sun.position = new Vector3(20, 40, 20);
     sun.intensity = 2.0;
+
+    const hemiLight = new HemisphericLight("hemiLight", new Vector3(0, 1, 0), scene);
+    hemiLight.intensity = 0.5; // Soft ambient fill light to fix pitch black shadows
+    hemiLight.specular = new Color3(0, 0, 0); // No shiny specular from ambient light
 
     const useUltraShadows = localStorage.getItem("optUltraShadows") === "true";
     const shadowMapSize = useUltraShadows ? 4096 : 2048;
@@ -109,87 +150,109 @@ async function createScene(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElem
     pipeline.fxaaEnabled = true;
     pipeline.bloomEnabled = false;
     pipeline.imageProcessingEnabled = true;
-    pipeline.imageProcessing.toneMappingEnabled = true;
-    pipeline.imageProcessing.toneMappingType = ImageProcessingConfiguration.TONEMAPPING_ACES;
+    
+    // Disabled ACES Tone Mapping for natural colors and brighter shadows
+    pipeline.imageProcessing.toneMappingEnabled = false;
+    
+    // Normalized exposure back to default
+    pipeline.imageProcessing.exposure = 1.0;
 
     // CRITICAL FIX: WebGPU requires the scene to be fully compiled.
     // We MUST await scene.whenReadyAsync() AFTER adding all materials and pipelines!
     await scene.whenReadyAsync();
 
     // --- Graphics UI Hookup ---
-    const tChromatic = document.getElementById("toggleChromatic") as HTMLInputElement;
-    if (tChromatic) {
-        tChromatic.checked = pipeline.chromaticAberrationEnabled;
-        tChromatic.addEventListener("change", (e) => {
-            pipeline.chromaticAberrationEnabled = (e.target as HTMLInputElement).checked;
-            if (pipeline.chromaticAberrationEnabled && pipeline.chromaticAberration) {
-                pipeline.chromaticAberration.aberrationAmount = 30.0;
-                pipeline.chromaticAberration.radialIntensity = 1.0;
+    let ssaoPipeline: any = null;
+    let ssrPipeline: any = null;
+
+    const syncProGraphics = () => {
+        const useMSAA = localStorage.getItem("optMSAA") === "true";
+        const useAnisotropic = localStorage.getItem("optAnisotropic") === "true";
+        const useSSAO = localStorage.getItem("optSSAO") === "true";
+        const useSSR = localStorage.getItem("optSSR") === "true";
+        
+        console.log("[GFX] syncProGraphics called:", { useMSAA, useAnisotropic, useSSAO, useSSR, cameraExists: !!camera });
+        
+        pipeline.samples = useMSAA ? 4 : 1;
+
+        scene.textures.forEach(texture => {
+            if ((texture as any).anisotropicFilteringLevel !== undefined) {
+                (texture as any).anisotropicFilteringLevel = useAnisotropic ? 16 : 1;
             }
         });
-        
-        let ssaoPipeline: any = null;
-        let ssrPipeline: any = null;
 
-        const syncProGraphics = () => {
-            const useMSAA = localStorage.getItem("optMSAA") === "true";
-            const useSSAO = localStorage.getItem("optSSAO") === "true";
-            const useSSR = localStorage.getItem("optSSR") === "true";
-            
-            pipeline.samples = useMSAA ? 4 : 1;
-
-            if (useSSAO && !ssaoPipeline) {
+        if (useSSAO && !ssaoPipeline) {
+            try {
+                if (!scene.prePassRenderer) {
+                    scene.enablePrePassRenderer();
+                    console.log("[GFX] PrePassRenderer enabled");
+                }
                 ssaoPipeline = new SSAO2RenderingPipeline("ssao", scene, {
                     ssaoRatio: 0.5,
                     blurRatio: 1.0
-                });
-                ssaoPipeline.radius = 1.2;
-                ssaoPipeline.totalStrength = 1.0;
-                if (camera) scene.postProcessRenderPipelineManager.attachCamerasToRenderPipeline("ssao", camera);
-            } else if (!useSSAO && ssaoPipeline) {
-                ssaoPipeline.dispose();
+                }, camera ? [camera] : undefined);
+                ssaoPipeline.radius = 1.2; // Back to normal
+                ssaoPipeline.totalStrength = 1.0; // Back to normal
+                ssaoPipeline.samples = 16;
+                ssaoPipeline.maxZ = 250;
+                console.log("[GFX] SSAO pipeline CREATED and attached.");
+            } catch (e) {
+                console.error("[GFX] SSAO CREATION FAILED:", e);
                 ssaoPipeline = null;
             }
+        } else if (!useSSAO && ssaoPipeline) {
+            ssaoPipeline.dispose();
+            ssaoPipeline = null;
+            console.log("[GFX] SSAO pipeline disposed");
+        }
 
-            if (useSSR && !ssrPipeline) {
+        if (useSSR && !ssrPipeline) {
+            try {
                 ssrPipeline = new ScreenSpaceReflectionPostProcess("ssr", scene, 1.0, camera!);
-                ssrPipeline.step = 2.0;
-            } else if (!useSSR && ssrPipeline) {
-                ssrPipeline.dispose();
+                ssrPipeline.step = 1.0;
+                ssrPipeline.strength = 1.5;
+                ssrPipeline.reflectionSamples = 64;
+                console.log("[GFX] SSR post-process CREATED");
+            } catch (e) {
+                console.error("[GFX] SSR CREATION FAILED:", e);
                 ssrPipeline = null;
             }
-        };
+        } else if (!useSSR && ssrPipeline) {
+            ssrPipeline.dispose();
+            ssrPipeline = null;
+            console.log("[GFX] SSR disposed");
+        }
+    };
 
-        ['optSSAO', 'optSSR', 'optMSAA', 'optUltraShadows', 'optChromatic'].forEach(id => {
-            const el = document.getElementById(id) as HTMLInputElement;
-            if (el) {
-                el.checked = localStorage.getItem(id) === "true";
-                el.addEventListener('change', () => {
-                    localStorage.setItem(id, el.checked ? "true" : "false");
-                    if (id === 'optChromatic') {
-                        pipeline.chromaticAberrationEnabled = el.checked;
-                    } else if (id !== 'optUltraShadows') {
-                        syncProGraphics();
-                    }
-                });
-            }
-        });
-        
-        syncProGraphics();
-        pipeline.chromaticAberrationEnabled = localStorage.getItem("optChromatic") === "true";
-    }
+    ['optSSAO', 'optSSR', 'optMSAA', 'optAnisotropic', 'optUltraShadows', 'optChromatic'].forEach(id => {
+        const el = document.getElementById(id) as HTMLInputElement;
+        if (el) {
+            el.checked = localStorage.getItem(id) === "true";
+            el.addEventListener('change', () => {
+                console.log(`[GFX] Toggle changed: ${id} = ${el.checked}`);
+                localStorage.setItem(id, el.checked ? "true" : "false");
+                if (id === 'optChromatic') {
+                    pipeline.chromaticAberrationEnabled = el.checked;
+                } else if (id !== 'optUltraShadows') {
+                    syncProGraphics();
+                }
+            });
+        } else {
+            console.warn(`[GFX] Checkbox #${id} NOT FOUND in DOM!`);
+        }
+    });
+    
+    syncProGraphics();
+    pipeline.chromaticAberrationEnabled = localStorage.getItem("optChromatic") === "true";
 
 
     const tSkybox = document.getElementById("skyboxSelector") as HTMLSelectElement;
     if (tSkybox) {
+        tSkybox.value = selectedSkybox;
         tSkybox.addEventListener("change", (e) => {
             const envName = (e.target as HTMLSelectElement).value;
-            const newEnvTexture = CubeTexture.CreateFromPrefilteredData(`https://playground.babylonjs.com/textures/${envName}`, scene);
-            scene.environmentTexture = newEnvTexture;
-            if (currentSkybox) {
-                currentSkybox.dispose();
-            }
-            currentSkybox = scene.createDefaultSkybox(newEnvTexture, true, 1000, 0.3);
+            localStorage.setItem("optSkybox", envName);
+            currentSkybox = applySkyboxPreset(scene, envName, currentSkybox);
         });
     }
     // Note: SSAO and SSR are enabled dynamically via syncProGraphics when selected in settings.
@@ -491,37 +554,37 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
         const scoreboardBody = document.getElementById("scoreboardBody");
         const engineIndicator = document.getElementById("engineTypeIndicator");
         
+        let isTabOpen = false;
+
         const handleTabDown = (e: KeyboardEvent) => {
             if (e.code === "Tab") {
                 e.preventDefault();
                 if (e.repeat) return;
+
+                isTabOpen = !isTabOpen;
+
                 if (scoreboard && scoreboardBody) {
-                    scoreboard.style.display = "flex"; // Match deathscreen/scoreboard flex layout
-                    document.exitPointerLock();
-                    if (engineIndicator) {
-                        engineIndicator.innerText = (window as any).currentEngineType || "WebGPU";
-                        engineIndicator.style.color = (window as any).currentEngineType === "WebGPU" ? "#00FF00" : "#FFA500";
+                    if (isTabOpen) {
+                        scoreboard.style.display = "flex"; // Show overlay
+                        document.exitPointerLock();
+                        if (engineIndicator) {
+                            engineIndicator.innerText = (window as any).currentEngineType || "WebGPU";
+                            engineIndicator.style.color = (window as any).currentEngineType === "WebGPU" ? "#00FF00" : "#FFA500";
+                        }
+                    } else {
+                        scoreboard.style.display = "none"; // Hide overlay
+                        canvas.requestPointerLock();
                     }
                 }
             }
         };
         window.addEventListener("keydown", handleTabDown);
 
-        const handleTabUp = (e: KeyboardEvent) => {
-            if (e.code === "Tab") {
-                if (scoreboard) {
-                    scoreboard.style.display = "none";
-                }
-            }
-        };
-        window.addEventListener("keyup", handleTabUp);
-
         // Store cleanup handles on the scene so they can be triggered from btnExitConfirm
         (scene as any).cleanupEventListeners = () => {
             canvas.removeEventListener("click", handleCanvasClick);
             document.removeEventListener("pointerlockchange", handlePointerLockChange);
             window.removeEventListener("keydown", handleTabDown);
-            window.removeEventListener("keyup", handleTabUp);
         };
 
         // Engine Select Logic

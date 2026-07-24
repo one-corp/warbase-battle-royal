@@ -11,7 +11,8 @@ import {
     AnimationGroup,
     SpotLight,
     WebGPUEngine,
-    TransformNode
+    TransformNode,
+    Texture
 } from "@babylonjs/core";
 
 export class MainMenuScene {
@@ -37,9 +38,24 @@ export class MainMenuScene {
         // 2. Environment & Lighting
         this.scene.clearColor = new Color3(0.05, 0.05, 0.05).toColor4(1);
         
-        const envTexture = CubeTexture.CreateFromPrefilteredData("https://playground.babylonjs.com/textures/environment.env", this.scene);
-        this.scene.environmentTexture = envTexture;
-        this.scene.createDefaultSkybox(envTexture, true, 1000, 0.1); // Dim skybox
+        const selectedSkybox = localStorage.getItem("optSkybox") || "skybox";
+        const isPBR = selectedSkybox.endsWith(".env");
+        let texture: Texture | CubeTexture;
+        
+        if (isPBR) {
+            texture = CubeTexture.CreateFromPrefilteredData(`https://playground.babylonjs.com/textures/${selectedSkybox}`, this.scene);
+        } else {
+            texture = new CubeTexture(`https://playground.babylonjs.com/textures/${selectedSkybox}`, this.scene);
+        }
+
+        this.scene.createDefaultSkybox(texture, isPBR, 1000, 0, false);
+        
+        // GLB models (like our characters/weapons) require PBR environment texture to not be pitch black in shadows
+        try {
+            const pbrLightingEnv = CubeTexture.CreateFromPrefilteredData("https://playground.babylonjs.com/textures/country.env", this.scene);
+            this.scene.environmentTexture = pbrLightingEnv;
+            this.scene.environmentIntensity = 1.0;
+        } catch(e) {}
 
         // Dramatic spotlights for a sleek armory look (CYBERPUNK RED THEME)
         const mainLight = new SpotLight("mainLight", new Vector3(0, 5, 5), new Vector3(0, -1, -1), Math.PI / 3, 2, this.scene);

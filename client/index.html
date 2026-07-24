@@ -205,53 +205,7 @@
           ">INITIALIZE OPERATION</button>
         </div>
 
-        <!-- TAB: ADVANCED GRAPHICS & SYSTEM SETTINGS -->
-        <div class="tab-content" id="tab-settings">
-          <h1 style="font-size: 28px; font-weight: 700; letter-spacing: 4px; color: #fff; margin: 0 0 30px 0;">SYSTEM & GRAPHICS SETTINGS</h1>
-          <div style="display: flex; flex-direction: column; gap: 18px; max-width: 650px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 30px;">
-            
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <div>
-                <div style="font-size: 16px; font-weight: 600; color: #fff;">SSAO (AMBIENT OCCLUSION)</div>
-                <div style="font-size: 12px; color: rgba(255,255,255,0.4); margin-top: 2px;">Realistic contact shadows and ambient lighting</div>
-              </div>
-              <input type="checkbox" id="optSSAO" />
-            </div>
-
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <div>
-                <div style="font-size: 16px; font-weight: 600; color: #fff;">SCREEN SPACE REFLECTIONS (SSR)</div>
-                <div style="font-size: 12px; color: rgba(255,255,255,0.4); margin-top: 2px;">Dynamic surface water and metallic reflections</div>
-              </div>
-              <input type="checkbox" id="optSSR" />
-            </div>
-
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <div>
-                <div style="font-size: 16px; font-weight: 600; color: #fff;">ANTI-ALIASING (MSAA)</div>
-                <div style="font-size: 12px; color: rgba(255,255,255,0.4); margin-top: 2px;">Smoothes jagged geometric edges</div>
-              </div>
-              <input type="checkbox" id="optMSAA" />
-            </div>
-
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <div>
-                <div style="font-size: 16px; font-weight: 600; color: #fff;">ULTRA SHADOWS</div>
-                <div style="font-size: 12px; color: rgba(255,255,255,0.4); margin-top: 2px;">Enables high-resolution shadow mapping</div>
-              </div>
-              <input type="checkbox" id="optUltraShadows" />
-            </div>
-
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <div>
-                <div style="font-size: 16px; font-weight: 600; color: #fff;">CHROMATIC ABERRATION</div>
-                <div style="font-size: 12px; color: rgba(255,255,255,0.4); margin-top: 2px;">Adds tactical lens distortion effect</div>
-              </div>
-              <input type="checkbox" id="optChromatic" />
-            </div>
-
-          </div>
-        </div>
+        <!-- Settings moved to In-Game Tab Overlay -->
 
       </div>
 
@@ -302,6 +256,48 @@
 
     <!-- In-Game HUD -->
     <div id="uiLayer" style="display: none; position: fixed; inset: 0; pointer-events: none; z-index: 2000;">
+      
+      <!-- IN-GAME GRAPHICS TOGGLES (Floating top-left for live testing) -->
+      <div style="position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.7); border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 4px; pointer-events: auto; font-family: 'Oswald', sans-serif; color: white; width: 250px;">
+        <h3 style="margin: 0 0 10px 0; font-size: 14px; letter-spacing: 1px; color: #ff2a4b;">GRAPHICS TESTER (Press ESC to click)</h3>
+        
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 5px 8px;">
+            <span style="font-size: 11px; font-family: 'Inter', sans-serif;">ANTI-ALIASING (MSAA)</span>
+            <input type="checkbox" id="optMSAA" />
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 5px 8px;">
+            <span style="font-size: 11px; font-family: 'Inter', sans-serif;">ANISOTROPIC FILTER</span>
+            <input type="checkbox" id="optAnisotropic" />
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 5px 8px;">
+            <span style="font-size: 11px; font-family: 'Inter', sans-serif;">AMBIENT OCCLUSION (SSAO)</span>
+            <input type="checkbox" id="optSSAO" />
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 5px 8px;">
+            <span style="font-size: 11px; font-family: 'Inter', sans-serif;">REFLECTIONS (SSR)</span>
+            <input type="checkbox" id="optSSR" />
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 5px 8px;">
+            <span style="font-size: 11px; font-family: 'Inter', sans-serif;">ULTRA SHADOWS</span>
+            <input type="checkbox" id="optUltraShadows" />
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 5px 8px;">
+            <span style="font-size: 11px; font-family: 'Inter', sans-serif;">CHROMATIC ABERRATION</span>
+            <input type="checkbox" id="optChromatic" />
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 5px 8px;">
+            <span style="font-size: 11px; font-family: 'Inter', sans-serif;">SKYBOX</span>
+            <select id="skyboxSelector" style="background: #111; color: #ff2a4b; border: 1px solid #ff2a4b; font-size: 10px;">
+              <option value="skybox" selected>BLUE SKY</option>
+              <option value="TropicalSunnyDay">TROPICAL</option>
+              <option value="country.env">COUNTRY HDR</option>
+              <option value="environment.env">STUDIO HDR</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       <!-- Crosshair -->
       <div id="crosshair" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 20px; font-weight: 400; text-shadow: 0 0 2px #000;">+</div>
 
@@ -317,20 +313,15 @@
             <div style="font-size: 14px; letter-spacing: 2px; color: rgba(255,255,255,0.6);">AK-47</div>
             <div id="ammoText" style="font-size: 36px; font-weight: 700; color: #fff; line-height: 1;">30 / 30</div>
           </div>
-          
-          <!-- Secondary Weapon (Sidearm) -->
-          <div id="hud-slot-secondary" class="hud-weapon-slot" style="text-align: right; opacity: 0.4; transition: opacity 0.2s;">
-            <div style="font-size: 14px; letter-spacing: 2px; color: rgba(255,255,255,0.6);">DEAGLE</div>
-            <div id="ammoTextSecondary" style="font-size: 24px; font-weight: 700; color: #fff; line-height: 1; display: none;">7 / 7</div>
-          </div>
-          
-          <!-- Grenade -->
           <div style="margin-left: 10px; padding-left: 20px; border-left: 1px solid rgba(255,255,255,0.2); text-align: center;">
             <div style="font-size: 20px;">💣</div>
             <div style="font-size: 14px; color: #fff; font-weight: 700;">1</div>
           </div>
         </div>
       </div>
+      
+      <!-- Scope UI is dynamically managed via ScopeUI.ts component -->
+        
     </div>
 
     <!-- Scoreboard (TAB) Overlay -->
@@ -480,6 +471,16 @@
                 return;
               }
               
+              // Auto-select first room if nothing selected yet
+              if (!selectedRoomIdInput.value && data.rooms.length > 0) {
+                selectedRoomIdInput.value = data.rooms[0].id;
+                document.getElementById('selectedMap').value = data.rooms[0].map || 'village';
+                if (deployHubTitle) deployHubTitle.innerText = data.rooms[0].name.toUpperCase();
+                btnDeployText.innerText = 'DEPLOY TO COMBAT';
+                joinButton.disabled = false;
+                joinButton.style.opacity = '1';
+              }
+              
               container.innerHTML = '';
               data.rooms.forEach(room => {
                 const div = document.createElement('div');
@@ -544,8 +545,8 @@
           .then(res => res.json())
           .then(data => {
             if (data.room_id) {
-              selectedRoomIdInput.value = data.id;
-              document.getElementById('selectedMap').value = data.map;
+              selectedRoomIdInput.value = data.room_id;
+              document.getElementById('selectedMap').value = mapName;
               if (deployHubTitle) deployHubTitle.innerText = roomName.toUpperCase();
               joinButton.disabled = false;
               btnDeployText.innerText = 'DEPLOY TO COMBAT';

@@ -33,8 +33,8 @@ export function initTracerSystem(scene: Scene) {
         addComponent(world, Renderable, eid);
         addComponent(world, Tracer, eid);
 
-        // We use an ultra-thin cylinder for high-velocity look
-        const mesh = MeshBuilder.CreateCylinder(`tracer_${eid}`, { height: 1, diameter: 0.008 }, scene);
+        // We use a thin cylinder for high-velocity look
+        const mesh = MeshBuilder.CreateCylinder(`tracer_${eid}`, { height: 1, diameter: 0.025 }, scene);
         mesh.rotation.x = Math.PI / 2;
         mesh.bakeCurrentTransformIntoVertices();
         mesh.isPickable = false;
@@ -42,7 +42,7 @@ export function initTracerSystem(scene: Scene) {
 
         // Give it a bright emissive material
         const mat = new StandardMaterial(`tracerMat_${eid}`, scene);
-        mat.emissiveColor = new Color3(1.0, 0.95, 0.7); // Pale yellow/white
+        mat.emissiveColor = new Color3(1.0, 0.9, 0.4); // Bright yellow-orange
         mat.disableLighting = true; // Unaffected by shadows/lights
         mesh.material = mat;
         

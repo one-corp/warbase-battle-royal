@@ -70,14 +70,26 @@ export class EnvironmentManager {
             container.meshes.forEach((mesh) => {
                 if (!mesh) return;
                 
-                // Add to shadow generator
+                // Reduce extreme reflectivity (make ground less mirror-like)
+                if (mesh.material && mesh.material.getClassName() === "PBRMaterial") {
+                    const pbr = mesh.material as any;
+                    if (this.mapChoice === "village") {
+                        pbr.metallic = 0.0;
+                        pbr.roughness = 0.95; // Rough concrete/dirt
+                    } else {
+                        // Generally tone down pure mirrors unless they are explicitly marked
+                        if (pbr.metallic > 0.8 && pbr.roughness < 0.2) {
+                            pbr.roughness = 0.4;
+                        }
+                    }
+                }
+
                 // Add to shadow generator
                 if (this.shadowGenerator && mesh.name !== "__root__") {
                     this.shadowGenerator.addShadowCaster(mesh, true);
                     mesh.receiveShadows = true;
                 }
 
-                // Add physics hitboxes (only for visible geometry, skipping pure transforms/bones)
                 // Add physics hitboxes (only for visible geometry, skipping pure transforms/bones)
                 // In babylon, geometry is usually on meshes with getTotalVertices() > 0
                 const vertexCount = mesh.getTotalVertices();
@@ -86,9 +98,7 @@ export class EnvironmentManager {
                     mesh.useVertexColors = false; 
 
                     try {
-                        if (vertexCount > 0) {
-                            new PhysicsAggregate(mesh, PhysicsShapeType.MESH, { mass: 0, friction: 0.5, restitution: 0 }, this.scene);
-                        }
+                        new PhysicsAggregate(mesh, PhysicsShapeType.MESH, { mass: 0, friction: 0.5, restitution: 0 }, this.scene);
                     } catch (e) {
                         console.warn(`Failed to create physics for ${mesh.name}:`, e);
                     }

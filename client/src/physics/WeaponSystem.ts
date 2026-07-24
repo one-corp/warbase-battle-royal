@@ -1,7 +1,7 @@
 import { AdvancedDynamicTexture, Rectangle } from "@babylonjs/gui";
 import { defineQuery, type IWorld } from "bitecs";
 import { 
-    Scene, MeshBuilder, Color3, Vector3, Matrix, TransformNode, ParticleSystem, Color4, 
+    Scene, MeshBuilder, Color3, Vector3, TransformNode, ParticleSystem, Color4, 
     AbstractMesh, Mesh, Scalar, SceneLoader, StandardMaterial, PhysicsMotionType 
 } from "@babylonjs/core";
 
@@ -50,26 +50,19 @@ export const createWeaponSystem = (scene: Scene, networkManager?: NetworkManager
     const weaponQuery = defineQuery([WeaponStateComponent, RecoilComponent, SwayComponent, InputComponent, PlayerComponent]);
     let lastGrenadeThrow = 0;
     const _tempReloadOffset = new Vector3();
-    const _tempBasePos = new Vector3();
     const _tempForward = new Vector3();
     const _tempRight = new Vector3();
     const _tempUp = new Vector3();
     const _tempSpreadDir = new Vector3();
+    const _tempScaledRight = new Vector3();
+    const _tempScaledUp = new Vector3();
     const _tempEndPoint = new Vector3();
-    const _tempDesiredWorldPos = new Vector3();
-    const _tempCurrentAimWorldPos = new Vector3();
-    const _tempDeltaWorldPos = new Vector3();
-    const _tempInvertedCameraMatrix = new Matrix();
-    const _tempLocalDelta = new Vector3();
-    const _tempMathematicalADSPos = new Vector3();
-    const _tempHipfirePos = new Vector3();
-    const _tempCurrentTargetPos = new Vector3();
     const _tempStartPoint = new Vector3();
-    const _tempOffset = new Vector3(0, -0.2, 0);
-    const _tempDirection = new Vector3();
     const _Forward = new Vector3(0, 0, 1);
     const _Right = new Vector3(1, 0, 0);
     const _Up = new Vector3(0, 1, 0);
+    
+    const lastAdsState = new Map<number, boolean>();
 
     return (world: IWorld, dt: number) => {
         const ents = weaponQuery(world);
@@ -127,6 +120,12 @@ export const createWeaponSystem = (scene: Scene, networkManager?: NetworkManager
 
             // 2. Process ADS
             const isADS = inputAds && !WeaponStateComponent.isReloading[eid];
+            
+            if (lastAdsState.get(eid) !== isADS) {
+                lastAdsState.set(eid, isADS);
+                window.dispatchEvent(new CustomEvent('scope-toggle', { detail: { active: isADS } }));
+            }
+
             const targetADS = isADS ? 1.0 : 0.0;
             const currentADS = WeaponStateComponent.adsProgress[eid];
             WeaponStateComponent.adsProgress[eid] += (targetADS - currentADS) * (dt / config.adsTime);
@@ -181,9 +180,9 @@ export const createWeaponSystem = (scene: Scene, networkManager?: NetworkManager
                 camera.getDirectionToRef(_Up, _tempUp);
                 
                 _tempSpreadDir.copyFrom(_tempForward);
-                _tempRight.scaleInPlace(Math.sin(spreadAngle) * Math.cos(rot));
-                _tempUp.scaleInPlace(Math.sin(spreadAngle) * Math.sin(rot));
-                _tempSpreadDir.addInPlace(_tempRight).addInPlace(_tempUp).normalize();
+                _tempRight.scaleToRef(Math.sin(spreadAngle) * Math.cos(rot), _tempScaledRight);
+                _tempUp.scaleToRef(Math.sin(spreadAngle) * Math.sin(rot), _tempScaledUp);
+                _tempSpreadDir.addInPlace(_tempScaledRight).addInPlace(_tempScaledUp).normalize();
 
                 _tempEndPoint.copyFrom(_tempSpreadDir).scaleInPlace(300).addInPlace(camera.globalPosition);
                 let hitPoint = _tempEndPoint;
@@ -199,7 +198,9 @@ export const createWeaponSystem = (scene: Scene, networkManager?: NetworkManager
                     const hitMesh = physResult.body.transformNode;
 
                     if (hitMesh.physicsBody && hitMesh.physicsBody.getMotionType() === PhysicsMotionType.DYNAMIC) {
-                        hitMesh.physicsBody.applyImpulse(_tempSpreadDir.scale(10), hitPoint);
+                        // Use scaleToRef to avoid GC allocation from .scale()
+                        _tempSpreadDir.scaleToRef(10, _tempScaledRight); 
+                        hitMesh.physicsBody.applyImpulse(_tempScaledRight, hitPoint);
                     }
                     
                     if (hitMesh.metadata && hitMesh.metadata.isHitbox && hitMesh.metadata.playerId && hitMesh.metadata.playerId !== networkManager?.username) {
@@ -211,12 +212,27 @@ export const createWeaponSystem = (scene: Scene, networkManager?: NetworkManager
                         }
                     } else if (!hitMesh.metadata?.playerId) {
                         const normal = physResult.hitNormalWorld;
-                        const decalPos = hitPoint.add(normal.scale(0.02));
+                        // Avoid .scale() and .add() allocations
+                        normal.scaleToRef(0.02, _tempScaledRight);
+                        const decalPos = hitPoint.add(_tempScaledRight); 
                         spawnDecal(decalPos, decalPos.add(normal));
                         spawnImpact(hitPoint, normal);
                     }
                 }
-                camera.globalPosition.addToRef(_tempOffset, _tempStartPoint);
+                
+                // Calculate tracer spawn offset perfectly without GC allocations
+                // _tempRight and _tempUp are pristine because we used scaleToRef above!
+                _tempStartPoint.copyFrom(camera.globalPosition);
+                
+                _tempRight.scaleToRef(0.15, _tempScaledRight);
+                _tempStartPoint.addInPlace(_tempScaledRight);
+                
+                _tempUp.scaleToRef(-0.15, _tempScaledUp);
+                _tempStartPoint.addInPlace(_tempScaledUp);
+                
+                _tempForward.scaleToRef(0.5, _tempScaledRight);
+                _tempStartPoint.addInPlace(_tempScaledRight);
+                
                 spawnTracer(_tempStartPoint, hitPoint);
             }
 
@@ -272,15 +288,6 @@ export const createWeaponSystem = (scene: Scene, networkManager?: NetworkManager
             PlayerComponent.pitch[eid] += (RecoilComponent.rotationY[eid] - oldRotY);
             PlayerComponent.yaw[eid] += (RecoilComponent.rotationX[eid] - oldRotX);
 
-            Vector3.LerpToRef(Vector3.ZeroReadOnly, config.adsPosition, WeaponStateComponent.adsProgress[eid], _tempBasePos);
-            
-            camera.getDirectionToRef(_Forward, _tempDirection);
-            _tempDirection.scaleInPlace(0.3);
-            camera.globalPosition.addToRef(_tempDirection, _tempDesiredWorldPos);
-
-            _tempCurrentAimWorldPos.copyFrom(aimPoint.getAbsolutePosition());
-            _tempDesiredWorldPos.subtractToRef(_tempCurrentAimWorldPos, _tempDeltaWorldPos);
-
             // 4. Process Weapon Swap & Grenades
             if ((InputComponent as any).weapon1[eid] === 1 && WeaponStateComponent.activeWeaponIndex[eid] !== 0) {
                 WeaponStateComponent.activeWeaponIndex[eid] = 0;
@@ -320,20 +327,14 @@ export const createWeaponSystem = (scene: Scene, networkManager?: NetworkManager
                 }
             }
 
-            _tempInvertedCameraMatrix.copyFrom(camera.getWorldMatrix());
-            _tempInvertedCameraMatrix.invert();
-
-            Vector3.TransformNormalToRef(_tempDeltaWorldPos, _tempInvertedCameraMatrix, _tempLocalDelta);
-            swayRoot.position.addToRef(_tempLocalDelta, _tempMathematicalADSPos);
-
-            _tempBasePos.addToRef(_tempReloadOffset, _tempHipfirePos);
-            Vector3.LerpToRef(_tempHipfirePos, _tempMathematicalADSPos, WeaponStateComponent.adsProgress[eid], _tempCurrentTargetPos);
+            // Lock socket offset directly to configured Hip position (Don't touch gun mesh for ADS)
+            socketOffset.position.copyFrom(config.hipPosition);
             
             const adsSwayMult = 1.0 - (WeaponStateComponent.adsProgress[eid] * 0.8); 
             swayRoot.rotation.y = SwayComponent.swayX[eid] * adsSwayMult;
             swayRoot.rotation.x = reloadRotX + (SwayComponent.swayY[eid] * adsSwayMult) + RecoilComponent.kickbackRotX[eid]; 
             
-            swayRoot.position.copyFrom(_tempCurrentTargetPos);
+            swayRoot.position.copyFrom(_tempReloadOffset);
             swayRoot.position.x += (bobX * adsSwayMult);
             swayRoot.position.y += (bobY * adsSwayMult);
             swayRoot.position.z += RecoilComponent.kickbackZ[eid];

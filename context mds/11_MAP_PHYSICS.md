@@ -76,3 +76,31 @@ if (mesh.getTotalVertices() > 0) {
 This forces the physics engine to trace the precise triangles of the roads, stairs, and walls, ensuring players walk on the actual ground rather than a massive invisible wrapper.
 
 By adhering to these rules, the map environment remains physically stable, and complex interactions like working elevators function reliably in multiplayer.
+
+## Map Materials & The "Mirror Ground" Bug
+
+When loading external GLB map environments (like `village_lowres.glb`), a common rendering issue is that the built-in PBR (Physically Based Rendering) materials often default to highly reflective settings (metallic = 1.0, roughness = 0.0) if no specific texture map is provided. When combined with an HDR environment skybox, this causes the dirt or concrete ground to look like a perfectly polished mirror.
+
+### The Fix
+
+To ensure map materials look like realistic terrain rather than chrome, we intercept the materials immediately after the GLB is loaded and before the scene fully renders. We iterate through the container meshes, locate any `PBRMaterial`, and forcibly reduce the `metallic` and increase `roughness` properties.
+
+```typescript
+// Example from Environment.ts: loadGLBMap()
+container.meshes.forEach((mesh) => {
+    if (mesh.material && mesh.material.getClassName() === "PBRMaterial") {
+        const pbr = mesh.material as any;
+        if (this.mapChoice === "village") {
+            pbr.metallic = 0.0;
+            pbr.roughness = 0.95; // Forces ground to look like matte dirt/concrete
+        } else {
+            // Globally tone down pure mirrors unless explicitly marked
+            if (pbr.metallic > 0.8 && pbr.roughness < 0.2) {
+                pbr.roughness = 0.4; 
+            }
+        }
+    }
+});
+```
+
+By flattening the PBR properties during map initialization, the rendering engine correctly shades the terrain as a diffuse surface, fixing the "mirror ground" bug without requiring manual edits to the 3D map files in Blender.

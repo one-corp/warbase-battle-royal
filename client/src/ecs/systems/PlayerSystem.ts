@@ -2,7 +2,7 @@ import { addEntity, addComponent } from "bitecs";
 import { world } from "../World";
 import { Position, Rotation, Velocity, InputComponent, PlayerComponent, PlayerTag, PhysicsBodyTag, Renderable, WeaponStateComponent, RecoilComponent, SwayComponent } from "../Components";
 import { entityMeshes, entityPhysicsBodies, entityCameras } from "../ViewMaps";
-import { Scene, MeshBuilder, PhysicsAggregate, PhysicsShapeType, Vector3, UniversalCamera, PointerEventTypes, KeyboardEventTypes } from "@babylonjs/core";
+import { Scene, MeshBuilder, PhysicsAggregate, PhysicsShapeType, Vector3, UniversalCamera, KeyboardEventTypes } from "@babylonjs/core";
 
 export function initPlayer(scene: Scene, canvas: HTMLCanvasElement): number {
     const eid = addEntity(world);
@@ -90,20 +90,27 @@ function setupInputListeners(eid: number, canvas: HTMLCanvasElement, scene: Scen
         }
     });
 
-    scene.onPointerObservable.add((pointerInfo) => {
-        if (pointerInfo.type === PointerEventTypes.POINTERDOWN) {
-            if (pointerInfo.event.button === 0) InputComponent.fire[eid] = 1;
-            if (document.pointerLockElement === canvas) {
-                if (pointerInfo.event.button === 2) InputComponent.ads[eid] = 1;
-            }
-        } else if (pointerInfo.type === PointerEventTypes.POINTERUP) {
-            if (pointerInfo.event.button === 0) InputComponent.fire[eid] = 0;
-            if (pointerInfo.event.button === 2) InputComponent.ads[eid] = 0;
-        } else if (pointerInfo.type === PointerEventTypes.POINTERMOVE) {
-            if (document.pointerLockElement === canvas) {
-                InputComponent.mouseDeltaX[eid] += (pointerInfo.event as PointerEvent).movementX || 0;
-                InputComponent.mouseDeltaY[eid] += (pointerInfo.event as PointerEvent).movementY || 0;
-            }
+    // Use raw DOM events and check the `e.buttons` bitmask.
+    // This perfectly handles simultaneous left/right clicks even if the browser 
+    // swallows the second pointerdown event.
+    const updateButtons = (e: PointerEvent) => {
+        InputComponent.fire[eid] = (e.buttons & 1) !== 0 ? 1 : 0;
+        if (document.pointerLockElement === canvas) {
+            InputComponent.ads[eid] = (e.buttons & 2) !== 0 ? 1 : 0;
+        } else {
+            InputComponent.ads[eid] = 0;
+        }
+    };
+
+    canvas.addEventListener('pointerdown', updateButtons);
+    canvas.addEventListener('pointerup', updateButtons);
+    canvas.addEventListener('pointermove', (e: PointerEvent) => {
+        if (document.pointerLockElement === canvas) {
+            InputComponent.mouseDeltaX[eid] += e.movementX || 0;
+            InputComponent.mouseDeltaY[eid] += e.movementY || 0;
+            // A secondary click while holding the primary often only fires a pointermove!
+            updateButtons(e);
         }
     });
+    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 }
