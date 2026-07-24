@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WARBASE — Tactical FPS</title>
-    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   </head>
   <body>
     <!-- ═══════════════════════════════════════════════════════════════
@@ -17,7 +17,7 @@
       display: flex;
       flex-direction: column;
       background: radial-gradient(circle at center, rgba(15,18,25,0.75) 0%, rgba(5,7,10,0.92) 100%);
-      font-family: 'Oswald', sans-serif;
+      font-family: 'Outfit', sans-serif;
       color: #e0e0e0;
       overflow: hidden;
     ">
@@ -43,16 +43,13 @@
         <!-- Center: Navigation Tabs -->
         <div style="display: flex; gap: 40px; align-items: center; height: 100%;">
           <div class="top-nav-item sidebar-nav-item active" data-tab="loadouts" id="nav-loadouts">LOADOUTS</div>
-          <div class="top-nav-item sidebar-nav-item" data-tab="join" id="nav-join">JOIN ROOM</div>
-          <div class="top-nav-item sidebar-nav-item" data-tab="create" id="nav-create">CREATE ROOM</div>
+          <div class="top-nav-item sidebar-nav-item" data-tab="join" id="nav-join">JOIN MATCH</div>
+          <div class="top-nav-item sidebar-nav-item" data-tab="create" id="nav-create">CREATE MATCH</div>
           <div class="top-nav-item sidebar-nav-item" data-tab="settings" id="nav-settings">SETTINGS</div>
         </div>
 
-        <!-- Right: Currency / Cash Display -->
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <div style="width: 20px; height: 20px; border-radius: 50%; background: #e0ac00; color: #000; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center;">$</div>
-          <span id="currency-display" style="font-size: 18px; font-weight: 600; letter-spacing: 2px; color: #fff;">27,640</span>
-        </div>
+        <!-- Right: Empty spacer to balance layout -->
+        <div style="width: 80px;"></div>
       </div>
 
       <!-- ── MAIN CONTENT AREA ── -->
@@ -137,22 +134,22 @@
           </div>
         </div>
 
-        <!-- TAB: JOIN MATCH (Server Browser) -->
+        <!-- TAB: JOIN MATCH (Match Browser) -->
         <div class="tab-content" id="tab-join">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-            <h1 style="font-size: 28px; font-weight: 700; letter-spacing: 4px; color: #fff; margin: 0;">SERVER BROWSER</h1>
+            <h1 style="font-size: 28px; font-weight: 700; letter-spacing: 4px; color: #fff; margin: 0;">MATCH BROWSER</h1>
             <button id="refresh-servers-btn" class="server-select-btn">REFRESH ↻</button>
           </div>
           
           <div id="server-list-container" style="display: flex; flex-direction: column; gap: 8px;">
             <div style="color: rgba(255,255,255,0.4); font-family: 'Share Tech Mono', monospace; padding: 40px 0; text-align: center;">Fetching active combat zones...</div>
           </div>
-
+ 
           <!-- Hidden input holding selected room id -->
           <input type="hidden" id="selectedRoomId" value="" />
           <input type="hidden" id="selectedMap" value="" />
           <input type="hidden" id="mapSelector" value="industrial" />
-
+ 
           <!-- Selected Deployment Button -->
           <div style="display: flex; justify-content: flex-end; margin-top: 30px;">
             <button id="joinButton" disabled style="
@@ -160,22 +157,22 @@
               border: 1px solid #ff4d6d;
               box-shadow: 0 0 15px rgba(255, 42, 75, 0.4);
               color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,0.5);
-              font-family: 'Oswald', sans-serif; font-size: 16px; font-weight: 700;
+              font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700;
               letter-spacing: 2px; padding: 12px 30px; cursor: pointer;
               opacity: 0.4; transition: all 0.2s ease-in-out;
-            " onmouseover="if(!this.disabled) { this.style.boxShadow='0 0 25px rgba(255, 42, 75, 0.8)'; this.style.transform='translateY(-2px)'; }" onmouseout="if(!this.disabled) { this.style.boxShadow='0 0 15px rgba(255, 42, 75, 0.4)'; this.style.transform='translateY(0)'; }"><span id="btn-deploy-text">SELECT A SERVER</span></button>
+            " onmouseover="if(!this.disabled) { this.style.boxShadow='0 0 25px rgba(255, 42, 75, 0.8)'; this.style.transform='translateY(-2px)'; }" onmouseout="if(!this.disabled) { this.style.boxShadow='0 0 15px rgba(255, 42, 75, 0.4)'; this.style.transform='translateY(0)'; }"><span id="btn-deploy-text">SELECT A MATCH</span></button>
           </div>
         </div>
-
+ 
         <!-- TAB: CREATE MATCH -->
         <div class="tab-content" id="tab-create">
           
           <div style="margin-bottom: 30px;">
-            <label style="display: block; font-size: 12px; font-weight: 600; letter-spacing: 3px; color: rgba(255,255,255,0.6); margin-bottom: 10px;">ROOM NAME</label>
-            <input type="text" id="roomNameInput" placeholder="Enter operation name..." autocomplete="off" style="
+            <label style="display: block; font-size: 12px; font-weight: 600; letter-spacing: 3px; color: rgba(255,255,255,0.6); margin-bottom: 10px;">MATCH NAME</label>
+            <input type="text" id="roomNameInput" placeholder="Enter match name..." autocomplete="off" style="
               width: 100%; max-width: 500px; padding: 14px 18px;
               background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
-              color: #fff; font-family: 'Oswald', sans-serif; font-size: 16px;
+              color: #fff; font-family: 'Outfit', sans-serif; font-size: 16px;
               outline: none; transition: border-color 0.2s;
             " />
           </div>
@@ -200,15 +197,15 @@
 
           <button id="initializeMatchBtn" style="
             background: #ffffff; border: none; color: #000000;
-            font-family: 'Oswald', sans-serif; font-size: 18px; font-weight: 700;
+            font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700;
             letter-spacing: 3px; padding: 16px 50px; cursor: pointer; transition: all 0.15s;
           ">INITIALIZE OPERATION</button>
         </div>
-
+ 
         <!-- Settings moved to In-Game Tab Overlay -->
-
+ 
       </div>
-
+ 
       <!-- ── FOOTER ACTION BAR ── -->
       <div id="bottom-footer-bar" style="
         height: 45px; min-height: 45px;
@@ -221,32 +218,67 @@
           <span id="live-online-indicator">👥 ONLINE PLAYERS: <strong id="live-player-count" style="color: #fff;">1</strong></span>
         </div>
         <div style="display: flex; align-items: center; gap: 25px;">
-          <button id="btn-footer-rename" style="background: none; border: none; color: rgba(255,255,255,0.8); font-family: 'Oswald', sans-serif; font-size: 13px; letter-spacing: 2px; cursor: pointer;"><strong style="color: #fff;">[EDIT]</strong> RENAME CALLSIGN</button>
+          <button id="btn-footer-rename" style="background: none; border: none; color: rgba(255,255,255,0.8); font-family: 'Outfit', sans-serif; font-size: 13px; letter-spacing: 2px; cursor: pointer;"><strong style="color: #fff;">[EDIT]</strong> RENAME CALLSIGN</button>
         </div>
       </div>
     </div>
-
+ 
     <!-- ── Rename Callsign Modal ── -->
     <div id="renameModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 5000; justify-content: center; align-items: center;">
-      <div style="background: rgba(18,20,26,0.95); border: 1px solid rgba(255,255,255,0.2); padding: 35px 40px; text-align: center; font-family: 'Oswald', sans-serif; color: white; width: 420px;">
+      <div style="background: rgba(18,20,26,0.95); border: 1px solid rgba(255,255,255,0.2); padding: 35px 40px; text-align: center; font-family: 'Outfit', sans-serif; color: white; width: 420px;">
         <h2 style="font-size: 24px; letter-spacing: 3px; margin: 0 0 10px 0; color: #fff;">OPERATOR CALLSIGN</h2>
         <p style="font-size: 13px; color: rgba(255,255,255,0.5); margin-bottom: 20px; font-family: 'Inter', sans-serif;">Enter your custom combat callsign below.</p>
-        <input type="text" id="callsignModalInput" style="width: 100%; padding: 12px 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-family: 'Oswald', sans-serif; font-size: 18px; text-transform: uppercase; outline: none; margin-bottom: 25px; box-sizing: border-box;" autocomplete="off" maxlength="16" />
+        <input type="text" id="callsignModalInput" style="width: 100%; padding: 12px 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-family: 'Outfit', sans-serif; font-size: 18px; text-transform: uppercase; outline: none; margin-bottom: 25px; box-sizing: border-box;" autocomplete="off" maxlength="16" />
         <div style="display: flex; gap: 15px; justify-content: center;">
-          <button id="btnRenameSave" style="background: #ffffff; border: none; color: #000; font-family: 'Oswald', sans-serif; font-size: 16px; font-weight: 700; letter-spacing: 2px; padding: 10px 25px; cursor: pointer;">SAVE</button>
-          <button id="btnRenameCancel" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-family: 'Oswald', sans-serif; font-size: 16px; font-weight: 700; letter-spacing: 2px; padding: 10px 25px; cursor: pointer;">CANCEL</button>
+          <button id="btnRenameSave" style="background: #ffffff; border: none; color: #000; font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; letter-spacing: 2px; padding: 10px 25px; cursor: pointer;">SAVE</button>
+          <button id="btnRenameCancel" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; letter-spacing: 2px; padding: 10px 25px; cursor: pointer;">CANCEL</button>
         </div>
       </div>
     </div>
 
     <!-- ── ESC Exit Confirmation Modal ── -->
     <div id="exitPopup" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 5000; justify-content: center; align-items: center;">
-      <div style="background: rgba(18,20,26,0.95); border: 1px solid rgba(255,255,255,0.2); padding: 40px; text-align: center; font-family: 'Oswald', sans-serif; color: white; width: 450px;">
+      <div style="background: rgba(18,20,26,0.95); border: 1px solid rgba(255,255,255,0.2); padding: 40px; text-align: center; font-family: 'Outfit', sans-serif; color: white; width: 450px;">
         <h2 style="font-size: 28px; letter-spacing: 3px; margin-bottom: 15px; color: #fff;">LEAVE COMBAT?</h2>
         <p style="font-size: 15px; color: rgba(255,255,255,0.6); margin-bottom: 30px; font-family: 'Inter', sans-serif;">Are you sure you want to exit the match and return to the main menu?</p>
+        <div style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); padding: 15px; margin-bottom: 30px; text-align: left;">
+          <h3 style="margin: 0 0 10px 0; font-size: 14px; letter-spacing: 1px; color: #ff2a4b;">GRAPHICS SETTINGS</h3>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 5px 8px;">
+              <span style="font-size: 11px; font-family: 'Inter', sans-serif;">ANTI-ALIASING (MSAA)</span>
+              <input type="checkbox" id="optMSAA" />
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 5px 8px;">
+              <span style="font-size: 11px; font-family: 'Inter', sans-serif;">ANISOTROPIC FILTER</span>
+              <input type="checkbox" id="optAnisotropic" />
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 5px 8px;">
+              <span style="font-size: 11px; font-family: 'Inter', sans-serif;">AMBIENT OCCLUSION (SSAO)</span>
+              <input type="checkbox" id="optSSAO" />
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 5px 8px;">
+              <span style="font-size: 11px; font-family: 'Inter', sans-serif;">REFLECTIONS (SSR)</span>
+              <input type="checkbox" id="optSSR" />
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 5px 8px;">
+              <span style="font-size: 11px; font-family: 'Inter', sans-serif;">CHROMATIC ABERRATION</span>
+              <input type="checkbox" id="optChromatic" />
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 5px 8px;">
+              <span style="font-size: 11px; font-family: 'Inter', sans-serif;">SKYBOX</span>
+              <select id="skyboxSelector" style="background: #111; color: #ff2a4b; border: 1px solid #ff2a4b; font-size: 10px;">
+                <option value="skybox">BLUE SKY</option>
+                <option value="TropicalSunnyDay" selected>TROPICAL</option>
+                <option value="country.env">COUNTRY HDR</option>
+                <option value="environment.env">STUDIO HDR</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
         <div style="display: flex; gap: 20px; justify-content: center;">
-          <button id="btnExitConfirm" style="background: #ff2a4d; border: none; color: #fff; font-family: 'Oswald', sans-serif; font-size: 16px; font-weight: 700; letter-spacing: 2px; padding: 12px 30px; cursor: pointer;">CONFIRM EXIT</button>
-          <button id="btnExitCancel" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-family: 'Oswald', sans-serif; font-size: 16px; font-weight: 700; letter-spacing: 2px; padding: 12px 30px; cursor: pointer;">CANCEL</button>
+          <button id="btnExitConfirm" style="background: #ff2a4d; border: none; color: #fff; font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; letter-spacing: 2px; padding: 12px 30px; cursor: pointer;">CONFIRM EXIT</button>
+          <button id="btnExitCancel" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; letter-spacing: 2px; padding: 12px 30px; cursor: pointer;">CANCEL</button>
         </div>
       </div>
     </div>
@@ -257,52 +289,17 @@
     <!-- In-Game HUD -->
     <div id="uiLayer" style="display: none; position: fixed; inset: 0; pointer-events: none; z-index: 2000;">
       
-      <!-- IN-GAME GRAPHICS TOGGLES (Floating top-left for live testing) -->
-      <div style="position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.7); border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 4px; pointer-events: auto; font-family: 'Oswald', sans-serif; color: white; width: 250px;">
-        <h3 style="margin: 0 0 10px 0; font-size: 14px; letter-spacing: 1px; color: #ff2a4b;">GRAPHICS TESTER (Press ESC to click)</h3>
-        
-        <div style="display: flex; flex-direction: column; gap: 8px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 5px 8px;">
-            <span style="font-size: 11px; font-family: 'Inter', sans-serif;">ANTI-ALIASING (MSAA)</span>
-            <input type="checkbox" id="optMSAA" />
-          </div>
-          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 5px 8px;">
-            <span style="font-size: 11px; font-family: 'Inter', sans-serif;">ANISOTROPIC FILTER</span>
-            <input type="checkbox" id="optAnisotropic" />
-          </div>
-          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 5px 8px;">
-            <span style="font-size: 11px; font-family: 'Inter', sans-serif;">AMBIENT OCCLUSION (SSAO)</span>
-            <input type="checkbox" id="optSSAO" />
-          </div>
-          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 5px 8px;">
-            <span style="font-size: 11px; font-family: 'Inter', sans-serif;">REFLECTIONS (SSR)</span>
-            <input type="checkbox" id="optSSR" />
-          </div>
-          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 5px 8px;">
-            <span style="font-size: 11px; font-family: 'Inter', sans-serif;">ULTRA SHADOWS</span>
-            <input type="checkbox" id="optUltraShadows" />
-          </div>
-          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 5px 8px;">
-            <span style="font-size: 11px; font-family: 'Inter', sans-serif;">CHROMATIC ABERRATION</span>
-            <input type="checkbox" id="optChromatic" />
-          </div>
-          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 5px 8px;">
-            <span style="font-size: 11px; font-family: 'Inter', sans-serif;">SKYBOX</span>
-            <select id="skyboxSelector" style="background: #111; color: #ff2a4b; border: 1px solid #ff2a4b; font-size: 10px;">
-              <option value="skybox" selected>BLUE SKY</option>
-              <option value="TropicalSunnyDay">TROPICAL</option>
-              <option value="country.env">COUNTRY HDR</option>
-              <option value="environment.env">STUDIO HDR</option>
-            </select>
-          </div>
-        </div>
+      <!-- Pointer Lock Warning (Click to return to game) -->
+      <div id="pointerWarning" style="display: none; position: absolute; top: 15%; left: 50%; transform: translate(-50%, -50%); background: rgba(18, 20, 26, 0.9); border: 1px solid #ff2a4b; color: white; padding: 12px 24px; font-family: 'Outfit', sans-serif; font-size: 14px; letter-spacing: 2px; text-transform: uppercase; box-shadow: 0 4px 15px rgba(0,0,0,0.5); z-index: 2001; pointer-events: none;">
+        POINTER LOCK LOST &bull; CLICK ANYWHERE TO RESUME
       </div>
+
 
       <!-- Crosshair -->
       <div id="crosshair" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 20px; font-weight: 400; text-shadow: 0 0 2px #000;">+</div>
 
       <!-- Weapon & Ammo Status (Bottom Right) -->
-      <div style="position: absolute; bottom: 40px; right: 50px; display: flex; flex-direction: column; align-items: flex-end; font-family: 'Oswald', sans-serif;">
+      <div style="position: absolute; bottom: 40px; right: 50px; display: flex; flex-direction: column; align-items: flex-end; font-family: 'Outfit', sans-serif;">
         <!-- Reloading Indicator -->
         <div id="reloadingText" style="display: none; color: #ffeb3b; font-size: 16px; letter-spacing: 2px; margin-bottom: 5px; text-shadow: 0 0 4px #000;">RELOADING...</div>
         
@@ -325,7 +322,7 @@
     </div>
 
     <!-- Scoreboard (TAB) Overlay -->
-    <div id="scoreboardUI" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 4500; justify-content: center; align-items: center; font-family: 'Oswald', sans-serif;">
+    <div id="scoreboardUI" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 4500; justify-content: center; align-items: center; font-family: 'Outfit', sans-serif;">
       <div style="background: rgba(18,20,26,0.95); border: 1px solid rgba(255,255,255,0.2); padding: 30px 40px; width: 650px; color: white; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">
           <h2 style="margin: 0; font-size: 24px; letter-spacing: 3px; color: #fff;">COMBAT SCOREBOARD</h2>
@@ -349,7 +346,7 @@
 
     <!-- Reconnecting Overlay -->
     <div id="reconnectOverlay" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 4000; justify-content: center; align-items: center;">
-      <div style="text-align: center; font-family: 'Oswald', sans-serif; color: white;">
+      <div style="text-align: center; font-family: 'Outfit', sans-serif; color: white;">
         <h2 style="font-size: 40px; letter-spacing: 4px; color: #ff9900; margin-bottom: 10px;">CONNECTION LOST</h2>
         <p id="reconnectText" style="font-size: 20px; color: rgba(255,255,255,0.7);">Attempting to reconnect...</p>
       </div>
@@ -467,8 +464,24 @@
               }
 
               if (!data.rooms || data.rooms.length === 0) {
-                container.innerHTML = '<div style="color: rgba(255,255,255,0.4); font-family: \'Share Tech Mono\', monospace; padding: 40px 0; text-align: center;">No active combat zones. Create one.</div>';
+                container.innerHTML = '<div style="color: rgba(255,255,255,0.4); font-family: \'Share Tech Mono\', monospace; padding: 40px 0; text-align: center;">No active matches. Create one.</div>';
+                selectedRoomIdInput.value = '';
+                joinButton.disabled = true;
+                joinButton.style.opacity = '0.4';
+                btnDeployText.innerText = 'SELECT A MATCH';
+                if (deployHubTitle) deployHubTitle.innerText = 'NO MATCH SELECTED';
                 return;
+              }
+              
+              // Validate that the currently selected room actually exists in the new list
+              const currentRoomId = selectedRoomIdInput.value;
+              const roomExists = data.rooms.some(r => r.id === currentRoomId);
+              if (currentRoomId && !roomExists) {
+                  selectedRoomIdInput.value = '';
+                  joinButton.disabled = true;
+                  joinButton.style.opacity = '0.4';
+                  btnDeployText.innerText = 'SELECT A MATCH';
+                  if (deployHubTitle) deployHubTitle.innerText = 'NO MATCH SELECTED';
               }
               
               // Auto-select first room if nothing selected yet
@@ -476,7 +489,7 @@
                 selectedRoomIdInput.value = data.rooms[0].id;
                 document.getElementById('selectedMap').value = data.rooms[0].map || 'village';
                 if (deployHubTitle) deployHubTitle.innerText = data.rooms[0].name.toUpperCase();
-                btnDeployText.innerText = 'DEPLOY TO COMBAT';
+                btnDeployText.innerText = 'DEPLOY';
                 joinButton.disabled = false;
                 joinButton.style.opacity = '1';
               }
@@ -500,7 +513,7 @@
                   selectedRoomIdInput.value = room.id;
                   document.getElementById('selectedMap').value = room.map;
                   if (deployHubTitle) deployHubTitle.innerText = room.name.toUpperCase();
-                  btnDeployText.innerText = 'DEPLOY TO COMBAT';
+                  btnDeployText.innerText = 'DEPLOY';
                   joinButton.disabled = false;
                   joinButton.style.opacity = '1';
                 };
@@ -508,7 +521,7 @@
               });
             })
             .catch(err => {
-              container.innerHTML = '<div style="color: #ff4444; font-family: \'Share Tech Mono\', monospace; padding: 40px 0; text-align: center;">Failed to fetch servers.</div>';
+              container.innerHTML = '<div style="color: #ff4444; font-family: \'Share Tech Mono\', monospace; padding: 40px 0; text-align: center;">Failed to fetch matches.</div>';
             });
         }
 
@@ -549,7 +562,7 @@
               document.getElementById('selectedMap').value = mapName;
               if (deployHubTitle) deployHubTitle.innerText = roomName.toUpperCase();
               joinButton.disabled = false;
-              btnDeployText.innerText = 'DEPLOY TO COMBAT';
+              btnDeployText.innerText = 'DEPLOY';
               joinButton.disabled = false;
               joinButton.style.opacity = '1';
               

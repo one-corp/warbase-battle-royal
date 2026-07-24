@@ -38,7 +38,7 @@ export class MainMenuScene {
         // 2. Environment & Lighting
         this.scene.clearColor = new Color3(0.05, 0.05, 0.05).toColor4(1);
         
-        const selectedSkybox = localStorage.getItem("optSkybox") || "skybox";
+        const selectedSkybox = localStorage.getItem("optSkybox") || "TropicalSunnyDay";
         const isPBR = selectedSkybox.endsWith(".env");
         let texture: Texture | CubeTexture;
         

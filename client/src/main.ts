@@ -97,23 +97,32 @@ async function initEngine(canvas: HTMLCanvasElement): Promise<Engine | WebGPUEng
     return new Engine(canvas, true);
 }
 
+function setLoadingStatus(text: string) {
+    const el = document.getElementById("btn-deploy-text");
+    if (el) el.innerText = text;
+    console.log(`[LOADING] ${text}`);
+}
+
 async function createScene(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElement, mapChoice: string) {
     const scene = new Scene(engine);
+    setLoadingStatus("INITIALIZING SCENE...");
     
     scene.collisionsEnabled = true;
     // Standard 9.81 gravity feels too floaty in FPS games. 
     // Increasing gravity to 15.3 makes jumps 20% faster while we scale impulse to match height.
     scene.gravity = new Vector3(0, -15.328, 0);
 
+    setLoadingStatus("LOADING PHYSICS ENGINE...");
     const havokInstance = await HavokPhysics();
     const hk = new HavokPlugin(true, havokInstance);
     scene.enablePhysics(new Vector3(0, -15.328, 0), hk);
+    setLoadingStatus("PHYSICS READY");
 
     // Initialize decoupled Scope UI Overlay
     ScopeUI.init();
 
     // 1. Image Based Lighting & Dynamic Multi-Skybox Setup
-    const selectedSkybox = localStorage.getItem("optSkybox") || "skybox";
+    const selectedSkybox = localStorage.getItem("optSkybox") || "TropicalSunnyDay";
     let currentSkybox: AbstractMesh | null = applySkyboxPreset(scene, selectedSkybox);
 
     // 2. Realistic Sun Lighting & Cascaded Shadows
@@ -125,19 +134,17 @@ async function createScene(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElem
     hemiLight.intensity = 0.5; // Soft ambient fill light to fix pitch black shadows
     hemiLight.specular = new Color3(0, 0, 0); // No shiny specular from ambient light
 
-    const useUltraShadows = localStorage.getItem("optUltraShadows") === "true";
-    const shadowMapSize = useUltraShadows ? 4096 : 2048;
+    const shadowMapSize = 2048;
     const shadowGenerator = new ShadowGenerator(shadowMapSize, sun);
     shadowGenerator.useBlurExponentialShadowMap = true;
     shadowGenerator.blurKernel = 32;
-    if (useUltraShadows) {
-        shadowGenerator.usePercentageCloserFiltering = true;
-    }
     shadowGenerator.enableSoftTransparentShadow = true;
     shadowGenerator.setDarkness(0.5);
     
+    setLoadingStatus("LOADING MAP...");
     const envManager = new EnvironmentManager(scene, shadowGenerator, mapChoice);
     await envManager.init();
+    setLoadingStatus("SPAWNING PLAYER...");
     const playerEid = initPlayer(scene, canvas);
     const camera = entityCameras.get(playerEid);
     
@@ -159,7 +166,18 @@ async function createScene(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElem
 
     // CRITICAL FIX: WebGPU requires the scene to be fully compiled.
     // We MUST await scene.whenReadyAsync() AFTER adding all materials and pipelines!
-    await scene.whenReadyAsync();
+    // Added a 3-second timeout fallback to prevent hangs on WebGPU systems with slow shader compile times.
+    setLoadingStatus("COMPILING SHADERS...");
+    try {
+        await Promise.race([
+            scene.whenReadyAsync(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Shader compilation timed out")), 3000))
+        ]);
+        setLoadingStatus("SHADERS COMPILED");
+    } catch (e) {
+        console.warn("Shader compilation timeout/warning, proceeding anyway:", e);
+        setLoadingStatus("SHADERS READY (FORCED)");
+    }
 
     // --- Graphics UI Hookup ---
     let ssaoPipeline: any = null;
@@ -224,7 +242,7 @@ async function createScene(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElem
         }
     };
 
-    ['optSSAO', 'optSSR', 'optMSAA', 'optAnisotropic', 'optUltraShadows', 'optChromatic'].forEach(id => {
+    ['optSSAO', 'optSSR', 'optMSAA', 'optAnisotropic', 'optChromatic'].forEach(id => {
         const el = document.getElementById(id) as HTMLInputElement;
         if (el) {
             el.checked = localStorage.getItem(id) === "true";
@@ -233,7 +251,7 @@ async function createScene(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElem
                 localStorage.setItem(id, el.checked ? "true" : "false");
                 if (id === 'optChromatic') {
                     pipeline.chromaticAberrationEnabled = el.checked;
-                } else if (id !== 'optUltraShadows') {
+                } else {
                     syncProGraphics();
                 }
             });
@@ -264,11 +282,23 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
     try {
         const { scene, playerEid } = await createScene(engine, canvas, mapChoice);
 
+        setLoadingStatus("SCENE READY — CONNECTING...");
+
         activeScene = scene;
 
         // Network Setup
         const multiplayerEntities = new MultiplayerEntities(scene);
-        const networkManager = new NetworkManager(username, roomId, () => {});
+        
+        // Wait for WebSocket to actually connect before declaring success
+        let networkManager!: NetworkManager;
+        await new Promise<void>((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error("WebSocket connection timed out")), 10000);
+            networkManager = new NetworkManager(username, roomId, () => {
+                clearTimeout(timeout);
+                resolve();
+            });
+        });
+        setLoadingStatus("CONNECTED — ENTERING COMBAT");
 
         // ESC to return to main menu (now with confirmation popup)
         const exitPopup = document.getElementById("exitPopup");
@@ -306,12 +336,13 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
                 if (loginUI) loginUI.style.display = "flex";
                 
                 const btnDeployText = document.getElementById("btn-deploy-text");
-                if (btnDeployText) btnDeployText.innerText = "DEPLOY TO COMBAT";
+                if (btnDeployText) btnDeployText.innerText = "DEPLOY";
                 
                 const joinBtn = document.getElementById("joinButton") as HTMLButtonElement;
                 if (joinBtn) joinBtn.disabled = false;
                 
                 window.removeEventListener("keydown", handleEscape);
+
                 if (scene && (scene as any).cleanupEventListeners) {
                     (scene as any).cleanupEventListeners();
                 }
@@ -418,7 +449,7 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
             }
         };
 
-        networkManager.onRespawn = () => {
+        networkManager.onRespawn = (x?: number, y?: number, z?: number) => {
             isLocalDead = false;
             respawnTimerActive = false;
             
@@ -426,17 +457,19 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
             if (deathScreen) deathScreen.style.display = "none";
             const timerSpan = document.getElementById("respawnTimer");
             if (timerSpan) timerSpan.innerText = "3";
-
+ 
             // Teleport back to spawn
             const mesh = entityMeshes.get(playerEid);
             const body = entityPhysicsBodies.get(playerEid);
             if (mesh && body) {
-                const basePos = (window as any).SPAWN_POINT || new Vector3(0, 20, 0);
-                const rx = basePos.x + (Math.random() - 0.5) * 4;
-                const rz = basePos.z + (Math.random() - 0.5) * 4;
-                
-                // For Havok, we need to disable physics, move mesh, re-enable. But setting velocity to 0 and position on transformNode works if we use disablePreStep
-                mesh.position.set(rx, basePos.y, rz);
+                if (x !== undefined && y !== undefined && z !== undefined) {
+                    mesh.position.set(x, y, z);
+                } else {
+                    const basePos = (window as any).SPAWN_POINT || new Vector3(0, 20, 0);
+                    const rx = basePos.x + (Math.random() - 0.5) * 4;
+                    const rz = basePos.z + (Math.random() - 0.5) * 4;
+                    mesh.position.set(rx, basePos.y, rz);
+                }
                 body.setLinearVelocity(Vector3.Zero());
             }
         };
@@ -537,13 +570,16 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
                 if (exitPopup) exitPopup.style.display = "none";
             } else {
                 isLocked = false;
-                if (pointerWarning) pointerWarning.style.display = "block";
-                
                 if (!isLocalDead) {
                     const scoreboard = document.getElementById("scoreboardUI") || document.getElementById("scoreboard");
                     if (!scoreboard || scoreboard.style.display !== "flex") {
                         if (exitPopup) exitPopup.style.display = "flex";
+                        if (pointerWarning) pointerWarning.style.display = "none";
+                    } else {
+                        if (pointerWarning) pointerWarning.style.display = "block";
                     }
+                } else {
+                    if (pointerWarning) pointerWarning.style.display = "none";
                 }
             }
         };
@@ -707,7 +743,7 @@ if (canvas) {
             // Enable the deploy button once engine is ready
             joinBtn.disabled = false;
             joinBtn.style.opacity = "1";
-            if (btnDeployText) btnDeployText.innerText = "DEPLOY TO COMBAT";
+            if (btnDeployText) btnDeployText.innerText = "DEPLOY";
 
             joinBtn.addEventListener("click", () => {
                 console.log("=== JOIN BUTTON CLICKED IN MAIN.TS ===");
@@ -728,7 +764,7 @@ if (canvas) {
                 
                 if (!roomId) {
                     console.error("Join blocked: roomId is empty!");
-                    alert("Please select a server or create a match first.");
+                    alert("Please select a match or create one first.");
                     return;
                 }
                 
@@ -744,15 +780,36 @@ if (canvas) {
                 }
                 
                 console.log("Starting game with roomId:", roomId);
+                
+                const restoreMenu = () => {
+                    joinBtn.disabled = false;
+                    if (btnDeployText) btnDeployText.innerText = "DEPLOY";
+                    if (!(window as any).mainMenu) {
+                        const mainMenu = new MainMenuScene(engine as Engine);
+                        (window as any).mainMenu = mainMenu;
+                        activeScene = mainMenu.scene;
+                    }
+                };
+
+                // Add a timeout fallback in case the server never sends GameState (e.g. invalid room)
+                let loadTimeout = setTimeout(() => {
+                    if (window.getComputedStyle(loginUI).display !== "none") {
+                        console.error("Game loading timed out! The server did not respond with game state.");
+                        alert("Connection timed out. The server might have restarted or the room is invalid.");
+                        restoreMenu();
+                    }
+                }, 10000); // 10 second timeout
+
                 startGame(engine, canvas, username, mapChoice, roomId).then(() => {
+                    clearTimeout(loadTimeout);
                     console.log("Game successfully started, hiding login UI");
                     // Hide the menu overlay — canvas is now fully interactive
                     loginUI.style.display = "none";
                     const uiLayer = document.getElementById("uiLayer");
                     if (uiLayer) uiLayer.style.display = "flex";
                 }).catch(err => {
-                    joinBtn.disabled = false;
-                    if (btnDeployText) btnDeployText.innerText = "DEPLOY TO COMBAT";
+                    clearTimeout(loadTimeout);
+                    restoreMenu();
                     const errorLog = document.getElementById("errorLog");
                     if (errorLog) errorLog.innerText = "Error loading map: " + (err.message || err);
                 });

@@ -36,9 +36,24 @@ export class EnvironmentManager {
 
     public async loadGLBMap(filename: string) {
         try {
-            console.log(`Loading external map: ${filename}...`);
-            const container = await SceneLoader.LoadAssetContainerAsync("./maps/", filename, this.scene);
+            const onProgress = (evt: any) => {
+                if (evt.lengthComputable) {
+                    const percentage = (evt.loaded * 100 / evt.total).toFixed(0);
+                    const btnText = document.getElementById("btn-deploy-text");
+                    if (btnText) {
+                        btnText.innerText = `DOWNLOADING MAP... ${percentage}%`;
+                    }
+                } else {
+                    const btnText = document.getElementById("btn-deploy-text");
+                    if (btnText) {
+                        const mb = (evt.loaded / (1024 * 1024)).toFixed(1);
+                        btnText.innerText = `DOWNLOADING MAP... ${mb}MB`;
+                    }
+                }
+            };
             
+            const container = await SceneLoader.LoadAssetContainerAsync("./maps/", filename, this.scene, onProgress);
+
             // Strip any built-in cameras or lights from the GLB so they don't ruin our scene's carefully tuned lighting & camera setup
             container.cameras.forEach(c => c.dispose());
             container.lights.forEach(l => l.dispose());

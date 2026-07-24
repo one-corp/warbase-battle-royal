@@ -90,9 +90,8 @@ func (app *application) listRoomsHandler(w http.ResponseWriter, r *http.Request)
 	}
 	app.presenceMu.Unlock()
 
-	if onlineCount == 0 {
-		onlineCount = 1
-	}
+	// Add players currently in-game (WebSockets active in the Match engine)
+	onlineCount += app.match.GetTotalActivePlayers()
 
 	rooms := app.match.ListActiveRooms()
 

@@ -5,6 +5,7 @@ import (
 	"math"
 	"math/rand"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
@@ -30,6 +31,7 @@ type Room struct {
 	PlayerIndices   map[string]int
 	CachedGameState *GameState
 	CachedServerMsg *ServerMessage
+	playerCount     atomic.Int32
 }
 
 func NewRoom(id string, name string, mapName string) *Room {
@@ -55,9 +57,10 @@ type Match struct {
 	rooms       map[string]*Room
 	roomsMutex  sync.RWMutex
 	broadcast   chan Message
-	register    chan *GameSession
-	unregister  chan *GameSession
-	respawnChan chan RespawnRequest
+	register      chan *GameSession
+	unregister    chan *GameSession
+	respawnChan   chan RespawnRequest
+	activePlayers atomic.Int32
 }
 
 func NewMatch() *Match {
@@ -99,7 +102,7 @@ func (m *Match) ListActiveRooms() []RoomInfo {
 			ID:          room.ID,
 			Name:        room.Name,
 			MapName:     room.MapName,
-			PlayerCount: len(room.PlayerEntities),
+			PlayerCount: int(room.playerCount.Load()),
 		})
 	}
 	return rooms
@@ -110,6 +113,11 @@ func (m *Match) getRoom(roomID string) (*Room, bool) {
 	defer m.roomsMutex.RUnlock()
 	room, ok := m.rooms[roomID]
 	return room, ok
+}
+
+// GetTotalActivePlayers returns the number of players actively connected to the game loop
+func (m *Match) GetTotalActivePlayers() int {
+	return int(m.activePlayers.Load())
 }
 
 // Exported methods to allow external HTTP handlers to interact with the Match
@@ -165,6 +173,7 @@ func (m *Match) Run() {
 		select {
 		case session := <-m.register:
 			m.sessions[session] = true
+			m.activePlayers.Add(1)
 			if _, ok := m.getRoom(session.RoomID); !ok {
 				// Room does not exist, they shouldn't connect normally, but let's just log it.
 				log.Printf("Player %s attempting to connect to non-existent room %s", session.PlayerID, session.RoomID)
@@ -173,6 +182,7 @@ func (m *Match) Run() {
 		case session := <-m.unregister:
 			if _, ok := m.sessions[session]; ok {
 				delete(m.sessions, session)
+				m.activePlayers.Add(-1)
 				close(session.outputQueue)
 			}
 
@@ -204,6 +214,7 @@ func (m *Match) Run() {
 						room.PlayerEntities = room.PlayerEntities[:lastIdx]
 						delete(room.PlayerIndices, session.PlayerID)
 						delete(room.CachedGameState.Players, session.PlayerID)
+						room.playerCount.Add(-1)
 					}
 				}
 			}
@@ -267,6 +278,7 @@ func (m *Match) Run() {
 						idx = len(room.PlayerEntities) - 1
 						room.PlayerIndices[message.SenderID] = idx
 						room.CachedGameState.Players[message.SenderID] = &PlayerState{}
+						room.playerCount.Add(1)
 					}
 					player := &room.PlayerEntities[idx]
 

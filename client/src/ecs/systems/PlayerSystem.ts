@@ -102,15 +102,30 @@ function setupInputListeners(eid: number, canvas: HTMLCanvasElement, scene: Scen
         }
     };
 
-    canvas.addEventListener('pointerdown', updateButtons);
-    canvas.addEventListener('pointerup', updateButtons);
-    canvas.addEventListener('pointermove', (e: PointerEvent) => {
+    const handlePointerMove = (e: PointerEvent) => {
         if (document.pointerLockElement === canvas) {
             InputComponent.mouseDeltaX[eid] += e.movementX || 0;
             InputComponent.mouseDeltaY[eid] += e.movementY || 0;
             // A secondary click while holding the primary often only fires a pointermove!
             updateButtons(e);
         }
-    });
-    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    };
+
+    const handleContextMenu = (e: Event) => e.preventDefault();
+
+    canvas.addEventListener('pointerdown', updateButtons);
+    canvas.addEventListener('pointerup', updateButtons);
+    canvas.addEventListener('pointermove', handlePointerMove);
+    canvas.addEventListener('contextmenu', handleContextMenu);
+
+    const originalCleanup = (scene as any).cleanupEventListeners;
+    (scene as any).cleanupEventListeners = () => {
+        if (originalCleanup) {
+            try { originalCleanup(); } catch (err) {}
+        }
+        canvas.removeEventListener('pointerdown', updateButtons);
+        canvas.removeEventListener('pointerup', updateButtons);
+        canvas.removeEventListener('pointermove', handlePointerMove);
+        canvas.removeEventListener('contextmenu', handleContextMenu);
+    };
 }

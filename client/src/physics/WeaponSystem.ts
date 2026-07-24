@@ -293,6 +293,8 @@ export const createWeaponSystem = (scene: Scene, networkManager?: NetworkManager
                 WeaponStateComponent.activeWeaponIndex[eid] = 0;
                 WeaponStateComponent.isReloading[eid] = 0;
                 WeaponStateComponent.adsProgress[eid] = 0;
+                lastAdsState.set(eid, false);
+                window.dispatchEvent(new CustomEvent('scope-toggle', { detail: { active: false } }));
                 
                 const akRoot = entityAKRoots.get(eid);
                 const pistolRoot = entityPistolRoots.get(eid);
@@ -305,6 +307,8 @@ export const createWeaponSystem = (scene: Scene, networkManager?: NetworkManager
                 WeaponStateComponent.activeWeaponIndex[eid] = 1;
                 WeaponStateComponent.isReloading[eid] = 0;
                 WeaponStateComponent.adsProgress[eid] = 0;
+                lastAdsState.set(eid, false);
+                window.dispatchEvent(new CustomEvent('scope-toggle', { detail: { active: false } }));
                 
                 const akRoot = entityAKRoots.get(eid);
                 const pistolRoot = entityPistolRoots.get(eid);
@@ -600,7 +604,7 @@ export const initWeapons = async (playerEid: number, scene: Scene, networkManage
     const slotPrimary = document.getElementById("hud-slot-primary");
     const slotSecondary = document.getElementById("hud-slot-secondary");
 
-    window.addEventListener('ammo-update', (e) => {
+    const handleAmmoUpdate = (e: Event) => {
         const detail = (e as any).detail;
         if (ammoTextPrimary && detail.weaponIndex === 0) ammoTextPrimary.innerText = `${detail.ammo} / ${detail.max}`;
         if (ammoTextSecondary && detail.weaponIndex === 1) ammoTextSecondary.innerText = `${detail.ammo} / ${detail.max}`;
@@ -610,9 +614,9 @@ export const initWeapons = async (playerEid: number, scene: Scene, networkManage
             if (slotPrimary?.classList.contains('active') && ammoTextPrimary) ammoTextPrimary.innerText = `${detail.ammo} / ${detail.max}`;
             if (slotSecondary?.classList.contains('active') && ammoTextSecondary) ammoTextSecondary.innerText = `${detail.ammo} / ${detail.max}`;
         }
-    });
+    };
 
-    window.addEventListener('weapon-swap', (e) => {
+    const handleWeaponSwap = (e: Event) => {
         const detail = (e as any).detail;
         if (detail.index === 0) {
             slotPrimary?.classList.add('active');
@@ -625,7 +629,19 @@ export const initWeapons = async (playerEid: number, scene: Scene, networkManage
             if (ammoTextPrimary) ammoTextPrimary.style.display = 'none';
             if (ammoTextSecondary) ammoTextSecondary.style.display = 'block';
         }
-    });
+    };
+
+    window.addEventListener('ammo-update', handleAmmoUpdate);
+    window.addEventListener('weapon-swap', handleWeaponSwap);
+
+    const originalCleanup = (scene as any).cleanupEventListeners;
+    (scene as any).cleanupEventListeners = () => {
+        if (originalCleanup) {
+            try { originalCleanup(); } catch (err) {}
+        }
+        window.removeEventListener('ammo-update', handleAmmoUpdate);
+        window.removeEventListener('weapon-swap', handleWeaponSwap);
+    };
         // @ts-ignore
         const DEG2RAD = Math.PI / 180;
 

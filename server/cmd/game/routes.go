@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"os"
+	"strings"
 )
 
 func (app *application) routes() http.Handler {
@@ -28,7 +29,16 @@ func (app *application) routes() http.Handler {
 		distPath = "/app/dist"
 	}
 	fileServer := http.FileServer(http.Dir(distPath))
-	mux.Handle("/", fileServer)
+	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Prevent Chrome from caching index.html so rebuilds are picked up immediately.
+		// Hashed asset files (JS/CSS) have unique names per build, so they cache fine.
+		if r.URL.Path == "/" || strings.HasSuffix(r.URL.Path, ".html") {
+			w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+			w.Header().Set("Pragma", "no-cache")
+			w.Header().Set("Expires", "0")
+		}
+		fileServer.ServeHTTP(w, r)
+	}))
 
 	// Profiling endpoints
 	mux.HandleFunc("/debug/pprof/", pprof.Index)
