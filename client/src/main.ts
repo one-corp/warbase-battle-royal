@@ -809,10 +809,9 @@ if (canvas) {
                 let loadTimeout = setTimeout(() => {
                     if (window.getComputedStyle(loginUI).display !== "none") {
                         console.error("Game loading timed out! The server did not respond with game state.");
-                        alert("Connection timed out. The server might have restarted or the room is invalid.");
                         restoreMenu();
                     }
-                }, 10000); // 10 second timeout
+                }, 60000); // 60 second timeout
 
                 startGame(engine, canvas, username, mapChoice, roomId).then(() => {
                     clearTimeout(loadTimeout);
