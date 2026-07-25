@@ -13,15 +13,22 @@ type Player struct {
 	// Authoritative Weapon & Ammo State
 	ActiveWeapon WeaponConfig
 	AmmoCount    int
+	AmmoStore    map[string]int
 
 	// Timestamps for anti-cheat validation
 	LastShotTime time.Time
 	IsReloading  bool
 	ReloadStart  time.Time
+	DeathTime    time.Time
 }
 
 func NewPlayer(id string) *Player {
 	defaultWeapon := Weapons["ak47"]
+	ammoStore := make(map[string]int)
+	for name, config := range Weapons {
+		ammoStore[name] = config.MagSize
+	}
+	
 	return &Player{
 		ID: id,
 		State: &PlayerState{
@@ -30,6 +37,7 @@ func NewPlayer(id string) *Player {
 		},
 		ActiveWeapon: defaultWeapon,
 		AmmoCount:    defaultWeapon.MagSize,
+		AmmoStore:    ammoStore,
 		LastShotTime: time.Now().Add(-time.Hour), // Ensure they can shoot immediately
 	}
 }
@@ -47,6 +55,7 @@ func (p *Player) ValidateAndApplyFire() error {
 			// Reload naturally completed
 			p.IsReloading = false
 			p.AmmoCount = p.ActiveWeapon.MagSize
+			p.AmmoStore[p.ActiveWeapon.ID] = p.AmmoCount
 		} else {
 			return errors.New("cannot shoot while reloading")
 		}
@@ -66,6 +75,7 @@ func (p *Player) ValidateAndApplyFire() error {
 
 	// Apply
 	p.AmmoCount--
+	p.AmmoStore[p.ActiveWeapon.ID] = p.AmmoCount
 	p.LastShotTime = now
 	return nil
 }
@@ -113,6 +123,7 @@ func (p *Player) ValidateAndApplyHit(target *Player, clientDamage int) (bool, er
 		target.State.IsDead = true
 		target.State.Deaths++
 		target.State.Animation = "death"
+		target.DeathTime = time.Now()
 		p.State.Kills++
 		return true, nil
 	}

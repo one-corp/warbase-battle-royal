@@ -27,29 +27,40 @@ export class NetworkManager {
     public onHitConfirmed: () => void = () => {};
     public onKillConfirmed: () => void = () => {};
     public onRespawn: (x: number, y: number, z: number) => void = () => {};
-    public onFireReceived: (shooterId: string) => void = () => {};
+    public onFireReceived: (
+        shooterId: string, 
+        originX?: number, originY?: number, originZ?: number, 
+        hitX?: number, hitY?: number, hitZ?: number, 
+        normalX?: number, normalY?: number, normalZ?: number, 
+        hitWall?: boolean
+    ) => void = () => {};
     public onGrenadeReceived: (shooterId: string, px: number, py: number, pz: number, vx: number, vy: number, vz: number) => void = () => {};
 
     private onConnectCb: () => void;
+    private onConnectionFailedCb?: () => void;
+    private hasConnectedOnce = false;
     private reconnectAttempts = 0;
     private pingInterval: number | null = null;
     public currentPing: number = 0;
     
-    constructor(username: string, room: string, onConnect: () => void) {
+    constructor(username: string, room: string, onConnect: () => void, onConnectionFailed?: () => void) {
         this.username = username;
         this.room = room;
         this.onConnectCb = onConnect;
+        this.onConnectionFailedCb = onConnectionFailed;
         this.connect();
     }
 
     private connect() {
         // Connect dynamically based on where the game is hosted
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        this.ws = new WebSocket(`${protocol}//${window.location.host}/connect?user=${this.username}&room=${this.room}`);
+        const cid = sessionStorage.getItem('warbase_client_id') || '';
+        this.ws = new WebSocket(`${protocol}//${window.location.host}/connect?user=${this.username}&room=${this.room}&cid=${cid}`);
         this.ws.binaryType = 'arraybuffer';
 
         this.ws.onopen = () => {
             console.log("WebSocket Connected!");
+            this.hasConnectedOnce = true;
             this.reconnectAttempts = 0;
             const reconnectOverlay = document.getElementById("reconnectOverlay");
             if (reconnectOverlay) reconnectOverlay.style.display = "none";
@@ -75,6 +86,11 @@ export class NetworkManager {
 
         this.ws.onclose = (e) => {
             console.warn("WebSocket Closed:", e);
+            if (!this.hasConnectedOnce && this.onConnectionFailedCb) {
+                this.onConnectionFailedCb();
+                return;
+            }
+
             const backoff = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 10000);
             this.reconnectAttempts++;
             
@@ -125,7 +141,19 @@ export class NetworkManager {
                     if (evt.event === "respawn" && evt.respawn) {
                         this.onRespawn(evt.respawn.x ?? 0, evt.respawn.y ?? 0, evt.respawn.z ?? 0);
                     } else if (evt.event === "fire" && evt.fire) {
-                        this.onFireReceived(evt.fire.shooterId ?? "");
+                        this.onFireReceived(
+                            evt.fire.shooterId ?? "",
+                            evt.fire.originX ?? 0,
+                            evt.fire.originY ?? 0,
+                            evt.fire.originZ ?? 0,
+                            evt.fire.hitX ?? 0,
+                            evt.fire.hitY ?? 0,
+                            evt.fire.hitZ ?? 0,
+                            evt.fire.normalX ?? 0,
+                            evt.fire.normalY ?? 0,
+                            evt.fire.normalZ ?? 0,
+                            evt.fire.hitWall ?? false
+                        );
                     } else if (evt.event === "hitConfirmed") {
                         this.onHitConfirmed();
                     } else if (evt.event === "killConfirmed") {
@@ -151,11 +179,22 @@ export class NetworkManager {
         };
     }
 
-    public sendFire() {
+    public sendFire(origin?: Vector3, hit?: Vector3, normal?: Vector3, hitWall?: boolean) {
         if (this.ws.readyState !== WebSocket.OPEN) return;
         const clientEvent = warbase.ClientEvent.create({
             event: "fire",
-            fire: {}
+            fire: {
+                originX: origin ? origin.x : 0,
+                originY: origin ? origin.y : 0,
+                originZ: origin ? origin.z : 0,
+                hitX: hit ? hit.x : 0,
+                hitY: hit ? hit.y : 0,
+                hitZ: hit ? hit.z : 0,
+                normalX: normal ? normal.x : 0,
+                normalY: normal ? normal.y : 0,
+                normalZ: normal ? normal.z : 0,
+                hitWall: hitWall ?? false
+            }
         });
         const buffer = warbase.ClientEvent.encode(clientEvent).finish();
         this.ws.send(buffer as BufferSource);

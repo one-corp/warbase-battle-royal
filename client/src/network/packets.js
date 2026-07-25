@@ -3,7 +3,7 @@ import $protobuf from "protobufjs/minimal.js";
 
 // Common aliases
 const $Reader = $protobuf.Reader, $Writer = $protobuf.Writer, $util = $protobuf.util;
-const $Object = $util.global.Object, $undefined = $util.global.undefined, $Error = $util.global.Error, $TypeError = $util.global.TypeError, $Number = $util.global.Number, $String = $util.global.String, $isFinite = $util.global.isFinite, $parseInt = $util.global.parseInt, $BigInt = $util.global.BigInt, $Boolean = $util.global.Boolean;
+const $Object = $util.global.Object, $undefined = $util.global.undefined, $Error = $util.global.Error, $TypeError = $util.global.TypeError, $Number = $util.global.Number, $String = $util.global.String, $isFinite = $util.global.isFinite, $Boolean = $util.global.Boolean, $parseInt = $util.global.parseInt, $BigInt = $util.global.BigInt;
 
 // Exported root namespace
 const $root = $protobuf.roots["default"] || ($protobuf.roots["default"] = {});
@@ -1394,6 +1394,16 @@ export const warbase = $root.warbase = (() => {
         /**
          * Properties of a FireEvent.
          * @typedef {Object} warbase.FireEvent.$Properties
+         * @property {number|null} [originX] FireEvent originX
+         * @property {number|null} [originY] FireEvent originY
+         * @property {number|null} [originZ] FireEvent originZ
+         * @property {number|null} [hitX] FireEvent hitX
+         * @property {number|null} [hitY] FireEvent hitY
+         * @property {number|null} [hitZ] FireEvent hitZ
+         * @property {number|null} [normalX] FireEvent normalX
+         * @property {number|null} [normalY] FireEvent normalY
+         * @property {number|null} [normalZ] FireEvent normalZ
+         * @property {boolean|null} [hitWall] FireEvent hitWall
          * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
          */
 
@@ -1424,6 +1434,86 @@ export const warbase = $root.warbase = (() => {
                     if (properties[keys[i]] != null && keys[i] !== "__proto__")
                         this[keys[i]] = properties[keys[i]];
         };
+
+        /**
+         * FireEvent originX.
+         * @member {number} originX
+         * @memberof warbase.FireEvent
+         * @instance
+         */
+        FireEvent.prototype.originX = 0;
+
+        /**
+         * FireEvent originY.
+         * @member {number} originY
+         * @memberof warbase.FireEvent
+         * @instance
+         */
+        FireEvent.prototype.originY = 0;
+
+        /**
+         * FireEvent originZ.
+         * @member {number} originZ
+         * @memberof warbase.FireEvent
+         * @instance
+         */
+        FireEvent.prototype.originZ = 0;
+
+        /**
+         * FireEvent hitX.
+         * @member {number} hitX
+         * @memberof warbase.FireEvent
+         * @instance
+         */
+        FireEvent.prototype.hitX = 0;
+
+        /**
+         * FireEvent hitY.
+         * @member {number} hitY
+         * @memberof warbase.FireEvent
+         * @instance
+         */
+        FireEvent.prototype.hitY = 0;
+
+        /**
+         * FireEvent hitZ.
+         * @member {number} hitZ
+         * @memberof warbase.FireEvent
+         * @instance
+         */
+        FireEvent.prototype.hitZ = 0;
+
+        /**
+         * FireEvent normalX.
+         * @member {number} normalX
+         * @memberof warbase.FireEvent
+         * @instance
+         */
+        FireEvent.prototype.normalX = 0;
+
+        /**
+         * FireEvent normalY.
+         * @member {number} normalY
+         * @memberof warbase.FireEvent
+         * @instance
+         */
+        FireEvent.prototype.normalY = 0;
+
+        /**
+         * FireEvent normalZ.
+         * @member {number} normalZ
+         * @memberof warbase.FireEvent
+         * @instance
+         */
+        FireEvent.prototype.normalZ = 0;
+
+        /**
+         * FireEvent hitWall.
+         * @member {boolean} hitWall
+         * @memberof warbase.FireEvent
+         * @instance
+         */
+        FireEvent.prototype.hitWall = false;
 
         /**
          * Creates a new FireEvent instance using the specified properties.
@@ -1457,6 +1547,26 @@ export const warbase = $root.warbase = (() => {
                 _depth = 0;
             if (_depth > $util.recursionLimit)
                 throw $Error("max depth exceeded");
+            if (message.originX != null && $Object.hasOwnProperty.call(message, "originX") && !$Object.is(message.originX, 0))
+                writer.uint32(/* id 1, wireType 5 =*/13).float(message.originX);
+            if (message.originY != null && $Object.hasOwnProperty.call(message, "originY") && !$Object.is(message.originY, 0))
+                writer.uint32(/* id 2, wireType 5 =*/21).float(message.originY);
+            if (message.originZ != null && $Object.hasOwnProperty.call(message, "originZ") && !$Object.is(message.originZ, 0))
+                writer.uint32(/* id 3, wireType 5 =*/29).float(message.originZ);
+            if (message.hitX != null && $Object.hasOwnProperty.call(message, "hitX") && !$Object.is(message.hitX, 0))
+                writer.uint32(/* id 4, wireType 5 =*/37).float(message.hitX);
+            if (message.hitY != null && $Object.hasOwnProperty.call(message, "hitY") && !$Object.is(message.hitY, 0))
+                writer.uint32(/* id 5, wireType 5 =*/45).float(message.hitY);
+            if (message.hitZ != null && $Object.hasOwnProperty.call(message, "hitZ") && !$Object.is(message.hitZ, 0))
+                writer.uint32(/* id 6, wireType 5 =*/53).float(message.hitZ);
+            if (message.normalX != null && $Object.hasOwnProperty.call(message, "normalX") && !$Object.is(message.normalX, 0))
+                writer.uint32(/* id 7, wireType 5 =*/61).float(message.normalX);
+            if (message.normalY != null && $Object.hasOwnProperty.call(message, "normalY") && !$Object.is(message.normalY, 0))
+                writer.uint32(/* id 8, wireType 5 =*/69).float(message.normalY);
+            if (message.normalZ != null && $Object.hasOwnProperty.call(message, "normalZ") && !$Object.is(message.normalZ, 0))
+                writer.uint32(/* id 9, wireType 5 =*/77).float(message.normalZ);
+            if (message.hitWall != null && $Object.hasOwnProperty.call(message, "hitWall") && message.hitWall !== false)
+                writer.uint32(/* id 10, wireType 0 =*/80).bool(message.hitWall);
             if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                 for (let i = 0; i < message.$unknowns.length; ++i)
                     writer.raw(message.$unknowns[i]);
@@ -1494,7 +1604,7 @@ export const warbase = $root.warbase = (() => {
                 _depth = 0;
             if (_depth > $Reader.recursionLimit)
                 throw $Error("max depth exceeded");
-            let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.warbase.FireEvent();
+            let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.warbase.FireEvent(), value;
             while (reader.pos < end) {
                 let start = reader.pos;
                 let tag = reader.tag();
@@ -1502,7 +1612,100 @@ export const warbase = $root.warbase = (() => {
                     _end = $undefined;
                     break;
                 }
-                reader.skipType(tag & 7, _depth, tag);
+                let wireType = tag & 7;
+                switch (tag >>>= 3) {
+                case 1: {
+                        if (wireType !== 5)
+                            break;
+                        if (!$Object.is(value = reader.float(), 0))
+                            message.originX = value;
+                        else
+                            delete message.originX;
+                        continue;
+                    }
+                case 2: {
+                        if (wireType !== 5)
+                            break;
+                        if (!$Object.is(value = reader.float(), 0))
+                            message.originY = value;
+                        else
+                            delete message.originY;
+                        continue;
+                    }
+                case 3: {
+                        if (wireType !== 5)
+                            break;
+                        if (!$Object.is(value = reader.float(), 0))
+                            message.originZ = value;
+                        else
+                            delete message.originZ;
+                        continue;
+                    }
+                case 4: {
+                        if (wireType !== 5)
+                            break;
+                        if (!$Object.is(value = reader.float(), 0))
+                            message.hitX = value;
+                        else
+                            delete message.hitX;
+                        continue;
+                    }
+                case 5: {
+                        if (wireType !== 5)
+                            break;
+                        if (!$Object.is(value = reader.float(), 0))
+                            message.hitY = value;
+                        else
+                            delete message.hitY;
+                        continue;
+                    }
+                case 6: {
+                        if (wireType !== 5)
+                            break;
+                        if (!$Object.is(value = reader.float(), 0))
+                            message.hitZ = value;
+                        else
+                            delete message.hitZ;
+                        continue;
+                    }
+                case 7: {
+                        if (wireType !== 5)
+                            break;
+                        if (!$Object.is(value = reader.float(), 0))
+                            message.normalX = value;
+                        else
+                            delete message.normalX;
+                        continue;
+                    }
+                case 8: {
+                        if (wireType !== 5)
+                            break;
+                        if (!$Object.is(value = reader.float(), 0))
+                            message.normalY = value;
+                        else
+                            delete message.normalY;
+                        continue;
+                    }
+                case 9: {
+                        if (wireType !== 5)
+                            break;
+                        if (!$Object.is(value = reader.float(), 0))
+                            message.normalZ = value;
+                        else
+                            delete message.normalZ;
+                        continue;
+                    }
+                case 10: {
+                        if (wireType !== 0)
+                            break;
+                        if (value = reader.bool())
+                            message.hitWall = value;
+                        else
+                            delete message.hitWall;
+                        continue;
+                    }
+                }
+                reader.skipType(wireType, _depth, tag);
                 if (!reader.discardUnknown) {
                     $util.makeProp(message, "$unknowns", false);
                     (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
@@ -1544,6 +1747,36 @@ export const warbase = $root.warbase = (() => {
                 _depth = 0;
             if (_depth > $util.recursionLimit)
                 return "max depth exceeded";
+            if (message.originX != null && $Object.hasOwnProperty.call(message, "originX"))
+                if (typeof message.originX !== "number")
+                    return "originX: number expected";
+            if (message.originY != null && $Object.hasOwnProperty.call(message, "originY"))
+                if (typeof message.originY !== "number")
+                    return "originY: number expected";
+            if (message.originZ != null && $Object.hasOwnProperty.call(message, "originZ"))
+                if (typeof message.originZ !== "number")
+                    return "originZ: number expected";
+            if (message.hitX != null && $Object.hasOwnProperty.call(message, "hitX"))
+                if (typeof message.hitX !== "number")
+                    return "hitX: number expected";
+            if (message.hitY != null && $Object.hasOwnProperty.call(message, "hitY"))
+                if (typeof message.hitY !== "number")
+                    return "hitY: number expected";
+            if (message.hitZ != null && $Object.hasOwnProperty.call(message, "hitZ"))
+                if (typeof message.hitZ !== "number")
+                    return "hitZ: number expected";
+            if (message.normalX != null && $Object.hasOwnProperty.call(message, "normalX"))
+                if (typeof message.normalX !== "number")
+                    return "normalX: number expected";
+            if (message.normalY != null && $Object.hasOwnProperty.call(message, "normalY"))
+                if (typeof message.normalY !== "number")
+                    return "normalY: number expected";
+            if (message.normalZ != null && $Object.hasOwnProperty.call(message, "normalZ"))
+                if (typeof message.normalZ !== "number")
+                    return "normalZ: number expected";
+            if (message.hitWall != null && $Object.hasOwnProperty.call(message, "hitWall"))
+                if (typeof message.hitWall !== "boolean")
+                    return "hitWall: boolean expected";
             return null;
         };
 
@@ -1564,7 +1797,38 @@ export const warbase = $root.warbase = (() => {
                 _depth = 0;
             if (_depth > $util.recursionLimit)
                 throw $Error("max depth exceeded");
-            return new $root.warbase.FireEvent();
+            let message = new $root.warbase.FireEvent();
+            if (object.originX != null)
+                if (!$Object.is($Number(object.originX), 0))
+                    message.originX = $Number(object.originX);
+            if (object.originY != null)
+                if (!$Object.is($Number(object.originY), 0))
+                    message.originY = $Number(object.originY);
+            if (object.originZ != null)
+                if (!$Object.is($Number(object.originZ), 0))
+                    message.originZ = $Number(object.originZ);
+            if (object.hitX != null)
+                if (!$Object.is($Number(object.hitX), 0))
+                    message.hitX = $Number(object.hitX);
+            if (object.hitY != null)
+                if (!$Object.is($Number(object.hitY), 0))
+                    message.hitY = $Number(object.hitY);
+            if (object.hitZ != null)
+                if (!$Object.is($Number(object.hitZ), 0))
+                    message.hitZ = $Number(object.hitZ);
+            if (object.normalX != null)
+                if (!$Object.is($Number(object.normalX), 0))
+                    message.normalX = $Number(object.normalX);
+            if (object.normalY != null)
+                if (!$Object.is($Number(object.normalY), 0))
+                    message.normalY = $Number(object.normalY);
+            if (object.normalZ != null)
+                if (!$Object.is($Number(object.normalZ), 0))
+                    message.normalZ = $Number(object.normalZ);
+            if (object.hitWall != null)
+                if (object.hitWall)
+                    message.hitWall = $Boolean(object.hitWall);
+            return message;
         };
 
         /**
@@ -1576,8 +1840,47 @@ export const warbase = $root.warbase = (() => {
          * @param {$protobuf.IConversionOptions} [options] Conversion options
          * @returns {Object.<string,*>} Plain object
          */
-        FireEvent.toObject = function () {
-            return {};
+        FireEvent.toObject = function (message, options, _depth) {
+            if (!options)
+                options = {};
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let object = {};
+            if (options.defaults) {
+                object.originX = 0;
+                object.originY = 0;
+                object.originZ = 0;
+                object.hitX = 0;
+                object.hitY = 0;
+                object.hitZ = 0;
+                object.normalX = 0;
+                object.normalY = 0;
+                object.normalZ = 0;
+                object.hitWall = false;
+            }
+            if (message.originX != null && $Object.hasOwnProperty.call(message, "originX"))
+                object.originX = options.json && !$isFinite(message.originX) ? $String(message.originX) : message.originX;
+            if (message.originY != null && $Object.hasOwnProperty.call(message, "originY"))
+                object.originY = options.json && !$isFinite(message.originY) ? $String(message.originY) : message.originY;
+            if (message.originZ != null && $Object.hasOwnProperty.call(message, "originZ"))
+                object.originZ = options.json && !$isFinite(message.originZ) ? $String(message.originZ) : message.originZ;
+            if (message.hitX != null && $Object.hasOwnProperty.call(message, "hitX"))
+                object.hitX = options.json && !$isFinite(message.hitX) ? $String(message.hitX) : message.hitX;
+            if (message.hitY != null && $Object.hasOwnProperty.call(message, "hitY"))
+                object.hitY = options.json && !$isFinite(message.hitY) ? $String(message.hitY) : message.hitY;
+            if (message.hitZ != null && $Object.hasOwnProperty.call(message, "hitZ"))
+                object.hitZ = options.json && !$isFinite(message.hitZ) ? $String(message.hitZ) : message.hitZ;
+            if (message.normalX != null && $Object.hasOwnProperty.call(message, "normalX"))
+                object.normalX = options.json && !$isFinite(message.normalX) ? $String(message.normalX) : message.normalX;
+            if (message.normalY != null && $Object.hasOwnProperty.call(message, "normalY"))
+                object.normalY = options.json && !$isFinite(message.normalY) ? $String(message.normalY) : message.normalY;
+            if (message.normalZ != null && $Object.hasOwnProperty.call(message, "normalZ"))
+                object.normalZ = options.json && !$isFinite(message.normalZ) ? $String(message.normalZ) : message.normalZ;
+            if (message.hitWall != null && $Object.hasOwnProperty.call(message, "hitWall"))
+                object.hitWall = message.hitWall;
+            return object;
         };
 
         /**
@@ -5343,6 +5646,16 @@ export const warbase = $root.warbase = (() => {
          * Properties of a ServerFireEvent.
          * @typedef {Object} warbase.ServerFireEvent.$Properties
          * @property {string|null} [shooterId] ServerFireEvent shooterId
+         * @property {number|null} [originX] ServerFireEvent originX
+         * @property {number|null} [originY] ServerFireEvent originY
+         * @property {number|null} [originZ] ServerFireEvent originZ
+         * @property {number|null} [hitX] ServerFireEvent hitX
+         * @property {number|null} [hitY] ServerFireEvent hitY
+         * @property {number|null} [hitZ] ServerFireEvent hitZ
+         * @property {number|null} [normalX] ServerFireEvent normalX
+         * @property {number|null} [normalY] ServerFireEvent normalY
+         * @property {number|null} [normalZ] ServerFireEvent normalZ
+         * @property {boolean|null} [hitWall] ServerFireEvent hitWall
          * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
          */
 
@@ -5383,6 +5696,86 @@ export const warbase = $root.warbase = (() => {
         ServerFireEvent.prototype.shooterId = "";
 
         /**
+         * ServerFireEvent originX.
+         * @member {number} originX
+         * @memberof warbase.ServerFireEvent
+         * @instance
+         */
+        ServerFireEvent.prototype.originX = 0;
+
+        /**
+         * ServerFireEvent originY.
+         * @member {number} originY
+         * @memberof warbase.ServerFireEvent
+         * @instance
+         */
+        ServerFireEvent.prototype.originY = 0;
+
+        /**
+         * ServerFireEvent originZ.
+         * @member {number} originZ
+         * @memberof warbase.ServerFireEvent
+         * @instance
+         */
+        ServerFireEvent.prototype.originZ = 0;
+
+        /**
+         * ServerFireEvent hitX.
+         * @member {number} hitX
+         * @memberof warbase.ServerFireEvent
+         * @instance
+         */
+        ServerFireEvent.prototype.hitX = 0;
+
+        /**
+         * ServerFireEvent hitY.
+         * @member {number} hitY
+         * @memberof warbase.ServerFireEvent
+         * @instance
+         */
+        ServerFireEvent.prototype.hitY = 0;
+
+        /**
+         * ServerFireEvent hitZ.
+         * @member {number} hitZ
+         * @memberof warbase.ServerFireEvent
+         * @instance
+         */
+        ServerFireEvent.prototype.hitZ = 0;
+
+        /**
+         * ServerFireEvent normalX.
+         * @member {number} normalX
+         * @memberof warbase.ServerFireEvent
+         * @instance
+         */
+        ServerFireEvent.prototype.normalX = 0;
+
+        /**
+         * ServerFireEvent normalY.
+         * @member {number} normalY
+         * @memberof warbase.ServerFireEvent
+         * @instance
+         */
+        ServerFireEvent.prototype.normalY = 0;
+
+        /**
+         * ServerFireEvent normalZ.
+         * @member {number} normalZ
+         * @memberof warbase.ServerFireEvent
+         * @instance
+         */
+        ServerFireEvent.prototype.normalZ = 0;
+
+        /**
+         * ServerFireEvent hitWall.
+         * @member {boolean} hitWall
+         * @memberof warbase.ServerFireEvent
+         * @instance
+         */
+        ServerFireEvent.prototype.hitWall = false;
+
+        /**
          * Creates a new ServerFireEvent instance using the specified properties.
          * @function create
          * @memberof warbase.ServerFireEvent
@@ -5416,6 +5809,26 @@ export const warbase = $root.warbase = (() => {
                 throw $Error("max depth exceeded");
             if (message.shooterId != null && $Object.hasOwnProperty.call(message, "shooterId") && message.shooterId !== "")
                 writer.uint32(/* id 1, wireType 2 =*/10).string(message.shooterId);
+            if (message.originX != null && $Object.hasOwnProperty.call(message, "originX") && !$Object.is(message.originX, 0))
+                writer.uint32(/* id 2, wireType 5 =*/21).float(message.originX);
+            if (message.originY != null && $Object.hasOwnProperty.call(message, "originY") && !$Object.is(message.originY, 0))
+                writer.uint32(/* id 3, wireType 5 =*/29).float(message.originY);
+            if (message.originZ != null && $Object.hasOwnProperty.call(message, "originZ") && !$Object.is(message.originZ, 0))
+                writer.uint32(/* id 4, wireType 5 =*/37).float(message.originZ);
+            if (message.hitX != null && $Object.hasOwnProperty.call(message, "hitX") && !$Object.is(message.hitX, 0))
+                writer.uint32(/* id 5, wireType 5 =*/45).float(message.hitX);
+            if (message.hitY != null && $Object.hasOwnProperty.call(message, "hitY") && !$Object.is(message.hitY, 0))
+                writer.uint32(/* id 6, wireType 5 =*/53).float(message.hitY);
+            if (message.hitZ != null && $Object.hasOwnProperty.call(message, "hitZ") && !$Object.is(message.hitZ, 0))
+                writer.uint32(/* id 7, wireType 5 =*/61).float(message.hitZ);
+            if (message.normalX != null && $Object.hasOwnProperty.call(message, "normalX") && !$Object.is(message.normalX, 0))
+                writer.uint32(/* id 8, wireType 5 =*/69).float(message.normalX);
+            if (message.normalY != null && $Object.hasOwnProperty.call(message, "normalY") && !$Object.is(message.normalY, 0))
+                writer.uint32(/* id 9, wireType 5 =*/77).float(message.normalY);
+            if (message.normalZ != null && $Object.hasOwnProperty.call(message, "normalZ") && !$Object.is(message.normalZ, 0))
+                writer.uint32(/* id 10, wireType 5 =*/85).float(message.normalZ);
+            if (message.hitWall != null && $Object.hasOwnProperty.call(message, "hitWall") && message.hitWall !== false)
+                writer.uint32(/* id 11, wireType 0 =*/88).bool(message.hitWall);
             if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                 for (let i = 0; i < message.$unknowns.length; ++i)
                     writer.raw(message.$unknowns[i]);
@@ -5472,6 +5885,96 @@ export const warbase = $root.warbase = (() => {
                             delete message.shooterId;
                         continue;
                     }
+                case 2: {
+                        if (wireType !== 5)
+                            break;
+                        if (!$Object.is(value = reader.float(), 0))
+                            message.originX = value;
+                        else
+                            delete message.originX;
+                        continue;
+                    }
+                case 3: {
+                        if (wireType !== 5)
+                            break;
+                        if (!$Object.is(value = reader.float(), 0))
+                            message.originY = value;
+                        else
+                            delete message.originY;
+                        continue;
+                    }
+                case 4: {
+                        if (wireType !== 5)
+                            break;
+                        if (!$Object.is(value = reader.float(), 0))
+                            message.originZ = value;
+                        else
+                            delete message.originZ;
+                        continue;
+                    }
+                case 5: {
+                        if (wireType !== 5)
+                            break;
+                        if (!$Object.is(value = reader.float(), 0))
+                            message.hitX = value;
+                        else
+                            delete message.hitX;
+                        continue;
+                    }
+                case 6: {
+                        if (wireType !== 5)
+                            break;
+                        if (!$Object.is(value = reader.float(), 0))
+                            message.hitY = value;
+                        else
+                            delete message.hitY;
+                        continue;
+                    }
+                case 7: {
+                        if (wireType !== 5)
+                            break;
+                        if (!$Object.is(value = reader.float(), 0))
+                            message.hitZ = value;
+                        else
+                            delete message.hitZ;
+                        continue;
+                    }
+                case 8: {
+                        if (wireType !== 5)
+                            break;
+                        if (!$Object.is(value = reader.float(), 0))
+                            message.normalX = value;
+                        else
+                            delete message.normalX;
+                        continue;
+                    }
+                case 9: {
+                        if (wireType !== 5)
+                            break;
+                        if (!$Object.is(value = reader.float(), 0))
+                            message.normalY = value;
+                        else
+                            delete message.normalY;
+                        continue;
+                    }
+                case 10: {
+                        if (wireType !== 5)
+                            break;
+                        if (!$Object.is(value = reader.float(), 0))
+                            message.normalZ = value;
+                        else
+                            delete message.normalZ;
+                        continue;
+                    }
+                case 11: {
+                        if (wireType !== 0)
+                            break;
+                        if (value = reader.bool())
+                            message.hitWall = value;
+                        else
+                            delete message.hitWall;
+                        continue;
+                    }
                 }
                 reader.skipType(wireType, _depth, tag);
                 if (!reader.discardUnknown) {
@@ -5518,6 +6021,36 @@ export const warbase = $root.warbase = (() => {
             if (message.shooterId != null && $Object.hasOwnProperty.call(message, "shooterId"))
                 if (!$util.isString(message.shooterId))
                     return "shooterId: string expected";
+            if (message.originX != null && $Object.hasOwnProperty.call(message, "originX"))
+                if (typeof message.originX !== "number")
+                    return "originX: number expected";
+            if (message.originY != null && $Object.hasOwnProperty.call(message, "originY"))
+                if (typeof message.originY !== "number")
+                    return "originY: number expected";
+            if (message.originZ != null && $Object.hasOwnProperty.call(message, "originZ"))
+                if (typeof message.originZ !== "number")
+                    return "originZ: number expected";
+            if (message.hitX != null && $Object.hasOwnProperty.call(message, "hitX"))
+                if (typeof message.hitX !== "number")
+                    return "hitX: number expected";
+            if (message.hitY != null && $Object.hasOwnProperty.call(message, "hitY"))
+                if (typeof message.hitY !== "number")
+                    return "hitY: number expected";
+            if (message.hitZ != null && $Object.hasOwnProperty.call(message, "hitZ"))
+                if (typeof message.hitZ !== "number")
+                    return "hitZ: number expected";
+            if (message.normalX != null && $Object.hasOwnProperty.call(message, "normalX"))
+                if (typeof message.normalX !== "number")
+                    return "normalX: number expected";
+            if (message.normalY != null && $Object.hasOwnProperty.call(message, "normalY"))
+                if (typeof message.normalY !== "number")
+                    return "normalY: number expected";
+            if (message.normalZ != null && $Object.hasOwnProperty.call(message, "normalZ"))
+                if (typeof message.normalZ !== "number")
+                    return "normalZ: number expected";
+            if (message.hitWall != null && $Object.hasOwnProperty.call(message, "hitWall"))
+                if (typeof message.hitWall !== "boolean")
+                    return "hitWall: boolean expected";
             return null;
         };
 
@@ -5542,6 +6075,36 @@ export const warbase = $root.warbase = (() => {
             if (object.shooterId != null)
                 if (typeof object.shooterId !== "string" || object.shooterId.length)
                     message.shooterId = $String(object.shooterId);
+            if (object.originX != null)
+                if (!$Object.is($Number(object.originX), 0))
+                    message.originX = $Number(object.originX);
+            if (object.originY != null)
+                if (!$Object.is($Number(object.originY), 0))
+                    message.originY = $Number(object.originY);
+            if (object.originZ != null)
+                if (!$Object.is($Number(object.originZ), 0))
+                    message.originZ = $Number(object.originZ);
+            if (object.hitX != null)
+                if (!$Object.is($Number(object.hitX), 0))
+                    message.hitX = $Number(object.hitX);
+            if (object.hitY != null)
+                if (!$Object.is($Number(object.hitY), 0))
+                    message.hitY = $Number(object.hitY);
+            if (object.hitZ != null)
+                if (!$Object.is($Number(object.hitZ), 0))
+                    message.hitZ = $Number(object.hitZ);
+            if (object.normalX != null)
+                if (!$Object.is($Number(object.normalX), 0))
+                    message.normalX = $Number(object.normalX);
+            if (object.normalY != null)
+                if (!$Object.is($Number(object.normalY), 0))
+                    message.normalY = $Number(object.normalY);
+            if (object.normalZ != null)
+                if (!$Object.is($Number(object.normalZ), 0))
+                    message.normalZ = $Number(object.normalZ);
+            if (object.hitWall != null)
+                if (object.hitWall)
+                    message.hitWall = $Boolean(object.hitWall);
             return message;
         };
 
@@ -5562,10 +6125,41 @@ export const warbase = $root.warbase = (() => {
             if (_depth > $util.recursionLimit)
                 throw $Error("max depth exceeded");
             let object = {};
-            if (options.defaults)
+            if (options.defaults) {
                 object.shooterId = "";
+                object.originX = 0;
+                object.originY = 0;
+                object.originZ = 0;
+                object.hitX = 0;
+                object.hitY = 0;
+                object.hitZ = 0;
+                object.normalX = 0;
+                object.normalY = 0;
+                object.normalZ = 0;
+                object.hitWall = false;
+            }
             if (message.shooterId != null && $Object.hasOwnProperty.call(message, "shooterId"))
                 object.shooterId = message.shooterId;
+            if (message.originX != null && $Object.hasOwnProperty.call(message, "originX"))
+                object.originX = options.json && !$isFinite(message.originX) ? $String(message.originX) : message.originX;
+            if (message.originY != null && $Object.hasOwnProperty.call(message, "originY"))
+                object.originY = options.json && !$isFinite(message.originY) ? $String(message.originY) : message.originY;
+            if (message.originZ != null && $Object.hasOwnProperty.call(message, "originZ"))
+                object.originZ = options.json && !$isFinite(message.originZ) ? $String(message.originZ) : message.originZ;
+            if (message.hitX != null && $Object.hasOwnProperty.call(message, "hitX"))
+                object.hitX = options.json && !$isFinite(message.hitX) ? $String(message.hitX) : message.hitX;
+            if (message.hitY != null && $Object.hasOwnProperty.call(message, "hitY"))
+                object.hitY = options.json && !$isFinite(message.hitY) ? $String(message.hitY) : message.hitY;
+            if (message.hitZ != null && $Object.hasOwnProperty.call(message, "hitZ"))
+                object.hitZ = options.json && !$isFinite(message.hitZ) ? $String(message.hitZ) : message.hitZ;
+            if (message.normalX != null && $Object.hasOwnProperty.call(message, "normalX"))
+                object.normalX = options.json && !$isFinite(message.normalX) ? $String(message.normalX) : message.normalX;
+            if (message.normalY != null && $Object.hasOwnProperty.call(message, "normalY"))
+                object.normalY = options.json && !$isFinite(message.normalY) ? $String(message.normalY) : message.normalY;
+            if (message.normalZ != null && $Object.hasOwnProperty.call(message, "normalZ"))
+                object.normalZ = options.json && !$isFinite(message.normalZ) ? $String(message.normalZ) : message.normalZ;
+            if (message.hitWall != null && $Object.hasOwnProperty.call(message, "hitWall"))
+                object.hitWall = message.hitWall;
             return object;
         };
 

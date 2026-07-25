@@ -497,6 +497,11 @@
         const livePlayerCount = document.getElementById('live-player-count');
 
         function refreshServers() {
+          const loginUI = document.getElementById('loginUI');
+          if (loginUI && loginUI.style.display === 'none') {
+            return; // Do not poll lobby API when in game
+          }
+          
           const container = document.getElementById('server-list-container');
           
           fetch('/api/rooms?cid=' + encodeURIComponent(clientId))

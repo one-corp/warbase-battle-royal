@@ -369,6 +369,16 @@ func (x *HitEvent) GetDamage() int32 {
 
 type FireEvent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
+	OriginX       float32                `protobuf:"fixed32,1,opt,name=origin_x,json=originX,proto3" json:"origin_x,omitempty"`
+	OriginY       float32                `protobuf:"fixed32,2,opt,name=origin_y,json=originY,proto3" json:"origin_y,omitempty"`
+	OriginZ       float32                `protobuf:"fixed32,3,opt,name=origin_z,json=originZ,proto3" json:"origin_z,omitempty"`
+	HitX          float32                `protobuf:"fixed32,4,opt,name=hit_x,json=hitX,proto3" json:"hit_x,omitempty"`
+	HitY          float32                `protobuf:"fixed32,5,opt,name=hit_y,json=hitY,proto3" json:"hit_y,omitempty"`
+	HitZ          float32                `protobuf:"fixed32,6,opt,name=hit_z,json=hitZ,proto3" json:"hit_z,omitempty"`
+	NormalX       float32                `protobuf:"fixed32,7,opt,name=normal_x,json=normalX,proto3" json:"normal_x,omitempty"`
+	NormalY       float32                `protobuf:"fixed32,8,opt,name=normal_y,json=normalY,proto3" json:"normal_y,omitempty"`
+	NormalZ       float32                `protobuf:"fixed32,9,opt,name=normal_z,json=normalZ,proto3" json:"normal_z,omitempty"`
+	HitWall       bool                   `protobuf:"varint,10,opt,name=hit_wall,json=hitWall,proto3" json:"hit_wall,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -401,6 +411,76 @@ func (x *FireEvent) ProtoReflect() protoreflect.Message {
 // Deprecated: Use FireEvent.ProtoReflect.Descriptor instead.
 func (*FireEvent) Descriptor() ([]byte, []int) {
 	return file_shared_proto_packets_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *FireEvent) GetOriginX() float32 {
+	if x != nil {
+		return x.OriginX
+	}
+	return 0
+}
+
+func (x *FireEvent) GetOriginY() float32 {
+	if x != nil {
+		return x.OriginY
+	}
+	return 0
+}
+
+func (x *FireEvent) GetOriginZ() float32 {
+	if x != nil {
+		return x.OriginZ
+	}
+	return 0
+}
+
+func (x *FireEvent) GetHitX() float32 {
+	if x != nil {
+		return x.HitX
+	}
+	return 0
+}
+
+func (x *FireEvent) GetHitY() float32 {
+	if x != nil {
+		return x.HitY
+	}
+	return 0
+}
+
+func (x *FireEvent) GetHitZ() float32 {
+	if x != nil {
+		return x.HitZ
+	}
+	return 0
+}
+
+func (x *FireEvent) GetNormalX() float32 {
+	if x != nil {
+		return x.NormalX
+	}
+	return 0
+}
+
+func (x *FireEvent) GetNormalY() float32 {
+	if x != nil {
+		return x.NormalY
+	}
+	return 0
+}
+
+func (x *FireEvent) GetNormalZ() float32 {
+	if x != nil {
+		return x.NormalZ
+	}
+	return 0
+}
+
+func (x *FireEvent) GetHitWall() bool {
+	if x != nil {
+		return x.HitWall
+	}
+	return false
 }
 
 type ReloadEvent struct {
@@ -1174,6 +1254,16 @@ func (x *RespawnEvent) GetZ() float32 {
 type ServerFireEvent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ShooterId     string                 `protobuf:"bytes,1,opt,name=shooter_id,json=shooterId,proto3" json:"shooter_id,omitempty"`
+	OriginX       float32                `protobuf:"fixed32,2,opt,name=origin_x,json=originX,proto3" json:"origin_x,omitempty"`
+	OriginY       float32                `protobuf:"fixed32,3,opt,name=origin_y,json=originY,proto3" json:"origin_y,omitempty"`
+	OriginZ       float32                `protobuf:"fixed32,4,opt,name=origin_z,json=originZ,proto3" json:"origin_z,omitempty"`
+	HitX          float32                `protobuf:"fixed32,5,opt,name=hit_x,json=hitX,proto3" json:"hit_x,omitempty"`
+	HitY          float32                `protobuf:"fixed32,6,opt,name=hit_y,json=hitY,proto3" json:"hit_y,omitempty"`
+	HitZ          float32                `protobuf:"fixed32,7,opt,name=hit_z,json=hitZ,proto3" json:"hit_z,omitempty"`
+	NormalX       float32                `protobuf:"fixed32,8,opt,name=normal_x,json=normalX,proto3" json:"normal_x,omitempty"`
+	NormalY       float32                `protobuf:"fixed32,9,opt,name=normal_y,json=normalY,proto3" json:"normal_y,omitempty"`
+	NormalZ       float32                `protobuf:"fixed32,10,opt,name=normal_z,json=normalZ,proto3" json:"normal_z,omitempty"`
+	HitWall       bool                   `protobuf:"varint,11,opt,name=hit_wall,json=hitWall,proto3" json:"hit_wall,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1213,6 +1303,76 @@ func (x *ServerFireEvent) GetShooterId() string {
 		return x.ShooterId
 	}
 	return ""
+}
+
+func (x *ServerFireEvent) GetOriginX() float32 {
+	if x != nil {
+		return x.OriginX
+	}
+	return 0
+}
+
+func (x *ServerFireEvent) GetOriginY() float32 {
+	if x != nil {
+		return x.OriginY
+	}
+	return 0
+}
+
+func (x *ServerFireEvent) GetOriginZ() float32 {
+	if x != nil {
+		return x.OriginZ
+	}
+	return 0
+}
+
+func (x *ServerFireEvent) GetHitX() float32 {
+	if x != nil {
+		return x.HitX
+	}
+	return 0
+}
+
+func (x *ServerFireEvent) GetHitY() float32 {
+	if x != nil {
+		return x.HitY
+	}
+	return 0
+}
+
+func (x *ServerFireEvent) GetHitZ() float32 {
+	if x != nil {
+		return x.HitZ
+	}
+	return 0
+}
+
+func (x *ServerFireEvent) GetNormalX() float32 {
+	if x != nil {
+		return x.NormalX
+	}
+	return 0
+}
+
+func (x *ServerFireEvent) GetNormalY() float32 {
+	if x != nil {
+		return x.NormalY
+	}
+	return 0
+}
+
+func (x *ServerFireEvent) GetNormalZ() float32 {
+	if x != nil {
+		return x.NormalZ
+	}
+	return 0
+}
+
+func (x *ServerFireEvent) GetHitWall() bool {
+	if x != nil {
+		return x.HitWall
+	}
+	return false
 }
 
 type HitConfirmedEvent struct {
@@ -1409,8 +1569,19 @@ const file_shared_proto_packets_proto_rawDesc = "" +
 	" \x01(\x05R\x04ping\"?\n" +
 	"\bHitEvent\x12\x1b\n" +
 	"\ttarget_id\x18\x01 \x01(\tR\btargetId\x12\x16\n" +
-	"\x06damage\x18\x02 \x01(\x05R\x06damage\"\v\n" +
-	"\tFireEvent\"\r\n" +
+	"\x06damage\x18\x02 \x01(\x05R\x06damage\"\x87\x02\n" +
+	"\tFireEvent\x12\x19\n" +
+	"\borigin_x\x18\x01 \x01(\x02R\aoriginX\x12\x19\n" +
+	"\borigin_y\x18\x02 \x01(\x02R\aoriginY\x12\x19\n" +
+	"\borigin_z\x18\x03 \x01(\x02R\aoriginZ\x12\x13\n" +
+	"\x05hit_x\x18\x04 \x01(\x02R\x04hitX\x12\x13\n" +
+	"\x05hit_y\x18\x05 \x01(\x02R\x04hitY\x12\x13\n" +
+	"\x05hit_z\x18\x06 \x01(\x02R\x04hitZ\x12\x19\n" +
+	"\bnormal_x\x18\a \x01(\x02R\anormalX\x12\x19\n" +
+	"\bnormal_y\x18\b \x01(\x02R\anormalY\x12\x19\n" +
+	"\bnormal_z\x18\t \x01(\x02R\anormalZ\x12\x19\n" +
+	"\bhit_wall\x18\n" +
+	" \x01(\bR\ahitWall\"\r\n" +
 	"\vReloadEvent\"0\n" +
 	"\x11SwitchWeaponEvent\x12\x1b\n" +
 	"\tweapon_id\x18\x01 \x01(\tR\bweaponId\"\x15\n" +
@@ -1466,10 +1637,21 @@ const file_shared_proto_packets_proto_rawDesc = "" +
 	"\fRespawnEvent\x12\f\n" +
 	"\x01x\x18\x01 \x01(\x02R\x01x\x12\f\n" +
 	"\x01y\x18\x02 \x01(\x02R\x01y\x12\f\n" +
-	"\x01z\x18\x03 \x01(\x02R\x01z\"0\n" +
+	"\x01z\x18\x03 \x01(\x02R\x01z\"\xac\x02\n" +
 	"\x0fServerFireEvent\x12\x1d\n" +
 	"\n" +
-	"shooter_id\x18\x01 \x01(\tR\tshooterId\"\x13\n" +
+	"shooter_id\x18\x01 \x01(\tR\tshooterId\x12\x19\n" +
+	"\borigin_x\x18\x02 \x01(\x02R\aoriginX\x12\x19\n" +
+	"\borigin_y\x18\x03 \x01(\x02R\aoriginY\x12\x19\n" +
+	"\borigin_z\x18\x04 \x01(\x02R\aoriginZ\x12\x13\n" +
+	"\x05hit_x\x18\x05 \x01(\x02R\x04hitX\x12\x13\n" +
+	"\x05hit_y\x18\x06 \x01(\x02R\x04hitY\x12\x13\n" +
+	"\x05hit_z\x18\a \x01(\x02R\x04hitZ\x12\x19\n" +
+	"\bnormal_x\x18\b \x01(\x02R\anormalX\x12\x19\n" +
+	"\bnormal_y\x18\t \x01(\x02R\anormalY\x12\x19\n" +
+	"\bnormal_z\x18\n" +
+	" \x01(\x02R\anormalZ\x12\x19\n" +
+	"\bhit_wall\x18\v \x01(\bR\ahitWall\"\x13\n" +
 	"\x11HitConfirmedEvent\"\x14\n" +
 	"\x12KillConfirmedEvent\"\x98\x01\n" +
 	"\x17ServerThrowGrenadeEvent\x12\x1d\n" +

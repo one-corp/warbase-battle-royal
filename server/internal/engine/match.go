@@ -4,6 +4,7 @@ import (
 	"log"
 	"math"
 	"math/rand"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -32,6 +33,8 @@ type Room struct {
 	CachedGameState *GameState
 	CachedServerMsg *ServerMessage
 	playerCount     atomic.Int32
+	Sessions        map[*GameSession]bool
+	EmptySince      time.Time
 }
 
 func NewRoom(id string, name string, mapName string) *Room {
@@ -43,6 +46,8 @@ func NewRoom(id string, name string, mapName string) *Room {
 		PlayerIndices:   make(map[string]int),
 		CachedGameState: &GameState{Players: make(map[string]*PlayerState)},
 		CachedServerMsg: &ServerMessage{},
+		Sessions:        make(map[*GameSession]bool),
+		EmptySince:      time.Now(),
 	}
 }
 
@@ -59,7 +64,6 @@ type Match struct {
 	broadcast   chan Message
 	register      chan *GameSession
 	unregister    chan *GameSession
-	respawnChan   chan RespawnRequest
 	activePlayers atomic.Int32
 }
 
@@ -68,7 +72,6 @@ func NewMatch() *Match {
 		broadcast:   make(chan Message),
 		register:    make(chan *GameSession),
 		unregister:  make(chan *GameSession),
-		respawnChan: make(chan RespawnRequest),
 		sessions:    make(map[*GameSession]bool),
 		rooms:       make(map[string]*Room),
 	}
@@ -105,6 +108,15 @@ func (m *Match) ListActiveRooms() []RoomInfo {
 			PlayerCount: int(room.playerCount.Load()),
 		})
 	}
+	
+	// Sort rooms consistently: by PlayerCount descending, then Name ascending
+	sort.Slice(rooms, func(i, j int) bool {
+		if rooms[i].PlayerCount != rooms[j].PlayerCount {
+			return rooms[i].PlayerCount > rooms[j].PlayerCount
+		}
+		return rooms[i].Name < rooms[j].Name
+	})
+	
 	return rooms
 }
 
@@ -120,6 +132,20 @@ func (m *Match) GetTotalActivePlayers() int {
 	return int(m.activePlayers.Load())
 }
 
+// IsUsernameTaken checks if a username is currently connected to a specific room
+func (m *Match) IsUsernameTaken(roomID, username string) bool {
+	m.roomsMutex.RLock()
+	defer m.roomsMutex.RUnlock()
+	room, ok := m.rooms[roomID]
+	if !ok {
+		return false
+	}
+	// Check if this username is in the room's PlayerIndices map (which tracks active entities)
+	// We do this instead of iterating sessions for O(1) speed.
+	_, taken := room.PlayerIndices[username]
+	return taken
+}
+
 // Exported methods to allow external HTTP handlers to interact with the Match
 func (m *Match) Register(s *GameSession) {
 	m.register <- s
@@ -133,21 +159,10 @@ func (m *Match) Broadcast(msg Message) {
 	m.broadcast <- msg
 }
 
-func (m *Match) triggerServerRespawn(playerID string, roomID string) {
-	defer func() {
-		if err := recover(); err != nil {
-			log.Printf("Panic in triggerServerRespawn: %v", err)
-		}
-	}()
-	// Wait 5 seconds
-	time.Sleep(5 * time.Second)
-	m.respawnChan <- RespawnRequest{PlayerID: playerID, RoomID: roomID}
-}
-
 // Helper to send events without re-locking
-func (m *Match) sendDirectEventLocked(playerID string, event *ServerMessage) {
+func (m *Match) sendDirectEventLocked(room *Room, playerID string, event *ServerMessage) {
 	if outData, err := proto.Marshal(event); err == nil {
-		for session := range m.sessions {
+		for session := range room.Sessions {
 			if session.PlayerID == playerID {
 				select {
 				case session.outputQueue <- outData:
@@ -174,9 +189,15 @@ func (m *Match) Run() {
 		case session := <-m.register:
 			m.sessions[session] = true
 			m.activePlayers.Add(1)
-			if _, ok := m.getRoom(session.RoomID); !ok {
+			
+			m.roomsMutex.RLock()
+			room, ok := m.rooms[session.RoomID]
+			m.roomsMutex.RUnlock()
+			if !ok {
 				// Room does not exist, they shouldn't connect normally, but let's just log it.
 				log.Printf("Player %s attempting to connect to non-existent room %s", session.PlayerID, session.RoomID)
+			} else {
+				room.Sessions[session] = true
 			}
 
 		case session := <-m.unregister:
@@ -195,12 +216,15 @@ func (m *Match) Run() {
 					break
 				}
 			}
-			if !stillConnected {
-				m.roomsMutex.RLock()
-				room, ok := m.rooms[session.RoomID]
-				m.roomsMutex.RUnlock()
+			
+			m.roomsMutex.RLock()
+			room, ok := m.rooms[session.RoomID]
+			m.roomsMutex.RUnlock()
+			
+			if ok {
+				delete(room.Sessions, session)
 				
-				if ok {
+				if !stillConnected {
 					idx, pOk := room.PlayerIndices[session.PlayerID]
 					if pOk {
 						lastIdx := len(room.PlayerEntities) - 1
@@ -215,47 +239,15 @@ func (m *Match) Run() {
 						delete(room.PlayerIndices, session.PlayerID)
 						delete(room.CachedGameState.Players, session.PlayerID)
 						room.playerCount.Add(-1)
+						
+						if room.playerCount.Load() == 0 {
+							room.EmptySince = time.Now()
+						}
 					}
 				}
 			}
 
 			log.Printf("Player %s disconnected from room %s", session.PlayerID, session.RoomID)
-
-		case req := <-m.respawnChan:
-			m.roomsMutex.RLock()
-			room, ok := m.rooms[req.RoomID]
-			m.roomsMutex.RUnlock()
-			if ok {
-				idx, pOk := room.PlayerIndices[req.PlayerID]
-				if pOk {
-					player := &room.PlayerEntities[idx]
-					if player.State.IsDead {
-						player.State.IsDead = false
-						player.State.Health = 100
-						player.State.Animation = "idle"
-						player.IsReloading = false
-						player.AmmoCount = player.ActiveWeapon.MagSize
-
-						newX := (rand.Float64() * 6) - 3
-						newZ := (rand.Float64() * 6) - 3
-
-						respawnEvt := &ServerMessage{
-							Message: &ServerMessage_ServerEvent{
-								ServerEvent: &ServerEvent{
-									Event: &ServerEvent_Respawn{
-										Respawn: &RespawnEvent{
-											X: float32(newX),
-											Y: 10,
-											Z: float32(newZ),
-										},
-									},
-								},
-							},
-						}
-						m.sendDirectEventLocked(req.PlayerID, respawnEvt)
-					}
-				}
-			}
 
 		case message := <-m.broadcast:
 			m.roomsMutex.RLock()
@@ -314,7 +306,7 @@ func (m *Match) Run() {
 							},
 						},
 					}
-					m.sendDirectEventLocked(message.SenderID, pongMsg)
+					m.sendDirectEventLocked(room, message.SenderID, pongMsg)
 
 				case *ClientEvent_Hit:
 					targetIdx, okTarget := room.PlayerIndices[event.Hit.TargetId]
@@ -332,18 +324,17 @@ func (m *Match) Run() {
 							// Valid hit! Send feedback to shooter
 							if isKill {
 								// It was a lethal shot
-								m.sendDirectEventLocked(shooter.ID, &ServerMessage{
+								m.sendDirectEventLocked(room, shooter.ID, &ServerMessage{
 									Message: &ServerMessage_ServerEvent{
 										ServerEvent: &ServerEvent{
 											Event: &ServerEvent_KillConfirmed{},
 										},
 									},
 								})
-								// Trigger respawn background task for target
-								go m.triggerServerRespawn(target.ID, room.ID)
+								// Target's client will send a RespawnRequest in 3 seconds.
 							} else {
 								// Normal hit
-								m.sendDirectEventLocked(shooter.ID, &ServerMessage{
+								m.sendDirectEventLocked(room, shooter.ID, &ServerMessage{
 									Message: &ServerMessage_ServerEvent{
 										ServerEvent: &ServerEvent{
 											Event: &ServerEvent_HitConfirmed{},
@@ -361,6 +352,7 @@ func (m *Match) Run() {
 					if ok {
 						shooter := &room.PlayerEntities[idx]
 						if err := shooter.ValidateAndApplyFire(); err == nil {
+							f := event.Fire
 							// Valid! Broadcast to everyone else IN THIS ROOM
 							fireMsg := &ServerMessage{
 								Message: &ServerMessage_ServerEvent{
@@ -368,14 +360,24 @@ func (m *Match) Run() {
 										Event: &ServerEvent_Fire{
 											Fire: &ServerFireEvent{
 												ShooterId: message.SenderID,
+												OriginX:   f.GetOriginX(),
+												OriginY:   f.GetOriginY(),
+												OriginZ:   f.GetOriginZ(),
+												HitX:      f.GetHitX(),
+												HitY:      f.GetHitY(),
+												HitZ:      f.GetHitZ(),
+												NormalX:   f.GetNormalX(),
+												NormalY:   f.GetNormalY(),
+												NormalZ:   f.GetNormalZ(),
+												HitWall:   f.GetHitWall(),
 											},
 										},
 									},
 								},
 							}
 							if outData, err := proto.Marshal(fireMsg); err == nil {
-								for session := range m.sessions {
-									if session.RoomID == message.RoomID && session.PlayerID != message.SenderID {
+								for session := range room.Sessions {
+									if session.PlayerID != message.SenderID {
 										select {
 										case session.outputQueue <- outData:
 										default:
@@ -404,12 +406,53 @@ func (m *Match) Run() {
 						if !shooter.State.IsDead {
 							if weapon, wOk := Weapons[event.SwitchWeapon.WeaponId]; wOk {
 								shooter.ActiveWeapon = weapon
-								shooter.AmmoCount = weapon.MagSize
+								if savedAmmo, hasSaved := shooter.AmmoStore[weapon.ID]; hasSaved {
+									shooter.AmmoCount = savedAmmo
+								} else {
+									shooter.AmmoCount = weapon.MagSize
+								}
 								shooter.IsReloading = false
 							}
 						}
 					}
 					
+				case *ClientEvent_RespawnRequest:
+					idx, ok := room.PlayerIndices[message.SenderID]
+					if ok {
+						player := &room.PlayerEntities[idx]
+						if player.State.IsDead && !player.DeathTime.IsZero() && time.Since(player.DeathTime) >= 2900*time.Millisecond {
+							player.State.IsDead = false
+							player.State.Health = 100
+							player.State.Animation = "idle"
+							player.IsReloading = false
+							player.AmmoCount = player.ActiveWeapon.MagSize
+							player.AmmoStore[player.ActiveWeapon.ID] = player.AmmoCount
+							player.DeathTime = time.Time{}
+
+							newX := (rand.Float64() * 6) - 3
+							newZ := (rand.Float64() * 6) - 3
+							
+							player.State.X = float32(newX)
+							player.State.Y = 10
+							player.State.Z = float32(newZ)
+
+							respawnEvt := &ServerMessage{
+								Message: &ServerMessage_ServerEvent{
+									ServerEvent: &ServerEvent{
+										Event: &ServerEvent_Respawn{
+											Respawn: &RespawnEvent{
+												X: float32(newX),
+												Y: 10,
+												Z: float32(newZ),
+											},
+										},
+									},
+								},
+							}
+							m.sendDirectEventLocked(room, message.SenderID, respawnEvt)
+						}
+					}
+
 				case *ClientEvent_ThrowGrenade:
 					// Broadcast to everyone else IN THIS ROOM
 					grenadeMsg := &ServerMessage{
@@ -430,8 +473,8 @@ func (m *Match) Run() {
 						},
 					}
 					if outData, err := proto.Marshal(grenadeMsg); err == nil {
-						for session := range m.sessions {
-							if session.RoomID == message.RoomID && session.PlayerID != message.SenderID {
+						for session := range room.Sessions {
+							if session.PlayerID != message.SenderID {
 								select {
 								case session.outputQueue <- outData:
 								default:
@@ -445,14 +488,23 @@ func (m *Match) Run() {
 		case <-ticker.C:
 			// Process each room separately
 			now := time.Now()
+			var emptyRooms []string
+
 			m.roomsMutex.RLock()
 			for _, room := range m.rooms {
+				// Mark for GC if empty for 30s
+				if room.playerCount.Load() == 0 && now.Sub(room.EmptySince) > 30*time.Second {
+					emptyRooms = append(emptyRooms, room.ID)
+					continue
+				}
+
 				// Resolve naturally completed reloads
 				for i := range room.PlayerEntities {
 					player := &room.PlayerEntities[i]
 					if player.IsReloading && now.Sub(player.ReloadStart) >= player.ActiveWeapon.ReloadTime {
 						player.IsReloading = false
 						player.AmmoCount = player.ActiveWeapon.MagSize
+						player.AmmoStore[player.ActiveWeapon.ID] = player.AmmoCount
 					}
 				}
 
@@ -463,21 +515,35 @@ func (m *Match) Run() {
 				stateData, err := proto.Marshal(room.CachedServerMsg)
 
 				if err == nil {
-					for session := range m.sessions {
-						if session.RoomID == room.ID {
-							select {
-							case session.outputQueue <- stateData:
-							default:
-								delete(m.sessions, session)
-								session.SafeClose()
-								// Evict from room immediately to prevent zombies
-								go m.Unregister(session)
-							}
+					// O(1) broadcast: Only iterate over sessions inside this specific room
+					for session := range room.Sessions {
+						select {
+						case session.outputQueue <- stateData:
+						default:
+							delete(m.sessions, session)
+							delete(room.Sessions, session)
+							session.SafeClose()
+							// Evict from room immediately to prevent zombies
+							go m.Unregister(session)
 						}
 					}
 				}
 			}
 			m.roomsMutex.RUnlock()
+
+			// Perform Garbage Collection of Empty Rooms
+			if len(emptyRooms) > 0 {
+				m.roomsMutex.Lock()
+				for _, id := range emptyRooms {
+					room, ok := m.rooms[id]
+					// Final check in case someone joined between RUnlock and Lock
+					if ok && room.playerCount.Load() == 0 && time.Since(room.EmptySince) > 30*time.Second {
+						delete(m.rooms, id)
+						log.Printf("Garbage collected empty room: %s", id)
+					}
+				}
+				m.roomsMutex.Unlock()
+			}
 		}
 	}
 }

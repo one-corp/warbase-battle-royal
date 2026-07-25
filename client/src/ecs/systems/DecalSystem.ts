@@ -17,6 +17,7 @@ export function initDecalSystem(scene: Scene) {
     mat.diffuseTexture.hasAlpha = true;
     mat.useAlphaFromDiffuseTexture = true;
     mat.emissiveColor = new Color3(0.2, 0.2, 0.2);
+    mat.backFaceCulling = false;
 
     for (let i = 0; i < MAX_DECALS; i++) {
         const eid = addEntity(world);

@@ -37,20 +37,6 @@ func (app *application) healthcheckHandler(w http.ResponseWriter, r *http.Reques
 }
 
 func (app *application) connectToServerHandler(w http.ResponseWriter, r *http.Request) {
-	// 1. Upgrade the http connection to websocket
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		app.logger.PrintError(err, nil)
-		return
-	}
-
-	// Disable Nagle's algorithm so small packets (protobuf ~35 bytes) are sent
-	// immediately without waiting for TCP buffer to fill up.
-	if tcpConn, ok := conn.NetConn().(*net.TCPConn); ok {
-		tcpConn.SetNoDelay(true)
-	}
-
-	// 2. Extract the username and room:
 	username := r.URL.Query().Get("user")
 	if username == "" {
 		username = "Guest_" + strconv.Itoa(rand.Intn(10000))
@@ -58,6 +44,31 @@ func (app *application) connectToServerHandler(w http.ResponseWriter, r *http.Re
 	room := r.URL.Query().Get("room")
 	if room == "" {
 		room = "industrial"
+	}
+
+	if app.match.IsUsernameTaken(room, username) {
+		app.badRequestResponse(w, r, fmt.Errorf("username already taken in this room"))
+		return
+	}
+
+	// 1. Upgrade the http connection to websocket
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		app.logger.PrintError(err, nil)
+		return
+	}
+
+	cid := r.URL.Query().Get("cid")
+	if cid != "" {
+		app.presenceMu.Lock()
+		delete(app.presenceMap, cid)
+		app.presenceMu.Unlock()
+	}
+
+	// Disable Nagle's algorithm so small packets (protobuf ~35 bytes) are sent
+	// immediately without waiting for TCP buffer to fill up.
+	if tcpConn, ok := conn.NetConn().(*net.TCPConn); ok {
+		tcpConn.SetNoDelay(true)
 	}
 
 	// 3. Create the session:

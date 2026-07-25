@@ -494,6 +494,36 @@ export namespace warbase {
         /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
+        /** FireEvent originX. */
+        originX: number;
+
+        /** FireEvent originY. */
+        originY: number;
+
+        /** FireEvent originZ. */
+        originZ: number;
+
+        /** FireEvent hitX. */
+        hitX: number;
+
+        /** FireEvent hitY. */
+        hitY: number;
+
+        /** FireEvent hitZ. */
+        hitZ: number;
+
+        /** FireEvent normalX. */
+        normalX: number;
+
+        /** FireEvent normalY. */
+        normalY: number;
+
+        /** FireEvent normalZ. */
+        normalZ: number;
+
+        /** FireEvent hitWall. */
+        hitWall: boolean;
+
         /**
          * Creates a new FireEvent instance using the specified properties.
          * @param [properties] Properties to set
@@ -577,6 +607,36 @@ export namespace warbase {
 
         /** Properties of a FireEvent. */
         interface $Properties {
+
+            /** FireEvent originX */
+            originX?: (number|null);
+
+            /** FireEvent originY */
+            originY?: (number|null);
+
+            /** FireEvent originZ */
+            originZ?: (number|null);
+
+            /** FireEvent hitX */
+            hitX?: (number|null);
+
+            /** FireEvent hitY */
+            hitY?: (number|null);
+
+            /** FireEvent hitZ */
+            hitZ?: (number|null);
+
+            /** FireEvent normalX */
+            normalX?: (number|null);
+
+            /** FireEvent normalY */
+            normalY?: (number|null);
+
+            /** FireEvent normalZ */
+            normalZ?: (number|null);
+
+            /** FireEvent hitWall */
+            hitWall?: (boolean|null);
 
             /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
@@ -2067,6 +2127,36 @@ export namespace warbase {
         /** ServerFireEvent shooterId. */
         shooterId: string;
 
+        /** ServerFireEvent originX. */
+        originX: number;
+
+        /** ServerFireEvent originY. */
+        originY: number;
+
+        /** ServerFireEvent originZ. */
+        originZ: number;
+
+        /** ServerFireEvent hitX. */
+        hitX: number;
+
+        /** ServerFireEvent hitY. */
+        hitY: number;
+
+        /** ServerFireEvent hitZ. */
+        hitZ: number;
+
+        /** ServerFireEvent normalX. */
+        normalX: number;
+
+        /** ServerFireEvent normalY. */
+        normalY: number;
+
+        /** ServerFireEvent normalZ. */
+        normalZ: number;
+
+        /** ServerFireEvent hitWall. */
+        hitWall: boolean;
+
         /**
          * Creates a new ServerFireEvent instance using the specified properties.
          * @param [properties] Properties to set
@@ -2153,6 +2243,36 @@ export namespace warbase {
 
             /** ServerFireEvent shooterId */
             shooterId?: (string|null);
+
+            /** ServerFireEvent originX */
+            originX?: (number|null);
+
+            /** ServerFireEvent originY */
+            originY?: (number|null);
+
+            /** ServerFireEvent originZ */
+            originZ?: (number|null);
+
+            /** ServerFireEvent hitX */
+            hitX?: (number|null);
+
+            /** ServerFireEvent hitY */
+            hitY?: (number|null);
+
+            /** ServerFireEvent hitZ */
+            hitZ?: (number|null);
+
+            /** ServerFireEvent normalX */
+            normalX?: (number|null);
+
+            /** ServerFireEvent normalY */
+            normalY?: (number|null);
+
+            /** ServerFireEvent normalZ */
+            normalZ?: (number|null);
+
+            /** ServerFireEvent hitWall */
+            hitWall?: (boolean|null);
 
             /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];

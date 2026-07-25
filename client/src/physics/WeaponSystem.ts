@@ -149,8 +149,6 @@ export const createWeaponSystem = (scene: Scene, networkManager?: NetworkManager
                 const event = new CustomEvent('ammo-update', { detail: { ammo: WeaponStateComponent.currentAmmo[eid], max: config.magSize } });
                 window.dispatchEvent(event);
                 
-                if (networkManager) networkManager.sendFire();
-
                 // Apply Spring Recoil (Velocity)
                 const mult = isADS ? config.adsRecoilMult : 1.0;
                 RecoilComponent.velocityY[eid] -= config.recoilVertical * mult * 20.0; // Scaled for velocity
@@ -186,6 +184,8 @@ export const createWeaponSystem = (scene: Scene, networkManager?: NetworkManager
 
                 _tempEndPoint.copyFrom(_tempSpreadDir).scaleInPlace(300).addInPlace(camera.globalPosition);
                 let hitPoint = _tempEndPoint;
+                let hitWall = false;
+                let hitNormalWorld = Vector3.Up();
                 
                 const query: any = { shouldHitTriggers: true };
                 const localBody = entityPhysicsBodies.get(eid);
@@ -212,6 +212,8 @@ export const createWeaponSystem = (scene: Scene, networkManager?: NetworkManager
                         }
                     } else if (!hitMesh.metadata?.playerId) {
                         const normal = physResult.hitNormalWorld;
+                        hitNormalWorld = normal;
+                        hitWall = true;
                         // Avoid .scale() and .add() allocations
                         normal.scaleToRef(0.02, _tempScaledRight);
                         const decalPos = hitPoint.add(_tempScaledRight); 
@@ -234,6 +236,8 @@ export const createWeaponSystem = (scene: Scene, networkManager?: NetworkManager
                 _tempStartPoint.addInPlace(_tempScaledRight);
                 
                 spawnTracer(_tempStartPoint, hitPoint);
+
+                if (networkManager) networkManager.sendFire(_tempStartPoint, hitPoint, hitNormalWorld, hitWall);
             }
 
             // 4. Process Sway / Bob
@@ -301,6 +305,7 @@ export const createWeaponSystem = (scene: Scene, networkManager?: NetworkManager
                 if (akRoot) akRoot.setEnabled(true);
                 if (pistolRoot) pistolRoot.setEnabled(false);
                 
+                if (networkManager) networkManager.sendSwitchWeapon('ak47');
                 window.dispatchEvent(new CustomEvent('weapon-swap', { detail: { index: 0, ammo: WeaponStateComponent.currentAmmo[eid], max: WEAPON_CONFIGS[0].magSize } }));
             }
             if ((InputComponent as any).weapon2[eid] === 1 && WeaponStateComponent.activeWeaponIndex[eid] !== 1) {
@@ -315,6 +320,7 @@ export const createWeaponSystem = (scene: Scene, networkManager?: NetworkManager
                 if (akRoot) akRoot.setEnabled(false);
                 if (pistolRoot) pistolRoot.setEnabled(true);
                 
+                if (networkManager) networkManager.sendSwitchWeapon('pistol');
                 window.dispatchEvent(new CustomEvent('weapon-swap', { detail: { index: 1, ammo: WeaponStateComponent.currentAmmo[eid], max: WEAPON_CONFIGS[1].magSize } }));
             }
 

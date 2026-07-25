@@ -1,5 +1,8 @@
 import { Scene, AssetContainer, SceneLoader, Vector3, Quaternion, AnimationGroup, TransformNode, Mesh, ParticleSystem, Texture, Color4, StandardMaterial, Color3, MeshBuilder, PhysicsAggregate, PhysicsShapeType, PhysicsMotionType, PhysicsConstraint, PhysicsConstraintType } from "@babylonjs/core";
 import { AdvancedDynamicTexture, Rectangle, TextBlock } from "@babylonjs/gui";
+import { spawnTracer } from "../ecs/systems/TracerSystem";
+import { spawnImpact } from "../ecs/systems/ImpactSystem";
+import { spawnDecal } from "../ecs/systems/DecalSystem";
 import type { PlayerState } from "./NetworkManager";
 
 const RENDER_DELAY = 35; // ms
@@ -37,6 +40,43 @@ export class MultiplayerEntities {
         this.scene.onBeforeRenderObservable.add(() => {
             this.interpolateEntities();
         });
+    }
+
+    public triggerFire(
+        id: string, 
+        origin?: Vector3, 
+        hitPoint?: Vector3, 
+        normal?: Vector3, 
+        hitWall?: boolean
+    ) {
+        const player = this.remotePlayers[id];
+        if (player) {
+            player.flashSystem.manualEmitCount = 5;
+            player.flashSystem.start();
+            setTimeout(() => {
+                player.flashSystem.stop();
+            }, 50);
+            
+            player.fireAnimTimer = performance.now();
+            if (player.currentState === "run" || player.currentState === "firing walk") {
+                this.syncAnimation(player, "firing walk", false, true);
+            } else {
+                this.syncAnimation(player, "firing", false, true);
+            }
+        }
+
+        if (origin && hitPoint && (origin.x !== 0 || origin.y !== 0 || origin.z !== 0 || hitPoint.x !== 0 || hitPoint.y !== 0 || hitPoint.z !== 0)) {
+            // Spawn tracer line flying from remote shooter to hit position
+            spawnTracer(origin, hitPoint);
+            
+            // If bullet hit a wall/environment, trigger impact smoke/sparks and decal
+            if (hitWall && normal) {
+                spawnImpact(hitPoint, normal);
+                const offsetNormal = normal.scale(0.02);
+                const decalPos = hitPoint.add(offsetNormal);
+                spawnDecal(decalPos, decalPos.add(normal));
+            }
+        }
     }
 
     private async loadModel() {
@@ -273,24 +313,6 @@ export class MultiplayerEntities {
             nameplate: nameplatePlane,
             nameplateTexture: adt
         };
-    }
-
-    public triggerFire(id: string) {
-        const player = this.remotePlayers[id];
-        if (player) {
-            player.flashSystem.manualEmitCount = 5;
-            player.flashSystem.start();
-            setTimeout(() => {
-                player.flashSystem.stop();
-            }, 50);
-            
-            player.fireAnimTimer = performance.now();
-            if (player.currentState === "run" || player.currentState === "firing walk") {
-                this.syncAnimation(player, "firing walk", false, true);
-            } else {
-                this.syncAnimation(player, "firing", false, true);
-            }
-        }
     }
 
     private removePlayer(id: string) {

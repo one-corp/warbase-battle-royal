@@ -39,7 +39,18 @@ message HitEvent {
     int32 damage = 2;
 }
 
-message FireEvent {}
+message FireEvent {
+    float origin_x = 1;
+    float origin_y = 2;
+    float origin_z = 3;
+    float hit_x = 4;
+    float hit_y = 5;
+    float hit_z = 6;
+    float normal_x = 7;
+    float normal_y = 8;
+    float normal_z = 9;
+    bool hit_wall = 10;
+}
 message ReloadEvent {}
 message SwitchWeaponEvent {
     string weapon_id = 1;
@@ -113,6 +124,16 @@ message RespawnEvent {
 
 message ServerFireEvent {
     string shooter_id = 1;
+    float origin_x = 2;
+    float origin_y = 3;
+    float origin_z = 4;
+    float hit_x = 5;
+    float hit_y = 6;
+    float hit_z = 7;
+    float normal_x = 8;
+    float normal_y = 9;
+    float normal_z = 10;
+    bool hit_wall = 11;
 }
 
 message HitConfirmedEvent {}

@@ -289,14 +289,21 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
         // Network Setup
         const multiplayerEntities = new MultiplayerEntities(scene);
         
-        // Wait for WebSocket to actually connect before declaring success
         let networkManager!: NetworkManager;
         await new Promise<void>((resolve, reject) => {
             const timeout = setTimeout(() => reject(new Error("WebSocket connection timed out")), 10000);
-            networkManager = new NetworkManager(username, roomId, () => {
-                clearTimeout(timeout);
-                resolve();
-            });
+            networkManager = new NetworkManager(
+                username, 
+                roomId, 
+                () => {
+                    clearTimeout(timeout);
+                    resolve();
+                },
+                () => {
+                    clearTimeout(timeout);
+                    reject(new Error("Username already taken. Please try a different name."));
+                }
+            );
         });
         setLoadingStatus("CONNECTED — ENTERING COMBAT");
 
@@ -360,15 +367,18 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
             };
         }
         
-        if (btnExitCancel) {
-            btnExitCancel.onclick = () => {
-                if (exitPopup) exitPopup.style.display = "none";
-                canvas.requestPointerLock();
-            };
-        }
+		if (btnExitCancel) {
+			btnExitCancel.onclick = () => {
+				if (exitPopup) exitPopup.style.display = "none";
+				canvas.requestPointerLock();
+			};
+		}
 
-        await initWeapons(playerEid, scene, networkManager);
-        const updateWeaponSystem = createWeaponSystem(scene, networkManager);
+		setLoadingStatus("DOWNLOADING WEAPONS & ANIMATIONS...");
+		await initWeapons(playerEid, scene, networkManager);
+		setLoadingStatus("ENTERING COMBAT...");
+		
+		const updateWeaponSystem = createWeaponSystem(scene, networkManager);
 
         let isLocalDead = false;
         let respawnTimerActive = false;
@@ -483,8 +493,11 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
             }
         };
 
-        networkManager.onFireReceived = (shooterId) => {
-            multiplayerEntities.triggerFire(shooterId);
+        networkManager.onFireReceived = (shooterId, ox, oy, oz, hx, hy, hz, nx, ny, nz, hitWall) => {
+            const origin = (ox !== undefined && oy !== undefined && oz !== undefined) ? new Vector3(ox, oy, oz) : undefined;
+            const hitPoint = (hx !== undefined && hy !== undefined && hz !== undefined) ? new Vector3(hx, hy, hz) : undefined;
+            const normal = (nx !== undefined && ny !== undefined && nz !== undefined) ? new Vector3(nx, ny, nz) : undefined;
+            multiplayerEntities.triggerFire(shooterId, origin, hitPoint, normal, hitWall);
         };
 
         networkManager.onGrenadeReceived = (_shooterId, px, py, pz, vx, vy, vz) => {
