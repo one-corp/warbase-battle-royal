@@ -592,6 +592,7 @@ export const warbase = $root.warbase = (() => {
          * @property {string|null} [animation] PlayerStateUpdate animation
          * @property {string|null} [platformId] PlayerStateUpdate platformId
          * @property {number|null} [ping] PlayerStateUpdate ping
+         * @property {string|null} [weaponId] PlayerStateUpdate weaponId
          * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
          */
 
@@ -704,6 +705,14 @@ export const warbase = $root.warbase = (() => {
         PlayerStateUpdate.prototype.ping = 0;
 
         /**
+         * PlayerStateUpdate weaponId.
+         * @member {string} weaponId
+         * @memberof warbase.PlayerStateUpdate
+         * @instance
+         */
+        PlayerStateUpdate.prototype.weaponId = "";
+
+        /**
          * Creates a new PlayerStateUpdate instance using the specified properties.
          * @function create
          * @memberof warbase.PlayerStateUpdate
@@ -755,6 +764,8 @@ export const warbase = $root.warbase = (() => {
                 writer.uint32(/* id 9, wireType 2 =*/74).string(message.platformId);
             if (message.ping != null && $Object.hasOwnProperty.call(message, "ping") && message.ping !== 0)
                 writer.uint32(/* id 10, wireType 0 =*/80).int32(message.ping);
+            if (message.weaponId != null && $Object.hasOwnProperty.call(message, "weaponId") && message.weaponId !== "")
+                writer.uint32(/* id 11, wireType 2 =*/90).string(message.weaponId);
             if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                 for (let i = 0; i < message.$unknowns.length; ++i)
                     writer.raw(message.$unknowns[i]);
@@ -892,6 +903,15 @@ export const warbase = $root.warbase = (() => {
                             delete message.ping;
                         continue;
                     }
+                case 11: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.stringVerify()).length)
+                            message.weaponId = value;
+                        else
+                            delete message.weaponId;
+                        continue;
+                    }
                 }
                 reader.skipType(wireType, _depth, tag);
                 if (!reader.discardUnknown) {
@@ -965,6 +985,9 @@ export const warbase = $root.warbase = (() => {
             if (message.ping != null && $Object.hasOwnProperty.call(message, "ping"))
                 if (!$util.isInteger(message.ping))
                     return "ping: integer expected";
+            if (message.weaponId != null && $Object.hasOwnProperty.call(message, "weaponId"))
+                if (!$util.isString(message.weaponId))
+                    return "weaponId: string expected";
             return null;
         };
 
@@ -1016,6 +1039,9 @@ export const warbase = $root.warbase = (() => {
             if (object.ping != null)
                 if ($Number(object.ping) !== 0)
                     message.ping = object.ping | 0;
+            if (object.weaponId != null)
+                if (typeof object.weaponId !== "string" || object.weaponId.length)
+                    message.weaponId = $String(object.weaponId);
             return message;
         };
 
@@ -1047,6 +1073,7 @@ export const warbase = $root.warbase = (() => {
                 object.animation = "";
                 object.platformId = "";
                 object.ping = 0;
+                object.weaponId = "";
             }
             if (message.x != null && $Object.hasOwnProperty.call(message, "x"))
                 object.x = options.json && !$isFinite(message.x) ? $String(message.x) : message.x;
@@ -1068,6 +1095,8 @@ export const warbase = $root.warbase = (() => {
                 object.platformId = message.platformId;
             if (message.ping != null && $Object.hasOwnProperty.call(message, "ping"))
                 object.ping = message.ping;
+            if (message.weaponId != null && $Object.hasOwnProperty.call(message, "weaponId"))
+                object.weaponId = message.weaponId;
             return object;
         };
 
@@ -4220,6 +4249,7 @@ export const warbase = $root.warbase = (() => {
          * @property {boolean|null} [isDead] PlayerState isDead
          * @property {string|null} [platformId] PlayerState platformId
          * @property {number|null} [ping] PlayerState ping
+         * @property {string|null} [weaponId] PlayerState weaponId
          * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
          */
 
@@ -4364,6 +4394,14 @@ export const warbase = $root.warbase = (() => {
         PlayerState.prototype.ping = 0;
 
         /**
+         * PlayerState weaponId.
+         * @member {string} weaponId
+         * @memberof warbase.PlayerState
+         * @instance
+         */
+        PlayerState.prototype.weaponId = "";
+
+        /**
          * Creates a new PlayerState instance using the specified properties.
          * @function create
          * @memberof warbase.PlayerState
@@ -4423,6 +4461,8 @@ export const warbase = $root.warbase = (() => {
                 writer.uint32(/* id 13, wireType 2 =*/106).string(message.platformId);
             if (message.ping != null && $Object.hasOwnProperty.call(message, "ping") && message.ping !== 0)
                 writer.uint32(/* id 14, wireType 0 =*/112).int32(message.ping);
+            if (message.weaponId != null && $Object.hasOwnProperty.call(message, "weaponId") && message.weaponId !== "")
+                writer.uint32(/* id 15, wireType 2 =*/122).string(message.weaponId);
             if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                 for (let i = 0; i < message.$unknowns.length; ++i)
                     writer.raw(message.$unknowns[i]);
@@ -4596,6 +4636,15 @@ export const warbase = $root.warbase = (() => {
                             delete message.ping;
                         continue;
                     }
+                case 15: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.stringVerify()).length)
+                            message.weaponId = value;
+                        else
+                            delete message.weaponId;
+                        continue;
+                    }
                 }
                 reader.skipType(wireType, _depth, tag);
                 if (!reader.discardUnknown) {
@@ -4681,6 +4730,9 @@ export const warbase = $root.warbase = (() => {
             if (message.ping != null && $Object.hasOwnProperty.call(message, "ping"))
                 if (!$util.isInteger(message.ping))
                     return "ping: integer expected";
+            if (message.weaponId != null && $Object.hasOwnProperty.call(message, "weaponId"))
+                if (!$util.isString(message.weaponId))
+                    return "weaponId: string expected";
             return null;
         };
 
@@ -4744,6 +4796,9 @@ export const warbase = $root.warbase = (() => {
             if (object.ping != null)
                 if ($Number(object.ping) !== 0)
                     message.ping = object.ping | 0;
+            if (object.weaponId != null)
+                if (typeof object.weaponId !== "string" || object.weaponId.length)
+                    message.weaponId = $String(object.weaponId);
             return message;
         };
 
@@ -4779,6 +4834,7 @@ export const warbase = $root.warbase = (() => {
                 object.isDead = false;
                 object.platformId = "";
                 object.ping = 0;
+                object.weaponId = "";
             }
             if (message.x != null && $Object.hasOwnProperty.call(message, "x"))
                 object.x = options.json && !$isFinite(message.x) ? $String(message.x) : message.x;
@@ -4808,6 +4864,8 @@ export const warbase = $root.warbase = (() => {
                 object.platformId = message.platformId;
             if (message.ping != null && $Object.hasOwnProperty.call(message, "ping"))
                 object.ping = message.ping;
+            if (message.weaponId != null && $Object.hasOwnProperty.call(message, "weaponId"))
+                object.weaponId = message.weaponId;
             return object;
         };
 

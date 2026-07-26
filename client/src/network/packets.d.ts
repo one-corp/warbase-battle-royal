@@ -230,6 +230,9 @@ export namespace warbase {
         /** PlayerStateUpdate ping. */
         ping: number;
 
+        /** PlayerStateUpdate weaponId. */
+        weaponId: string;
+
         /**
          * Creates a new PlayerStateUpdate instance using the specified properties.
          * @param [properties] Properties to set
@@ -343,6 +346,9 @@ export namespace warbase {
 
             /** PlayerStateUpdate ping */
             ping?: (number|null);
+
+            /** PlayerStateUpdate weaponId */
+            weaponId?: (string|null);
 
             /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
@@ -1679,6 +1685,9 @@ export namespace warbase {
         /** PlayerState ping. */
         ping: number;
 
+        /** PlayerState weaponId. */
+        weaponId: string;
+
         /**
          * Creates a new PlayerState instance using the specified properties.
          * @param [properties] Properties to set
@@ -1804,6 +1813,9 @@ export namespace warbase {
 
             /** PlayerState ping */
             ping?: (number|null);
+
+            /** PlayerState weaponId */
+            weaponId?: (string|null);
 
             /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];

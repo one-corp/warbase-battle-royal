@@ -29,7 +29,7 @@ import { initPlayer } from './ecs/systems/PlayerSystem';
 import { playerMovementSystem } from './ecs/systems/PlayerMovementSystem';
 import { updateTracers } from './ecs/systems/TracerSystem';
 import { PhysicsSystem } from './ecs/systems/PhysicsSystem';
-import { InputComponent, PlayerComponent, Position } from './ecs/Components';
+import { InputComponent, PlayerComponent, Position, WeaponStateComponent } from './ecs/Components';
 import { entityCameras, entityMeshes, entityPhysicsBodies, clearAllViewMaps } from './ecs/ViewMaps';
 import { world, clearECSWorld } from './ecs/World';
 import { initWeapons, createWeaponSystem } from './physics/WeaponSystem';
@@ -39,6 +39,7 @@ import { MultiplayerEntities } from "./network/MultiplayerEntities";
 import { ScopeUI } from "./ui/ScopeUI";
 
 import { MainMenuScene } from "./engine/MainMenuScene";
+import { WeaponPreview3D } from "./ui/WeaponPreview3D";
 
 export let currentEngineType = "WebGL 2.0";
 export let activeScene: Scene | null = null;
@@ -65,36 +66,70 @@ function applySkyboxPreset(scene: Scene, presetName: string, oldSkybox?: Abstrac
     // Without this, the shadows on the map are 100% black because standard HemisphericLights don't work on PBR ambient.
     try {
         const pbrLightingEnv = CubeTexture.CreateFromPrefilteredData("https://playground.babylonjs.com/textures/country.env", scene);
-        scene.environmentTexture = pbrLightingEnv;
-        scene.environmentIntensity = 1.0; // Normalized ambient lighting
+        pbrLightingEnv.onLoadObservable.addOnce(() => {
+            scene.environmentTexture = pbrLightingEnv;
+            scene.environmentIntensity = 1.0;
+        });
+        
+        // If network fails (or user is offline/CORS blocked), generate a procedural fallback texture
+        // otherwise the entire map and weapons will render pitch black!
+        setTimeout(() => {
+            if (!scene.environmentTexture) {
+                console.warn("[GFX] Network env failed, using procedural fallback env to prevent black screen!");
+                scene.createDefaultEnvironment({ createSkybox: false, createGround: false });
+            }
+        }, 2000);
     } catch (e) {
-        console.warn("Failed to load lighting env");
+        console.warn("Failed to initialize lighting env");
     }
 
     return newSkybox;
 }
 
 async function initEngine(canvas: HTMLCanvasElement): Promise<Engine | WebGPUEngine> {
-    const forceWebGL = localStorage.getItem("forceWebGL") === "true";
+    const enableWebGPU = localStorage.getItem("optWebGPU") === "true";
 
-    if (!forceWebGL && await WebGPUEngine.IsSupportedAsync) {
-        let engine;
+    // 1. WebGL 2.0 is our Primary, Rock-Solid, Super-Optimized Engine by Default
+    if (enableWebGPU && await WebGPUEngine.IsSupportedAsync) {
         try {
-            engine = new WebGPUEngine(canvas, { antialias: false });
-            await engine.initAsync();
+            console.log("[ENGINE] User enabled Experimental WebGPU Engine. Initializing...");
+            const webgpu = new WebGPUEngine(canvas, {
+                antialias: false,
+                stencil: true,
+                powerPreference: "high-performance"
+            });
+            await webgpu.initAsync();
             currentEngineType = "WebGPU";
-            return engine;
+            (window as any).currentEngineType = "WebGPU";
+            console.log("[ENGINE] Next-Gen WebGPU Engine initialized successfully!");
+            
+            // WebGPU context loss handler for fail-safe stability
+            webgpu.onContextLostObservable?.add(() => {
+                console.error("[ENGINE] WebGPU context lost! Reloading page to restore engine...");
+                window.location.reload();
+            });
+
+            return webgpu;
         } catch (e) {
-            console.error("WebGPU initialization failed:", e);
-            const errorElement = document.getElementById("errorDisplay");
-            if (errorElement) errorElement.innerText = "Error: WebGPU failed to initialize. Please check your browser compatibility.";
+            console.warn("[ENGINE] WebGPU init failed or unsupported on this GPU driver, falling back to Primary WebGL 2.0:", e);
         }
-    } else if (!forceWebGL) {
-        console.warn("WebGPU not supported by this browser, falling back to WebGL 2.0");
+    } else if (enableWebGPU) {
+        console.warn("[ENGINE] WebGPU option enabled, but browser/GPU does not support WebGPU. Using Primary WebGL 2.0.");
+    } else {
+        console.log("[ENGINE] Primary Engine Active: WebGL 2.0 (Super-Optimized).");
     }
     
+    // 2. Primary Engine: High-Performance WebGL 2.0
     currentEngineType = "WebGL 2.0";
-    return new Engine(canvas, true);
+    (window as any).currentEngineType = "WebGL 2.0";
+    const webglEngine = new Engine(canvas, true, {
+        preserveDrawingBuffer: false,
+        stencil: true,
+        disableWebGL2Support: false,
+        powerPreference: "high-performance",
+        doNotHandleTouchAction: true
+    });
+    return webglEngine;
 }
 
 function setLoadingStatus(text: string) {
@@ -120,10 +155,6 @@ async function createScene(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElem
 
     // Initialize decoupled Scope UI Overlay
     ScopeUI.init();
-
-    // 1. Image Based Lighting & Dynamic Multi-Skybox Setup
-    const selectedSkybox = localStorage.getItem("optSkybox") || "TropicalSunnyDay";
-    let currentSkybox: AbstractMesh | null = applySkyboxPreset(scene, selectedSkybox);
 
     // 2. Realistic Sun Lighting & Cascaded Shadows
     const sun = new DirectionalLight("sun", new Vector3(-1, -2, -1), scene);
@@ -151,6 +182,10 @@ async function createScene(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElem
     // Explicitly enforce the player camera as the active camera (in case a GLB somehow overrode it)
     if (camera) scene.activeCamera = camera;
 
+    // 1. Image Based Lighting & Dynamic Multi-Skybox Setup (MUST be after camera for RGBDTextureTools)
+    const selectedSkybox = localStorage.getItem("optSkybox") || "TropicalSunnyDay";
+    let currentSkybox: AbstractMesh | null = applySkyboxPreset(scene, selectedSkybox);
+
     // 3. Cinematic Post-Processing Pipeline
     const pipeline = new DefaultRenderingPipeline("defaultPipeline", false, scene, camera ? [camera] : []);
     pipeline.samples = 1; // Explicitly avoid MSAA
@@ -171,7 +206,7 @@ async function createScene(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElem
     try {
         await Promise.race([
             scene.whenReadyAsync(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error("Shader compilation timed out")), 3000))
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Shader compilation timed out")), 15000))
         ]);
         setLoadingStatus("SHADERS COMPILED");
     } catch (e) {
@@ -273,8 +308,6 @@ async function createScene(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElem
             currentSkybox = applySkyboxPreset(scene, envName, currentSkybox);
         });
     }
-    // Note: SSAO and SSR are enabled dynamically via syncProGraphics when selected in settings.
-
     return { scene, playerEid, engine };
 }
 
@@ -360,6 +393,9 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
                 
                 scene.dispose();
                 activeScene = null;
+                
+                if ((window as any).previewPrimary) (window as any).previewPrimary.resume();
+                if ((window as any).previewSidearm) (window as any).previewSidearm.resume();
                 
                 const mainMenu = new MainMenuScene(engine as Engine);
                 (window as any).mainMenu = mainMenu;
@@ -564,11 +600,13 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
                         }
                     }
 
+                    const activeWeaponId = WeaponStateComponent.activeWeaponIndex[playerEid] === 1 ? 'pistol' : 'ak47';
                     networkManager.sendState(
                         _tempPos,
                         _tempRot,
                         anim,
-                        platformId
+                        platformId,
+                        activeWeaponId
                     );
                 }
             }
@@ -750,15 +788,66 @@ if (canvas) {
     initEngine(canvas).then((engine) => {
         const mainMenu = new MainMenuScene(engine);
         (window as any).mainMenu = mainMenu; // Store on window for proper disposal
-        activeScene = mainMenu.scene;
-
-        // Frame limiter variables
+        
+        // Start Global Render Loop
         engine.runRenderLoop(() => {
-            if (activeScene) activeScene.render();
+            if (activeScene) {
+                activeScene.render();
+            } else if ((window as any).mainMenu && (window as any).mainMenu.scene) {
+                (window as any).mainMenu.scene.render();
+            }
         });
 
         window.addEventListener("resize", () => {
             engine.resize();
+        });
+
+        // Initialize Live 3D Weapon Card Previews
+        const canvasPrimary = document.getElementById("canvas-primary-weapon") as HTMLCanvasElement;
+        const canvasSidearm = document.getElementById("canvas-sidearm-weapon") as HTMLCanvasElement;
+
+        let previewPrimary: WeaponPreview3D | undefined;
+        let previewSidearm: WeaponPreview3D | undefined;
+
+        if (canvasPrimary) {
+            previewPrimary = new WeaponPreview3D(canvasPrimary);
+            (window as any).previewPrimary = previewPrimary;
+            const activeClass = sessionStorage.getItem("warbase_selected_class") || "ASSAULT";
+            previewPrimary.setWeapon(activeClass === "SCOUT" ? "m2010" : "ak47");
+        }
+        if (canvasSidearm) {
+            previewSidearm = new WeaponPreview3D(canvasSidearm);
+            (window as any).previewSidearm = previewSidearm;
+            previewSidearm.setWeapon("pistol");
+        }
+
+        // Wire Class Items (ASSAULT vs SCOUT)
+        const classItems = document.querySelectorAll(".class-item");
+        const classDescText = document.getElementById("class-desc-text");
+        const primaryWeaponName = document.getElementById("primary-weapon-name");
+
+        classItems.forEach(item => {
+            item.addEventListener("click", () => {
+                const className = item.getAttribute("data-class");
+                if (!className || item.classList.contains("locked")) return;
+
+                classItems.forEach(c => c.classList.remove("active"));
+                item.classList.add("active");
+
+                if (className === "ASSAULT") {
+                    sessionStorage.setItem("warbase_selected_class", "ASSAULT");
+                    if (primaryWeaponName) primaryWeaponName.innerText = "AK-47 RIFLE";
+                    if (classDescText) classDescText.innerText = "Assault specialists push the frontline with high mobility and rapid-fire rifles. Perfect for aggressive tactical combat.";
+                    if (previewPrimary) previewPrimary.setWeapon("ak47");
+                    if ((window as any).mainMenu) (window as any).mainMenu.setHeldWeapon("ak47");
+                } else if (className === "SCOUT") {
+                    sessionStorage.setItem("warbase_selected_class", "SCOUT");
+                    if (primaryWeaponName) primaryWeaponName.innerText = "M2010 SNIPER RIFLE";
+                    if (classDescText) classDescText.innerText = "Scout marksmen eliminate high-value targets from long range with the high-caliber M2010 bolt-action sniper rifle.";
+                    if (previewPrimary) previewPrimary.setWeapon("m2010");
+                    if ((window as any).mainMenu) (window as any).mainMenu.setHeldWeapon("m2010");
+                }
+            });
         });
 
         const joinBtn = document.getElementById("joinButton") as HTMLButtonElement;
@@ -790,32 +879,36 @@ if (canvas) {
                 console.log("Join inputs - username:", username, "roomId:", roomId, "mapChoice:", mapChoice);
                 
                 if (!roomId) {
-                    console.error("Join blocked: roomId is empty!");
-                    alert("Please select a match or create one first.");
-                    return;
+                    roomId = "industrial-public";
                 }
                 
                 joinBtn.disabled = true;
                 if (btnDeployText) btnDeployText.innerText = "LOADING ENVIRONMENT...";
                 
-                // Dispose the 3D menu scene EARLY to free GPU memory and avoid buffer conflicts
-                // when the game scene loads the same GLB models
+                console.log("Starting game with roomId:", roomId);
+                
+                // CRITICAL FIX: Dispose MainMenuScene IMMEDIATELY before creating GameScene!
+                // Keeping two active scenes alive on WebGPU causes GPUCommandEncoder validation crashes (black screen).
+                if (previewPrimary) previewPrimary.pause();
+                if (previewSidearm) previewSidearm.pause();
                 if ((window as any).mainMenu) {
                     (window as any).mainMenu.dispose();
                     (window as any).mainMenu = null;
-                    activeScene = null;
                 }
-                
-                console.log("Starting game with roomId:", roomId);
                 
                 const restoreMenu = () => {
                     joinBtn.disabled = false;
                     if (btnDeployText) btnDeployText.innerText = "DEPLOY";
+                    if (activeScene && (window as any).mainMenu && activeScene !== (window as any).mainMenu.scene) {
+                        activeScene.dispose();
+                    }
                     if (!(window as any).mainMenu) {
                         const mainMenu = new MainMenuScene(engine as Engine);
                         (window as any).mainMenu = mainMenu;
-                        activeScene = mainMenu.scene;
                     }
+                    activeScene = (window as any).mainMenu.scene;
+                    if (previewPrimary) previewPrimary.resume();
+                    if (previewSidearm) previewSidearm.resume();
                 };
 
                 // Add a timeout fallback in case the server never sends GameState (e.g. invalid room)

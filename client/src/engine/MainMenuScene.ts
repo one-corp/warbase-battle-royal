@@ -15,10 +15,14 @@ import {
     Texture
 } from "@babylonjs/core";
 
+import { AK47Builder } from "../physics/AK47Builder";
+import { M2010Builder } from "../physics/M2010Builder";
+
 export class MainMenuScene {
     public scene: Scene;
     private camera: ArcRotateCamera;
     public idleAnimation?: AnimationGroup;
+    private heldWeapons: Record<string, TransformNode> = {};
 
     constructor(engine: Engine | WebGPUEngine) {
         this.scene = new Scene(engine);
@@ -90,30 +94,59 @@ export class MainMenuScene {
             const wrapper = new TransformNode("playerWrapper", this.scene);
             rootMesh.parent = wrapper;
             
-            // Adjust rotation (try 0 or Math.PI depending on GLB orientation)
-            wrapper.rotation = new Vector3(0, 0, 0); // If he was facing away, maybe 0 makes him face front? We will set to Math.PI if 0 was original. Wait, original was 0. So let's try Math.PI on wrapper.
             wrapper.rotation = new Vector3(0, Math.PI, 0);
-            
             rootMesh.scaling = new Vector3(1, 1, 1);
             rootMesh.position = new Vector3(0, 0, 0);
 
-            // Stop all animations that might auto-play (like death)
+            // Stop all animations that might auto-play
             container.animationGroups.forEach(ag => ag.stop());
 
             // Play Idle Animation
             const idleAnim = container.animationGroups.find(ag => ag.name === "Rifle Idle");
-            
             if (idleAnim) {
                 idleAnim.start(true, 1.0, idleAnim.from, idleAnim.to, false);
                 this.idleAnimation = idleAnim;
-            } else {
-                console.warn("Could not find Rifle Idle animation. Available:", container.animationGroups.map(ag => ag.name));
+            }
+
+            // Find RightHand bone to attach held weapons
+            let rightHandNode: TransformNode | undefined;
+            rootMesh.getChildTransformNodes(false).forEach(node => {
+                if (node.name.includes("RightHand")) {
+                    rightHandNode = node;
+                }
+            });
+
+            if (rightHandNode) {
+                // Build 3D AK-47
+                const ak = AK47Builder.Build(this.scene);
+                ak.scaling = new Vector3(0.12, 0.12, 0.12);
+                ak.setParent(rightHandNode);
+                ak.position = new Vector3(-0.05, 0.05, 0);
+                ak.rotation = new Vector3(Math.PI / 2, 0, 0);
+                this.heldWeapons["ak47"] = ak;
+
+                // Build 3D M2010 Sniper
+                const m2010 = M2010Builder.Build(this.scene);
+                m2010.scaling = new Vector3(0.12, 0.12, 0.12);
+                m2010.setParent(rightHandNode);
+                m2010.position = new Vector3(-0.05, 0.05, 0);
+                m2010.rotation = new Vector3(Math.PI / 2, 0, 0);
+                this.heldWeapons["m2010"] = m2010;
+
+                const activeClass = sessionStorage.getItem("warbase_selected_class") || "ASSAULT";
+                this.setHeldWeapon(activeClass === "SCOUT" ? "m2010" : "ak47");
             }
             
             console.log("Main Menu Character Loaded successfully");
         } catch (e) {
             console.error("Failed to load AnimatedSoldier.glb for main menu", e);
         }
+    }
+
+    public setHeldWeapon(weaponId: string) {
+        Object.keys(this.heldWeapons).forEach(wKey => {
+            this.heldWeapons[wKey].setEnabled(wKey === weaponId);
+        });
     }
 
     public dispose() {

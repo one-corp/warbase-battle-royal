@@ -27,4 +27,11 @@ var Weapons = map[string]WeaponConfig{
 		ReloadTime: 1500 * time.Millisecond,
 		MagSize:    12,
 	},
+	"m2010": {
+		ID:         "m2010",
+		Damage:     95,
+		RPM:        45,
+		ReloadTime: 3200 * time.Millisecond,
+		MagSize:    5,
+	},
 }

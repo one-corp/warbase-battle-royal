@@ -4,6 +4,9 @@ import { spawnTracer } from "../ecs/systems/TracerSystem";
 import { spawnImpact } from "../ecs/systems/ImpactSystem";
 import { spawnDecal } from "../ecs/systems/DecalSystem";
 import type { PlayerState } from "./NetworkManager";
+import { AK47Builder } from "../physics/AK47Builder";
+import { PistolBuilder } from "../physics/PistolBuilder";
+import { M2010Builder } from "../physics/M2010Builder";
 
 const RENDER_DELAY = 35; // ms
 
@@ -16,6 +19,9 @@ interface RemotePlayer {
     fireAnimTimer: number;
     nameplate: Mesh;
     nameplateTexture: AdvancedDynamicTexture;
+    weapons: Record<string, TransformNode>;
+    activeWeaponId: string;
+    muzzlePoints: Record<string, Mesh>;
 }
 
 export class MultiplayerEntities {
@@ -80,7 +86,7 @@ export class MultiplayerEntities {
     }
 
     private async loadModel() {
-        this.assetContainer = await SceneLoader.LoadAssetContainerAsync("./models/", `AnimatedSoldier.glb?v=${Date.now()}`, this.scene);
+        this.assetContainer = await SceneLoader.LoadAssetContainerAsync("./models/", `AnimatedSoldier.glb`, this.scene);
     }
 
     public updateNetworkState(globalState: Record<string, PlayerState>, localUsername: string) {
@@ -125,6 +131,19 @@ export class MultiplayerEntities {
 
             // Sync animation state
             this.syncAnimation(player, state.anim, state.isDead, false);
+
+            // Sync 3rd-person active weapon
+            const currentWeapon = state.weaponId || "ak47";
+            if (player.activeWeaponId !== currentWeapon && player.weapons[currentWeapon]) {
+                if (player.weapons[player.activeWeaponId]) {
+                    player.weapons[player.activeWeaponId].setEnabled(false);
+                }
+                player.weapons[currentWeapon].setEnabled(true);
+                player.activeWeaponId = currentWeapon;
+                if (player.muzzlePoints[currentWeapon]) {
+                    player.flashSystem.emitter = player.muzzlePoints[currentWeapon];
+                }
+            }
         }
 
         // Cleanup disconnected players
@@ -196,7 +215,8 @@ export class MultiplayerEntities {
         rootNode.scaling = new Vector3(0.9, 0.9, 0.9);
 
         // --- WEAPON ATTACHMENT ---
-        let muzzlePoint = new Mesh(`muzzle_${id}`, this.scene);
+        const weapons: Record<string, TransformNode> = {};
+        const muzzlePoints: Record<string, Mesh> = {};
 
         // Search for the RightHand linked transform node in the instantiated hierarchy
         let rightHandTransform: TransformNode | undefined;
@@ -206,53 +226,72 @@ export class MultiplayerEntities {
             }
         });
 
+        const initialWeapon = state.weaponId || "ak47";
+
         if (rightHandTransform) {
-            // Build a procedural 3rd-person gun (simplified AK)
-            const matteBlack = new StandardMaterial("matteBlack", this.scene);
-            matteBlack.diffuseColor = new Color3(0.1, 0.1, 0.1);
-
-            const gunRoot = new TransformNode("ak47_3p", this.scene);
-            
-            // Receiver
-            const receiver = MeshBuilder.CreateBox("receiver", { width: 0.05, height: 0.08, depth: 0.3 }, this.scene);
-            receiver.position = new Vector3(0, 0.04, 0.1);
-            receiver.material = matteBlack;
-            receiver.parent = gunRoot;
-            
-            // Barrel
-            const barrel = MeshBuilder.CreateCylinder("barrel", { diameter: 0.02, height: 0.4 }, this.scene);
-            barrel.rotation.x = Math.PI / 2;
-            barrel.position = new Vector3(0, 0.06, 0.45);
-            barrel.material = matteBlack;
-            barrel.parent = gunRoot;
-
-            // Set the desired world scale FIRST
-            gunRoot.scaling = new Vector3(0.5, 0.5, 0.5); // 3rd person scale
-            
-            // Use setParent to maintain absolute scale (prevents weapon from shrinking due to bone's 0.01 scale)
-            gunRoot.setParent(rightHandTransform);
-
-            // Orient and position the gun relative to the hand
-            gunRoot.position = new Vector3(-0.1, 0.1, 0);
-            gunRoot.rotation = new Vector3(Math.PI / 2, 0, 0); 
-            
-            // Prevent frustum culling and picking
-            gunRoot.getChildMeshes().forEach((m: any) => {
+            // 1. Procedural 3P AK47
+            const ak3p = AK47Builder.Build(this.scene);
+            ak3p.scaling = new Vector3(0.12, 0.12, 0.12);
+            ak3p.setParent(rightHandTransform);
+            ak3p.position = new Vector3(-0.05, 0.05, 0);
+            ak3p.rotation = new Vector3(Math.PI / 2, 0, 0);
+            ak3p.getChildMeshes().forEach((m: any) => {
                 m.alwaysSelectAsActiveMesh = true;
                 m.isPickable = false;
             });
+            weapons["ak47"] = ak3p;
 
-            muzzlePoint.parent = gunRoot;
-            muzzlePoint.position = new Vector3(0, 0.06, 0.65); // End of barrel
-        } else {
-            muzzlePoint.parent = rootNode;
-            muzzlePoint.position = new Vector3(0, 1.2, 0.5);
+            const akMuzzle = new Mesh(`muzzle_ak_${id}`, this.scene);
+            akMuzzle.parent = ak3p;
+            akMuzzle.position = new Vector3(0, 0.15, 3.4);
+            muzzlePoints["ak47"] = akMuzzle;
+
+            // 2. Procedural 3P Pistol
+            const pistol3p = PistolBuilder.Build(this.scene);
+            pistol3p.scaling = new Vector3(0.12, 0.12, 0.12);
+            pistol3p.setParent(rightHandTransform);
+            pistol3p.position = new Vector3(-0.04, 0.04, 0);
+            pistol3p.rotation = new Vector3(Math.PI / 2, 0, 0);
+            pistol3p.getChildMeshes().forEach((m: any) => {
+                m.alwaysSelectAsActiveMesh = true;
+                m.isPickable = false;
+            });
+            weapons["pistol"] = pistol3p;
+
+            const pistolMuzzle = new Mesh(`muzzle_pistol_${id}`, this.scene);
+            pistolMuzzle.parent = pistol3p;
+            pistolMuzzle.position = new Vector3(0, 0.2, 0.7);
+            muzzlePoints["pistol"] = pistolMuzzle;
+
+            // 3. Procedural 3P M2010 Sniper Rifle
+            const m2010_3p = M2010Builder.Build(this.scene);
+            m2010_3p.scaling = new Vector3(0.12, 0.12, 0.12);
+            m2010_3p.setParent(rightHandTransform);
+            m2010_3p.position = new Vector3(-0.05, 0.05, 0);
+            m2010_3p.rotation = new Vector3(Math.PI / 2, 0, 0);
+            m2010_3p.getChildMeshes().forEach((m: any) => {
+                m.alwaysSelectAsActiveMesh = true;
+                m.isPickable = false;
+            });
+            weapons["m2010"] = m2010_3p;
+
+            const m2010Muzzle = new Mesh(`muzzle_m2010_${id}`, this.scene);
+            m2010Muzzle.parent = m2010_3p;
+            m2010Muzzle.position = new Vector3(0, 0.05, 1.25);
+            muzzlePoints["m2010"] = m2010Muzzle;
+
+            // Show active weapon, hide inactive
+            Object.keys(weapons).forEach(wKey => {
+                weapons[wKey].setEnabled(wKey === initialWeapon);
+            });
         }
+
+        const activeMuzzle = muzzlePoints[initialWeapon] || rootNode;
 
         // --- MUZZLE FLASH SYSTEM ---
         const flash = new ParticleSystem(`flash_${id}`, 50, this.scene);
         flash.particleTexture = new Texture("https://playground.babylonjs.com/textures/flare.png", this.scene);
-        flash.emitter = muzzlePoint;
+        flash.emitter = activeMuzzle;
         flash.minEmitBox = new Vector3(0, 0, 0);
         flash.maxEmitBox = new Vector3(0, 0, 0);
         flash.color1 = new Color4(1, 0.8, 0.1, 1);
@@ -311,7 +350,10 @@ export class MultiplayerEntities {
             flashSystem: flash,
             fireAnimTimer: 0,
             nameplate: nameplatePlane,
-            nameplateTexture: adt
+            nameplateTexture: adt,
+            weapons: weapons,
+            activeWeaponId: initialWeapon,
+            muzzlePoints: muzzlePoints
         };
     }
 

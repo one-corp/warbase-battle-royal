@@ -99,9 +99,13 @@ export class EnvironmentManager {
                     }
                 }
 
-                // Add to shadow generator
-                if (this.shadowGenerator && mesh.name !== "__root__") {
-                    this.shadowGenerator.addShadowCaster(mesh, true);
+                // Add to shadow generator (only non-root, geometry-bearing meshes)
+                if (this.shadowGenerator && mesh.name !== "__root__" && mesh.getTotalVertices() > 0) {
+                    // Only cast shadows if mesh isn't an explicit ground plane to save GPU draw calls
+                    const isGround = mesh.name.toLowerCase().includes("ground") || mesh.name.toLowerCase().includes("floor") || mesh.name.toLowerCase().includes("terrain");
+                    if (!isGround) {
+                        this.shadowGenerator.addShadowCaster(mesh, true);
+                    }
                     mesh.receiveShadows = true;
                 }
 

@@ -5,6 +5,7 @@ import (
 	"math"
 	"math/rand"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -35,6 +36,7 @@ type Room struct {
 	playerCount     atomic.Int32
 	Sessions        map[*GameSession]bool
 	EmptySince      time.Time
+	IsPermanent     bool
 }
 
 func NewRoom(id string, name string, mapName string) *Room {
@@ -68,12 +70,31 @@ type Match struct {
 }
 
 func NewMatch() *Match {
-	return &Match{
+	m := &Match{
 		broadcast:   make(chan Message),
 		register:    make(chan *GameSession),
 		unregister:  make(chan *GameSession),
 		sessions:    make(map[*GameSession]bool),
 		rooms:       make(map[string]*Room),
+	}
+	m.seedDefaultRoomsLocked()
+	return m
+}
+
+func (m *Match) seedDefaultRoomsLocked() {
+	defaults := []struct {
+		id, name, mapName string
+	}{
+		{"industrial-public", "Industrial Zone (Public)", "industrial"},
+		{"village-public", "Village Outpost (Public)", "village"},
+		{"arena-public", "Game Arena (Public)", "arena"},
+	}
+	for _, d := range defaults {
+		if _, exists := m.rooms[d.id]; !exists {
+			r := NewRoom(d.id, d.name, d.mapName)
+			r.IsPermanent = true
+			m.rooms[d.id] = r
+		}
 	}
 }
 
@@ -96,6 +117,10 @@ func (m *Match) CreateRoom(name string, mapName string) *Room {
 }
 
 func (m *Match) ListActiveRooms() []RoomInfo {
+	m.roomsMutex.Lock()
+	m.seedDefaultRoomsLocked()
+	m.roomsMutex.Unlock()
+
 	m.roomsMutex.RLock()
 	defer m.roomsMutex.RUnlock()
 	
@@ -190,15 +215,22 @@ func (m *Match) Run() {
 			m.sessions[session] = true
 			m.activePlayers.Add(1)
 			
-			m.roomsMutex.RLock()
+			m.roomsMutex.Lock()
 			room, ok := m.rooms[session.RoomID]
-			m.roomsMutex.RUnlock()
 			if !ok {
-				// Room does not exist, they shouldn't connect normally, but let's just log it.
-				log.Printf("Player %s attempting to connect to non-existent room %s", session.PlayerID, session.RoomID)
-			} else {
-				room.Sessions[session] = true
+				log.Printf("Auto-creating room %s for connecting player %s", session.RoomID, session.PlayerID)
+				mapName := "industrial"
+				if strings.Contains(strings.ToLower(session.RoomID), "village") {
+					mapName = "village"
+				} else if strings.Contains(strings.ToLower(session.RoomID), "arena") {
+					mapName = "arena"
+				}
+				roomName := "Custom Match (" + session.RoomID[:min(8, len(session.RoomID))] + ")"
+				room = NewRoom(session.RoomID, roomName, mapName)
+				m.rooms[session.RoomID] = room
 			}
+			room.Sessions[session] = true
+			m.roomsMutex.Unlock()
 
 		case session := <-m.unregister:
 			if _, ok := m.sessions[session]; ok {
@@ -292,6 +324,9 @@ func (m *Match) Run() {
 						player.State.Animation = event.StateUpdate.Animation
 						player.State.PlatformId = event.StateUpdate.PlatformId
 						player.State.Ping = event.StateUpdate.Ping
+						if event.StateUpdate.WeaponId != "" {
+							player.State.WeaponId = event.StateUpdate.WeaponId
+						}
 					}
 
 				case *ClientEvent_Ping:
@@ -406,6 +441,7 @@ func (m *Match) Run() {
 						if !shooter.State.IsDead {
 							if weapon, wOk := Weapons[event.SwitchWeapon.WeaponId]; wOk {
 								shooter.ActiveWeapon = weapon
+								shooter.State.WeaponId = event.SwitchWeapon.WeaponId
 								if savedAmmo, hasSaved := shooter.AmmoStore[weapon.ID]; hasSaved {
 									shooter.AmmoCount = savedAmmo
 								} else {
@@ -492,8 +528,8 @@ func (m *Match) Run() {
 
 			m.roomsMutex.RLock()
 			for _, room := range m.rooms {
-				// Mark for GC if empty for 30s
-				if room.playerCount.Load() == 0 && now.Sub(room.EmptySince) > 30*time.Second {
+				// Mark for GC if non-permanent and empty for 30s
+				if !room.IsPermanent && room.playerCount.Load() == 0 && now.Sub(room.EmptySince) > 30*time.Second {
 					emptyRooms = append(emptyRooms, room.ID)
 					continue
 				}

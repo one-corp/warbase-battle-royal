@@ -11,6 +11,7 @@ export const entitySwayRoots = new Map<number, TransformNode>();
 export const entityWeaponSocketOffsets = new Map<number, TransformNode>();
 export const entityAKRoots = new Map<number, TransformNode>();
 export const entityPistolRoots = new Map<number, TransformNode>();
+export const entityM2010Roots = new Map<number, TransformNode>();
 export const entityAimPoints = new Map<number, TransformNode>();
 export const entityFlashParticles = new Map<number, ParticleSystem>();
 export const entityShellParticles = new Map<number, ParticleSystem>();
@@ -23,6 +24,7 @@ export function clearAllViewMaps() {
     entityWeaponSocketOffsets.clear();
     entityAKRoots.clear();
     entityPistolRoots.clear();
+    entityM2010Roots.clear();
     entityAimPoints.clear();
     entityFlashParticles.clear();
     entityShellParticles.clear();

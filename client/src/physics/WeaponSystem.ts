@@ -1,8 +1,8 @@
 import { AdvancedDynamicTexture, Rectangle } from "@babylonjs/gui";
 import { defineQuery, type IWorld } from "bitecs";
 import { 
-    Scene, MeshBuilder, Color3, Vector3, TransformNode, ParticleSystem, Color4, 
-    AbstractMesh, Mesh, Scalar, SceneLoader, StandardMaterial, PhysicsMotionType 
+    Scene, Vector3, TransformNode, ParticleSystem, Color4, 
+    AbstractMesh, Mesh, Scalar, SceneLoader, PhysicsMotionType 
 } from "@babylonjs/core";
 
 import type { NetworkManager } from "../network/NetworkManager";
@@ -10,9 +10,12 @@ import { initDecalSystem, spawnDecal } from "../ecs/systems/DecalSystem";
 import { initTracerSystem, spawnTracer } from "../ecs/systems/TracerSystem";
 import { initImpactSystem, spawnImpact } from "../ecs/systems/ImpactSystem";
 import { throwNetworkGrenade } from "./GrenadeSystem";
+import { AK47Builder } from './AK47Builder';
+import { PistolBuilder } from './PistolBuilder';
+import { M2010Builder } from './M2010Builder';
 import { 
     entityCameras, entityPhysicsBodies, entitySwayRoots, entityWeaponSocketOffsets,
-    entityAKRoots, entityPistolRoots, entityAimPoints, entityFlashParticles, entityShellParticles 
+    entityAKRoots, entityPistolRoots, entityM2010Roots, entityAimPoints, entityFlashParticles, entityShellParticles 
 } from "../ecs/ViewMaps";
 import { WeaponStateComponent, RecoilComponent, SwayComponent, InputComponent, PlayerComponent } from "../ecs/Components";
 
@@ -42,6 +45,14 @@ export const WEAPON_CONFIGS: WeaponConfig[] = [
         recoilVertical: 0.04, recoilHorizontal: 0.005, recoilRecovery: 10.0, adsFOV: 65,
         adsTime: 0.12, adsSpreadMult: 0.2, adsRecoilMult: 0.5, 
         hipPosition: new Vector3(0.2, -0.2, 0.5), adsPosition: new Vector3(0.0, -0.1, 0.35),
+        isAuto: false,
+    },
+    { // 2: M2010 SNIPER
+        id: 'm2010', damage: 95, headshotMultiplier: 2.5, fireRate: 45, magSize: 5, reloadTime: 3.2,
+        baseSpread: 0.2, bloomPerShot: 2.0, maxSpread: 8.0, bloomRecovery: 5.0,
+        recoilVertical: 0.08, recoilHorizontal: 0.015, recoilRecovery: 4.0, adsFOV: 25,
+        adsTime: 0.3, adsSpreadMult: 0.05, adsRecoilMult: 0.3, 
+        hipPosition: new Vector3(0.12, -0.15, 0.25), adsPosition: new Vector3(0.0, -0.135, 0.35),
         isAuto: false,
     }
 ];
@@ -292,9 +303,13 @@ export const createWeaponSystem = (scene: Scene, networkManager?: NetworkManager
             PlayerComponent.pitch[eid] += (RecoilComponent.rotationY[eid] - oldRotY);
             PlayerComponent.yaw[eid] += (RecoilComponent.rotationX[eid] - oldRotX);
 
+            const activeClass = sessionStorage.getItem("warbase_selected_class") || "ASSAULT";
+            const primaryIndex = activeClass === "SCOUT" ? 2 : 0;
+            const primaryId = activeClass === "SCOUT" ? "m2010" : "ak47";
+
             // 4. Process Weapon Swap & Grenades
-            if ((InputComponent as any).weapon1[eid] === 1 && WeaponStateComponent.activeWeaponIndex[eid] !== 0) {
-                WeaponStateComponent.activeWeaponIndex[eid] = 0;
+            if ((InputComponent as any).weapon1[eid] === 1 && WeaponStateComponent.activeWeaponIndex[eid] !== primaryIndex) {
+                WeaponStateComponent.activeWeaponIndex[eid] = primaryIndex;
                 WeaponStateComponent.isReloading[eid] = 0;
                 WeaponStateComponent.adsProgress[eid] = 0;
                 lastAdsState.set(eid, false);
@@ -302,11 +317,13 @@ export const createWeaponSystem = (scene: Scene, networkManager?: NetworkManager
                 
                 const akRoot = entityAKRoots.get(eid);
                 const pistolRoot = entityPistolRoots.get(eid);
-                if (akRoot) akRoot.setEnabled(true);
+                const m2010Root = entityM2010Roots.get(eid);
+                if (akRoot) akRoot.setEnabled(primaryIndex === 0);
                 if (pistolRoot) pistolRoot.setEnabled(false);
+                if (m2010Root) m2010Root.setEnabled(primaryIndex === 2);
                 
-                if (networkManager) networkManager.sendSwitchWeapon('ak47');
-                window.dispatchEvent(new CustomEvent('weapon-swap', { detail: { index: 0, ammo: WeaponStateComponent.currentAmmo[eid], max: WEAPON_CONFIGS[0].magSize } }));
+                if (networkManager) networkManager.sendSwitchWeapon(primaryId);
+                window.dispatchEvent(new CustomEvent('weapon-swap', { detail: { index: 0, ammo: WeaponStateComponent.currentAmmo[eid], max: WEAPON_CONFIGS[primaryIndex].magSize } }));
             }
             if ((InputComponent as any).weapon2[eid] === 1 && WeaponStateComponent.activeWeaponIndex[eid] !== 1) {
                 WeaponStateComponent.activeWeaponIndex[eid] = 1;
@@ -317,7 +334,9 @@ export const createWeaponSystem = (scene: Scene, networkManager?: NetworkManager
                 
                 const akRoot = entityAKRoots.get(eid);
                 const pistolRoot = entityPistolRoots.get(eid);
+                const m2010Root = entityM2010Roots.get(eid);
                 if (akRoot) akRoot.setEnabled(false);
+                if (m2010Root) m2010Root.setEnabled(false);
                 if (pistolRoot) pistolRoot.setEnabled(true);
                 
                 if (networkManager) networkManager.sendSwitchWeapon('pistol');
@@ -411,7 +430,7 @@ export const initWeapons = async (playerEid: number, scene: Scene, networkManage
         const swayRoot = new TransformNode("swayRoot", scene);
         swayRoot.parent = camera;
 
-        const container = await SceneLoader.LoadAssetContainerAsync("./models/", `AnimatedSoldier.glb?v=${Date.now()}`, scene);
+        const container = await SceneLoader.LoadAssetContainerAsync("./models/", `AnimatedSoldier.glb`, scene);
         const entries = container.instantiateModelsToScene();
         const viewmodelRoot = entries.rootNodes[0] as TransformNode;
         viewmodelRoot.parent = swayRoot;
@@ -419,6 +438,7 @@ export const initWeapons = async (playerEid: number, scene: Scene, networkManage
         viewmodelRoot.rotation = new Vector3(0, 0, 0); 
         
         viewmodelRoot.getChildMeshes().forEach((m: any) => {
+            m.isVisible = false; // Hide the 3rd person body from the local camera
             m.alwaysSelectAsActiveMesh = true;
             m.isPickable = false;
         });
@@ -487,86 +507,76 @@ export const initWeapons = async (playerEid: number, scene: Scene, networkManage
         weaponSocketOffset.position = socketPos;
         weaponSocketOffset.rotation = socketRot;
 
-        const gunmetal = new StandardMaterial("gunmetal", scene);
-        gunmetal.diffuseColor = new Color3(0.2, 0.2, 0.2);
-        gunmetal.specularColor = new Color3(0.5, 0.5, 0.5);
+        // Build the highly detailed procedural AK47
+        const akRoot = AK47Builder.Build(scene);
         
-        const matteBlack = new StandardMaterial("matteBlack", scene);
-        matteBlack.diffuseColor = new Color3(0.05, 0.05, 0.05);
-
-        const akRoot = new TransformNode("ak47", scene);
-        akRoot.parent = weaponSocketOffset;
+        // Attach directly to the sway root for a true FPS viewmodel (detached from 3rd person body)
+        akRoot.parent = swayRoot;
         
-        const akGrip = MeshBuilder.CreateBox("akGrip", { width: 0.04, height: 0.12, depth: 0.06 }, scene);
-        akGrip.position = new Vector3(0, -0.06, 0);
-        akGrip.rotation.x = Math.PI / 8;
-        akGrip.material = matteBlack;
-        akGrip.parent = akRoot;
+        // Position it perfectly for standard FPS FOV
+        akRoot.position = new Vector3(0.12, -0.15, 0.25);
+        akRoot.rotation = new Vector3(0, 0, 0); 
         
-        const akReceiver = MeshBuilder.CreateBox("akReceiver", { width: 0.05, height: 0.08, depth: 0.3 }, scene);
-        akReceiver.position = new Vector3(0, 0.04, 0.1);
-        akReceiver.material = gunmetal;
-        akReceiver.parent = akRoot;
-        
-        const akBarrel = MeshBuilder.CreateCylinder("akBarrel", { diameter: 0.02, height: 0.4 }, scene);
-        akBarrel.rotation.x = Math.PI / 2;
-        akBarrel.position = new Vector3(0, 0.06, 0.45);
-        akBarrel.material = gunmetal;
-        akBarrel.parent = akRoot;
-
-        const akMag = MeshBuilder.CreateBox("akMag", { width: 0.04, height: 0.15, depth: 0.08 }, scene);
-        akMag.rotation.x = -Math.PI / 8;
-        akMag.position = new Vector3(0, -0.05, 0.2);
-        akMag.material = matteBlack;
-        akMag.parent = akRoot;
-
-        const akStock = MeshBuilder.CreateBox("akStock", { width: 0.04, height: 0.08, depth: 0.2 }, scene);
-        akStock.position = new Vector3(0, 0.02, -0.15);
-        akStock.material = gunmetal;
-        akStock.parent = akRoot;
-
+        // Prevent weapon from clipping into walls (draw on top of environment)
+        scene.setRenderingAutoClearDepthStencil(1, true, false, false);
         akRoot.getChildMeshes().forEach((m: any) => {
+            m.renderingGroupId = 1;
             m.alwaysSelectAsActiveMesh = true;
             m.isPickable = false;
         });
 
-        const pistolRoot = new TransformNode("pistol", scene);
-        pistolRoot.parent = weaponSocketOffset;
-        
-        const pistolGrip = MeshBuilder.CreateBox("pistolGrip", { width: 0.03, height: 0.1, depth: 0.05 }, scene);
-        pistolGrip.position = new Vector3(0, -0.05, 0);
-        pistolGrip.rotation.x = Math.PI / 16;
-        pistolGrip.material = matteBlack;
-        pistolGrip.parent = pistolRoot;
-        
-        const pistolReceiver = MeshBuilder.CreateBox("pistolReceiver", { width: 0.04, height: 0.05, depth: 0.2 }, scene);
-        pistolReceiver.position = new Vector3(0, 0.025, 0.05);
-        pistolReceiver.material = gunmetal;
-        pistolReceiver.parent = pistolRoot;
+        // Build the highly detailed procedural Pistol
+        const pistolRoot = PistolBuilder.Build(scene);
+        pistolRoot.parent = swayRoot;
+        pistolRoot.position = new Vector3(0.12, -0.15, 0.3);
+        pistolRoot.rotation = new Vector3(0, 0, 0);
 
         pistolRoot.getChildMeshes().forEach((m: any) => {
+            m.renderingGroupId = 1;
             m.alwaysSelectAsActiveMesh = true;
             m.isPickable = false;
         });
 
         pistolRoot.setEnabled(false); 
 
+        // Build the highly detailed procedural M2010 Sniper
+        const m2010Root = M2010Builder.Build(scene);
+        m2010Root.parent = swayRoot;
+        m2010Root.position = new Vector3(0.12, -0.15, 0.25);
+        m2010Root.rotation = new Vector3(0, 0, 0);
+
+        m2010Root.getChildMeshes().forEach((m: any) => {
+            m.renderingGroupId = 1;
+            m.alwaysSelectAsActiveMesh = true;
+            m.isPickable = false;
+        });
+
+        const activeClass = sessionStorage.getItem("warbase_selected_class") || "ASSAULT";
+        const initialIndex: number = activeClass === "SCOUT" ? 2 : 0;
+
+        akRoot.setEnabled(initialIndex === 0);
+        pistolRoot.setEnabled(initialIndex === 1);
+        m2010Root.setEnabled(initialIndex === 2);
+
+        const activePrimary = initialIndex === 2 ? m2010Root : akRoot;
+
         const aimPoint = new TransformNode("AimPoint", scene);
-        aimPoint.parent = akRoot;
+        aimPoint.parent = activePrimary;
         aimPoint.position = new Vector3(0, 0.08, 0.1); 
 
         const muzzlePoint = new Mesh("muzzle", scene);
-        muzzlePoint.position = new Vector3(0, 0.08, 0.45);
-        muzzlePoint.parent = swayRoot;
+        muzzlePoint.position = new Vector3(0, 0.15, 2.5); // Local coords relative to the root
+        muzzlePoint.parent = activePrimary;
 
         const flash = createMuzzleFlash(muzzlePoint, scene);
         const shellPoint = new Mesh("shellPoint", scene);
-        shellPoint.parent = swayRoot;
+        shellPoint.parent = activePrimary;
+        shellPoint.position = new Vector3(0.2, 0.15, 0.5); // Right side ejection port
         const shellEjector = createShellEjector(shellPoint, scene);
 
-        WeaponStateComponent.activeWeaponIndex[playerEid] = 0;
-        WeaponStateComponent.currentAmmo[playerEid] = WEAPON_CONFIGS[0].magSize;
-        WeaponStateComponent.currentSpread[playerEid] = WEAPON_CONFIGS[0].baseSpread;
+        WeaponStateComponent.activeWeaponIndex[playerEid] = initialIndex;
+        WeaponStateComponent.currentAmmo[playerEid] = WEAPON_CONFIGS[initialIndex].magSize;
+        WeaponStateComponent.currentSpread[playerEid] = WEAPON_CONFIGS[initialIndex].baseSpread;
         WeaponStateComponent.isReloading[playerEid] = 0;
         WeaponStateComponent.reloadTimer[playerEid] = 0;
         WeaponStateComponent.lastFireTime[playerEid] = 0;
@@ -657,6 +667,7 @@ export const initWeapons = async (playerEid: number, scene: Scene, networkManage
     entityWeaponSocketOffsets.set(playerEid, weaponSocketOffset);
     entityAKRoots.set(playerEid, akRoot);
     entityPistolRoots.set(playerEid, pistolRoot);
+    entityM2010Roots.set(playerEid, m2010Root);
     entityAimPoints.set(playerEid, aimPoint);
     entityFlashParticles.set(playerEid, flash);
     entityShellParticles.set(playerEid, shellEjector);

@@ -34,6 +34,7 @@ func NewPlayer(id string) *Player {
 		State: &PlayerState{
 			Health:    100,
 			Animation: "idle",
+			WeaponId:  "ak47",
 		},
 		ActiveWeapon: defaultWeapon,
 		AmmoCount:    defaultWeapon.MagSize,

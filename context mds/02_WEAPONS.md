@@ -627,40 +627,25 @@ Phase 4 — Bolt/Slide (20% of time, empty reload only):
 
 ---
 
-## 13. Engine Implementation Details
+### 13.1 Modeling Approach: Procedural PBR Weapon Builders
+Instead of loading static external `.glb` files, weapons are dynamically generated using custom procedural PBR mesh builders:
+- **`AK47Builder.ts`**: Builds a high-detail assault rifle featuring metallic PBR materials, wooden handguard/stock sheen (`PBRMaterial`), curved magazine, gas tube, receiver cover, barrel tip, and iron sights.
+- **`PistolBuilder.ts`**: Builds a PBR sidearm featuring a polished steel slide (`PBRMaterial` with 0.9 metallic / 0.25 roughness), matte polymer frame/grip, silver barrel, trigger guard, trigger, magazine floor plate, and sights.
 
-### 13.1 Modeling Approach: Procedural Native Meshes
-Currently, instead of loading external `.glb` files for the weapons, we are building them **procedurally** inside `WeaponSystem.ts` using Babylon's `MeshBuilder`. 
+### 13.2 1st-Person Viewmodel Positioning
+The 1st-person viewmodel is parented to a sway root node inside the player's camera space:
+- **Position Offset**: `Vector3(0.12, -0.15, 0.25)`
+- **Scale**: `0.08`
+- **Depth Stencil**: Rendered on `renderingGroupId = 1` to eliminate any clipping against world geometry.
 
-This is incredibly performant and ensures our download size stays tiny, but it means the design is "blocky" and low-poly. 
-
-**AK-47 Breakdown:**
-Built from 5 primitive shapes grouped under an `akRoot` TransformNode:
-- **Grip**: Box (`width: 0.04, height: 0.12, depth: 0.06`) tilted at $\pi/8$.
-- **Receiver**: Box (`width: 0.05, height: 0.08, depth: 0.3`).
-- **Barrel**: Cylinder (`diameter: 0.02, height: 0.4`).
-- **Magazine**: Box tilted forward (`-Math.PI/8`).
-- **Stock**: Box extending backwards to rest on the shoulder.
-
-**Pistol Breakdown:**
-A simpler 2-part mesh:
-- **Grip**: Small box.
-- **Receiver (Slide)**: Short box resting on top of the grip.
-
-### 13.2 Rigging and Positioning (The Weapon Socket)
-To make the weapon move seamlessly with the player's arms, we use a **Socket Architecture**.
-1. The game loads the `AnimatedSoldier.glb` viewmodel.
-2. We find the bone named `RightHand`.
-3. We attach a `WeaponSocketRoot` node directly to this bone (`attachToBone`).
-4. We parent the active weapon (e.g., `akRoot`) to the socket.
-
-Because bones in `.glb` files (like Mixamo rigs) often have arbitrary rotations, we must apply offsets so the gun rests perfectly in the palm pointing forward.
-Current offsets defined in `WeaponSystem.ts`:
-- **Position Offset**: `[0, 0, 0]` (The root of our procedural gun is exactly at the grip).
-- **Rotation Offset**: `[Math.PI / 2, 0, 0]` (Rotated 90 degrees on the X-axis so it points forward rather than down the arm).
-
-### 13.3 Aim Down Sights (ADS) Alignment
-We use an "Industry Standard" AimPoint approach to handle ADS.
-1. We place an invisible `AimPoint` node precisely on top of the gun's iron sights (`y: 0.08, z: 0.1`).
-2. When the player holds right-click, we calculate the mathematical difference between the camera's center and the `AimPoint`.
-3. We translate the entire viewmodel (arms + gun) to perfectly bridge that gap, ensuring the iron sight aligns exactly with the center of the screen.
+### 13.3 3rd-Person Networked Weapon System & Dynamic Switching
+To ensure all players see what weapons other players are holding in real-time:
+1. **Bone Socket Attachment**: In [MultiplayerEntities.ts](file:///Users/vaidik/Developer/WarBase%20/client/src/network/MultiplayerEntities.ts), every remote player's character mesh searches for the `RightHand` bone transform node (`getChildTransformNodes`).
+2. **Procedural 3P Meshes**: Both 3P `ak47` (built via `AK47Builder.Build(scene)`) and 3P `pistol` (built via `PistolBuilder.Build(scene)`) are instantiated and attached to the `RightHand` bone using `setParent()`.
+3. **3P Proportional Scale & Orientation**:
+   - `ak3p.scaling = Vector3(0.12, 0.12, 0.12)`
+   - `pistol3p.scaling = Vector3(0.12, 0.12, 0.12)`
+   - `rotation = Vector3(Math.PI / 2, 0, 0)`
+4. **Real-time Server State Broadcast**:
+   - `PlayerState` protobuf transfers `weapon_id` in 60Hz server tick payloads.
+   - When a remote player switches weapons (keys `1` or `2`), `updateNetworkState()` toggles the visible mesh on their right hand and updates the 3rd-person muzzle flash emitter location dynamically.

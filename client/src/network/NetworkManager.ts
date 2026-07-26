@@ -17,6 +17,7 @@ export interface PlayerState {
     isDead: boolean;
     platformId?: string;
     ping: number;
+    weaponId?: string;
 }
 
 export class NetworkManager {
@@ -213,7 +214,7 @@ export class NetworkManager {
         this.ws.send(buffer as BufferSource);
     }
 
-    public sendState(pos: Vector3, rot: Quaternion, anim: string, platformId?: string) {
+    public sendState(pos: Vector3, rot: Quaternion, anim: string, platformId?: string, weaponId?: string) {
         if (this.ws.readyState !== WebSocket.OPEN) return;
 
         // Prevent poisoned payloads from crashing/teleporting the server
@@ -234,7 +235,8 @@ export class NetworkManager {
                 rw: rot.w,
                 animation: anim,
                 platformId: platformId,
-                ping: this.currentPing
+                ping: this.currentPing,
+                weaponId: weaponId
             }
         });
         const buffer = warbase.ClientEvent.encode(clientEvent).finish();
