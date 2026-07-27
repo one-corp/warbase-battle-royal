@@ -190,24 +190,6 @@ export class M2010Builder {
         mag.material = matteSteel;
         mag.parent = root;
 
-        // --- 6. FRONT BIPOD ---
-        const bipodMount = MeshBuilder.CreateBox("bipod_mount", { width: 0.03, height: 0.02, depth: 0.05 }, scene);
-        bipodMount.position = new Vector3(0, 0.015, 0.55);
-        bipodMount.material = matteSteel;
-        bipodMount.parent = root;
-
-        const bipodLegL = MeshBuilder.CreateCylinder("bipod_leg_l", { diameter: 0.012, height: 0.2 }, scene);
-        bipodLegL.rotation.z = -Math.PI / 10;
-        bipodLegL.position = new Vector3(-0.04, -0.08, 0.55);
-        bipodLegL.material = matteSteel;
-        bipodLegL.parent = root;
-
-        const bipodLegR = MeshBuilder.CreateCylinder("bipod_leg_r", { diameter: 0.012, height: 0.2 }, scene);
-        bipodLegR.rotation.z = Math.PI / 10;
-        bipodLegR.position = new Vector3(0.04, -0.08, 0.55);
-        bipodLegR.material = matteSteel;
-        bipodLegR.parent = root;
-
         return root;
     }
 }

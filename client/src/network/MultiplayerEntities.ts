@@ -19,6 +19,7 @@ interface RemotePlayer {
     fireAnimTimer: number;
     nameplate: Mesh;
     nameplateTexture: AdvancedDynamicTexture;
+    healthBar: Rectangle;
     weapons: Record<string, TransformNode>;
     activeWeaponId: string;
     muzzlePoints: Record<string, Mesh>;
@@ -144,6 +145,10 @@ export class MultiplayerEntities {
                     player.flashSystem.emitter = player.muzzlePoints[currentWeapon];
                 }
             }
+
+            // Sync Health
+            const health = state.health !== undefined ? Math.max(0, state.health) : 100;
+            player.healthBar.width = `${health}%`;
         }
 
         // Cleanup disconnected players
@@ -337,10 +342,29 @@ export class MultiplayerEntities {
         label.text = id;
         label.color = "white";
         // Font size is relative to the 102px height texture
-        label.fontSize = 75; 
+        label.fontSize = 50; 
         label.fontFamily = "monospace";
         label.fontWeight = "bold";
+        label.textVerticalAlignment = 0; // Top
         rect.addControl(label);
+
+        const hpBg = new Rectangle();
+        hpBg.width = "90%";
+        hpBg.height = "25%";
+        hpBg.color = "black";
+        hpBg.thickness = 1;
+        hpBg.background = "rgba(50, 50, 50, 0.8)";
+        hpBg.verticalAlignment = 1; // Bottom
+        hpBg.top = "-10px";
+        rect.addControl(hpBg);
+
+        const hpFg = new Rectangle();
+        hpFg.width = "100%"; // Will be dynamically updated based on health
+        hpFg.height = "100%";
+        hpFg.thickness = 0;
+        hpFg.background = "red";
+        hpFg.horizontalAlignment = 0; // Left align
+        hpBg.addControl(hpFg);
 
         this.remotePlayers[id] = {
             mesh: rootNode,
@@ -351,6 +375,7 @@ export class MultiplayerEntities {
             fireAnimTimer: 0,
             nameplate: nameplatePlane,
             nameplateTexture: adt,
+            healthBar: hpFg,
             weapons: weapons,
             activeWeaponId: initialWeapon,
             muzzlePoints: muzzlePoints

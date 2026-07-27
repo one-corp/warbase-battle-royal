@@ -173,6 +173,40 @@ export class AK47Builder {
         frontSightRing.material = darkSteelMat;
         frontSightRing.parent = root;
 
+        // 13. Red Dot Sight (Modern Optic)
+        // Red Dot Sight Base / Mount
+        const opticMount = MeshBuilder.CreateBox("opticMount", { width: 0.2, height: 0.15, depth: 0.6 }, scene);
+        opticMount.position.set(0, 0.42, 0.2);
+        opticMount.material = darkSteelMat;
+        opticMount.parent = root;
+
+        // Red Dot Sight Housing
+        const opticHousing = MeshBuilder.CreateBox("opticHousing", { width: 0.24, height: 0.25, depth: 0.4 }, scene);
+        opticHousing.position.set(0, 0.58, 0.2);
+        opticHousing.material = darkSteelMat;
+        opticHousing.parent = root;
+
+        // Holographic Glass Lens
+        const opticLens = MeshBuilder.CreatePlane("opticLens", { width: 0.18, height: 0.18 }, scene);
+        opticLens.position.set(0, 0.58, 0.39);
+        const glassMat = new PBRMaterial("glassMat", scene);
+        glassMat.alpha = 0.3;
+        glassMat.albedoColor = new Color3(0.1, 0.3, 0.5);
+        glassMat.metallic = 0.1;
+        glassMat.roughness = 0.1;
+        opticLens.material = glassMat;
+        opticLens.parent = root;
+
+        // Emissive Red Dot Reticle
+        const reticle = MeshBuilder.CreatePlane("reticle", { size: 0.015 }, scene);
+        reticle.position.set(0, 0.58, 0.38); // Slightly behind the lens so it doesn't clip
+        const reticleMat = new PBRMaterial("reticleMat", scene);
+        reticleMat.albedoColor = new Color3(1, 0, 0);
+        reticleMat.emissiveColor = new Color3(1, 0, 0);
+        reticleMat.disableLighting = true; // Always bright red
+        reticle.material = reticleMat;
+        reticle.parent = root;
+
         // --- SCALE FOR FIRST PERSON VIEW ---
         root.scaling.scaleInPlace(0.08);
 

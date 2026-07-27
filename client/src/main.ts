@@ -600,7 +600,9 @@ async function startGame(engine: Engine | WebGPUEngine, canvas: HTMLCanvasElemen
                         }
                     }
 
-                    const activeWeaponId = WeaponStateComponent.activeWeaponIndex[playerEid] === 1 ? 'pistol' : 'ak47';
+                    const activeClass = sessionStorage.getItem("warbase_selected_class") || "ASSAULT";
+                    const primaryId = activeClass === "SCOUT" ? "m2010" : "ak47";
+                    const activeWeaponId = WeaponStateComponent.activeWeaponIndex[playerEid] === 1 ? 'pistol' : primaryId;
                     networkManager.sendState(
                         _tempPos,
                         _tempRot,

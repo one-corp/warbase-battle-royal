@@ -3,6 +3,8 @@ import { world } from "../World";
 import { InputComponent, PlayerComponent, PlayerTag } from "../Components";
 import { entityPhysicsBodies, entityCameras, entityMeshes } from "../ViewMaps";
 import { Vector3, Scalar, Ray, PhysicsMotionType } from "@babylonjs/core";
+import { WEAPON_CONFIGS } from "../../physics/WeaponSystem";
+import { WeaponStateComponent } from "../Components";
 
 const DEG2RAD = Math.PI / 180;
 const WALK_SPEED = 4.5;
@@ -90,7 +92,9 @@ export function playerMovementSystem(dt: number, scene: any) {
         PlayerComponent.isSprinting[eid] = isSprinting ? 1 : 0;
 
         if (isAds) {
-            targetFOV = 50; 
+            const activeWepIndex = WeaponStateComponent.activeWeaponIndex[eid];
+            const adsFOV = WEAPON_CONFIGS[activeWepIndex].adsFOV;
+            targetFOV = adsFOV;
         } else if (isSprinting && isMoving) {
             targetFOV = BASE_FOV + SPRINT_FOV_BOOST;
         }

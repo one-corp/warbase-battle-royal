@@ -514,7 +514,7 @@ export const initWeapons = async (playerEid: number, scene: Scene, networkManage
         akRoot.parent = swayRoot;
         
         // Position it perfectly for standard FPS FOV
-        akRoot.position = new Vector3(0.12, -0.15, 0.25);
+        akRoot.position = new Vector3(0.08, -0.12, 0.15);
         akRoot.rotation = new Vector3(0, 0, 0); 
         
         // Prevent weapon from clipping into walls (draw on top of environment)
@@ -528,7 +528,7 @@ export const initWeapons = async (playerEid: number, scene: Scene, networkManage
         // Build the highly detailed procedural Pistol
         const pistolRoot = PistolBuilder.Build(scene);
         pistolRoot.parent = swayRoot;
-        pistolRoot.position = new Vector3(0.12, -0.15, 0.3);
+        pistolRoot.position = new Vector3(0.08, -0.12, 0.20);
         pistolRoot.rotation = new Vector3(0, 0, 0);
 
         pistolRoot.getChildMeshes().forEach((m: any) => {
@@ -542,7 +542,7 @@ export const initWeapons = async (playerEid: number, scene: Scene, networkManage
         // Build the highly detailed procedural M2010 Sniper
         const m2010Root = M2010Builder.Build(scene);
         m2010Root.parent = swayRoot;
-        m2010Root.position = new Vector3(0.12, -0.15, 0.25);
+        m2010Root.position = new Vector3(0.08, -0.12, 0.20);
         m2010Root.rotation = new Vector3(0, 0, 0);
 
         m2010Root.getChildMeshes().forEach((m: any) => {
@@ -672,11 +672,4 @@ export const initWeapons = async (playerEid: number, scene: Scene, networkManage
     entityFlashParticles.set(playerEid, flash);
     entityShellParticles.set(playerEid, shellEjector);
     
-    // Initialize ECS State
-    WeaponStateComponent.activeWeaponIndex[playerEid] = 0; // AK47
-    WeaponStateComponent.currentAmmo[playerEid] = WEAPON_CONFIGS[0].magSize;
-    WeaponStateComponent.isReloading[playerEid] = 0;
-    WeaponStateComponent.currentSpread[playerEid] = WEAPON_CONFIGS[0].baseSpread;
-    WeaponStateComponent.adsProgress[playerEid] = 0;
-
 };

@@ -133,7 +133,8 @@ export class NetworkManager {
                             deaths: p.deaths ?? 0,
                             isDead: p.isDead ?? false,
                             platformId: p.platformId ?? undefined,
-                            ping: p.ping ?? 0
+                            ping: p.ping ?? 0,
+                            weaponId: p.weaponId ?? undefined
                         };
                     }
                     this.onStateReceived(state);
